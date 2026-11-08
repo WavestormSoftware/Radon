@@ -11,6 +11,7 @@ State::State(const Config& c)
       layouts(new Layout[c.max_layout_stack]),
       edits(new TextEdit[c.max_textboxes]),
       anims(new Anim[c.max_anims]),
+      children(new ChildState[c.max_children]),
       fonts(new FontSlot[c.max_fonts]),
       atlas(new uint8_t[(size_t)c.atlas_size * c.atlas_size]),
       nodes(new stbrp_node[c.atlas_size]),
@@ -181,6 +182,10 @@ void Context::begin_frame(const Input& input, float dt) {
     s.dt = dt;
     s.frame++;
     s.blink += dt;
+    s.time += dt;
+    s.wheel_used = false;
+    s.cstack_n = 0;
+    s.in_menu = false;
     s.error = false;
     s.warning = false;
     s.pointer_delta = input.pointer_pressed
@@ -220,7 +225,13 @@ void Context::begin_frame(const Input& input, float dt) {
         s.tab_dir = shift ? -1 : 1;
         s.kbd_nav = true;
     }
-    if (key_pressed(s, KeyEscape) && s.popup_id) s.popup_id = 0;
+    if (key_pressed(s, KeyEscape)) {
+        if (s.popup_id)
+            s.popup_id = 0;
+        else if (s.modal_id)
+            s.modal_id = 0;
+    }
+    s.modal_seen = false;
     if (input.pointer_pressed && s.popup_id && s.hover_window != s.popup_id) {
         s.popup_suppress = s.popup_id;
         s.popup_id = 0;
@@ -245,7 +256,12 @@ void Context::end_frame() {
     }
     if (s.in.pointer_released || !s.in.pointer_down) s.popup_suppress = 0;
     if (s.popup_id && !s.popup_seen && s.frame > s.popup_open_frame + 1) s.popup_id = 0;
-    if (s.layout_n != 0 || s.wstack_n != 0) s.error = true;  // unbalanced begin/end
+    if (s.modal_id && !s.modal_seen && s.frame > s.modal_open_frame + 1) s.modal_id = 0;
+    if (s.layout_n != 0 || s.wstack_n != 0 || s.cstack_n != 0) s.error = true;  // unbalanced begin/end
+    while (s.theme_n > 0) {                                                     // unbalanced push_theme
+        s.cfg.theme = s.theme_stack[--s.theme_n];
+        s.error = true;
+    }
 
     if (s.tip_set) {
         const Theme& t = s.cfg.theme;

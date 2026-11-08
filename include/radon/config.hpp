@@ -13,6 +13,7 @@ struct Config {
     int max_vertices = 65536;
     int max_indices = 196608;
     int max_textboxes = 16;  ///< edit state, keyed by ID
+    int max_children = 32;   ///< scrolling child regions, keyed by ID
     int max_fonts = 4;
     int max_glyphs = 4096;  ///< glyph cache entries
     int max_anims = 256;    ///< hover/press blend slots, keyed by ID

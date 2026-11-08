@@ -287,12 +287,16 @@ TEST_CASE("touch drag scrolls the window") {
     CHECK(clicked == 1);  // content moved up by 30 -> second button under (20, 20)
 }
 
-TEST_CASE("themes: dark and light differ, accent and background as decided") {
+TEST_CASE("themes: dark and light differ, accent and background as (Wavestorm palette)") {
     Theme d = Theme::dark(), l = Theme::light();
-    CHECK(d.background.r == 0x0a);
-    CHECK(d.accent.r == 0x4d);
-    CHECK(d.accent.g == 0xa3);
-    CHECK(d.accent.b == 0xff);
+    CHECK(d.background.r == 0x0b);
+    CHECK(d.accent.r == 0xec);
+    CHECK(d.accent.g == 0x48);
+    CHECK(d.accent.b == 0x99);
+    CHECK(Theme::midnight().accent.b == 0xff);
+    Theme custom = Theme::with_accent(d, {10, 200, 30, 255});
+    CHECK(custom.accent.g == 200);
+    CHECK(custom.focus_ring.g == 200);
     CHECK(l.background.r != d.background.r);
     th::Harness h;
     h.ctx.set_theme(l);

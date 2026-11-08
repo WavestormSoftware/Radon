@@ -51,7 +51,7 @@ jobs:
       - run: git clone --depth 1 --branch release-3.2.8 https://github.com/libsdl-org/SDL.git "$RUNNER_TEMP/SDL"
       - run: |
           cd examples/mobile_demo/android
-          gradle --no-daemon assembleRelease -Psdl3Dir="$RUNNER_TEMP/SDL" -Pandroid.ndkVersion=27.0.12077973
+          gradle --no-daemon assembleRelease -Psdl3Dir="$RUNNER_TEMP/SDL"
       - run: ls examples/mobile_demo/android/app/build/outputs/apk/release/
 
   ios:

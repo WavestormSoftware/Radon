@@ -3,11 +3,13 @@ plugins { id 'com.android.application' }
 // SDL's Java sources (SDLActivity etc.) come from the same SDL release the C++ build fetches.
 // Pass -Psdl3Dir=/path/to/SDL (tag release-3.2.8), or let it default to the CMake-fetched copy.
 def sdl3Dir = findProperty('sdl3Dir') ?: "${rootDir}/../../../build/_deps/sdl3-src"
-def fontFile = file("${rootDir}/../../assets/font.ttf")
+// -PfontFile=/path/to/font.ttf overrides the default examples/assets/font.ttf
+def fontFile = file(findProperty('fontFile') ?: "${rootDir}/../../assets/font.ttf")
 
 android {
     namespace 'net.wavestorm.radon.demo'
     compileSdk 34
+    ndkVersion '27.0.12077973'
     defaultConfig {
         applicationId 'net.wavestorm.radon.demo'
         minSdk 24
@@ -32,7 +34,7 @@ android {
 
 // Ship the owner-supplied font as an asset when present (SDL_LoadFile reads APK assets).
 tasks.register('copyFont', Copy) {
-    from(fontFile)
+    from(fontFile) { rename { "font.ttf" } }
     into "${buildDir}/generated/rd_assets"
     onlyIf { fontFile.exists() }
 }

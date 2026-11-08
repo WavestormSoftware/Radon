@@ -1,49 +1,41 @@
-# Status (v0.1.0 candidate, branch `v0.1-dev`)
+# Status
 
-Environment: Linux (Artix, kernel 7.2), GCC 16.2.1, Clang, CMake 4.4.5, Ninja, system SDL 3.4.18, a live
-desktop session. No emsdk, no Android NDK/SDK, no Xcode, no MSVC, no xvfb.
+Environment: Linux (Artix), GCC 16.2.1, Clang, CMake 4.4.5, Ninja, system SDL 3.4.18, a live desktop
+session, Android SDK 34 / NDK 27 / Gradle 8.9 (installed for the APK build). No emsdk, no Xcode, no MSVC.
 
 | Target | Built | Ran | Tested | Notes |
 |---|---|---|---|---|
-| Windows | No | No | No | Not verified: no Windows or MSVC here. CI job `windows` is written, never run. |
-| Linux | Yes | Yes | Yes | GCC debug and Clang release presets; 57 test cases and the allocation test pass. Demo ran on the live desktop and wrote `docs/screenshots/m3.png`. |
-| Web | No | No | Partly | Not verified: no emsdk. Project and CI job are written, never built. The core touch path is covered by unit tests only. |
-| Android | No | No | Partly | Not verified: no NDK/SDK. Gradle project and CI job are written, never built. |
-| iOS | No | No | Partly | Not verified: not macOS. CMake/Xcode project and CI job are written, never built. |
+| Windows | No | No | No | No Windows/MSVC here. CI job written, never run. |
+| Linux | Yes | Yes | Yes | GCC debug + Clang release; 75 test cases + allocation test pass; ASan/UBSan clean. Gallery and 10 examples run on the live desktop. |
+| Web | No | No | Core only | No emsdk here (installing it was not permitted in this session). Project and CI job written, never built. Instructions: `docs/building.md`. |
+| Android | Yes (unsigned + debug-signed APK) | No | Core only | Built with NDK 27 / Gradle 8.9. The APK was not installed on a device or emulator. |
+| iOS | No | No | Core only | Not macOS. CMake/Xcode project and CI job written, never built. |
 
-"Tested" for Web/Android/iOS means the shared core tests pass on Linux; nothing ran on those targets.
+"Core only" means the shared core tests pass on Linux; nothing ran on that target.
 
 ## Commands run and results
 
-All from the repo root.
-
 | Command | Result |
 |---|---|
-| `cmake --preset linux-gcc-debug && cmake --build --preset linux-gcc-debug && ctest --preset linux-gcc-debug` | Built with `-Wall -Wextra -Werror`; 2/2 tests pass (57 doctest cases, 216 assertions; allocation test) |
-| `cmake --preset linux-clang-release && cmake --build --preset linux-clang-release && ctest --preset linux-clang-release` | Built; 2/2 tests pass. (Clang first failed on two unused demo fields; fixed.) |
+| `cmake --preset linux-gcc-debug && cmake --build --preset linux-gcc-debug && ctest --preset linux-gcc-debug` | Built with `-Wall -Wextra -Werror`; 2/2 pass (75 cases, allocation test) |
+| `cmake --preset linux-clang-release && cmake --build --preset linux-clang-release && ctest --preset linux-clang-release` | Built; 2/2 pass |
 | `scripts/check_core_includes.sh` | `check_core_includes: ok` |
-| `./build/linux-gcc-debug/tests/test_alloc` (and the clang-release build) | `heap allocations over 200 frames after warm-up: 0`, pass. glibc `malloc` interposition was active. |
-| `find include src/core backends examples tests \( -name '*.cpp' -o -name '*.hpp' \) \| xargs clang-format --dry-run --Werror` | No output, exit 0 |
-| ASan + UBSan build of the tests (`-fsanitize=address,undefined`, core only) | All 57 cases and the allocation test pass, no reports |
-| `RD_FONT=/usr/share/fonts/noto/NotoSans-Regular.ttf ./build/linux-gcc-debug/examples/desktop_demo/radon_desktop_demo --screenshot docs/screenshots/m3.png --frames 30` | Wrote a 960x600 PNG (checked by eye: windows, text, widgets, tooltip, dark theme) |
-| Demo with no font found | Prints the "no font found" error and still runs; build succeeds without `font.ttf` |
+| `build/<preset>/tests/test_alloc` | 0 heap allocations over 200 frames after warm-up, with the whole widget set (menus, modal, color picker, plots...) |
+| `xargs clang-format --dry-run --Werror` on `include src/core backends examples tests` | clean |
+| ASan + UBSan build of the core tests | all pass, no reports |
+| `scripts/screenshots.sh` | regenerated `docs/screenshots/*.png` (gallery pages, light theme, phone width, 10 examples); checked by eye |
+| `gradle assembleRelease -Psdl3Dir=... -PfontFile=...` in `examples/mobile_demo/android` | BUILD SUCCESSFUL; `app-release-unsigned.apk` (arm64-v8a) |
 
 ## Not verified
 
-- **Windows, Web, Android, iOS**: see the table. The CI jobs for them have never run.
-- **Interactive demo use**: button clicks and slider drags are covered by unit tests with synthetic input;
-  nobody clicked the real demo window. The screenshot was scripted, with the pointer hovering a button.
-- **Screenshot method**: taken on the live desktop, not under xvfb (not installed). Only `m3.png` exists;
-  there is no gallery beyond it.
-- **Real touch and soft keyboard**: no device was used. `SDL_StartTextInput` / safe-area code is untested.
-- **Light theme** is implemented and unit-tested for its values only; it was not looked at.
-- **Intermediate milestone commits (M0-M4)** do not build on their own; see ADR 0006.
-- **Font-dependent tests** ran against the system Noto Sans, not `examples/assets/font.ttf`, which does not
-  exist yet. Without any font they print a skip message.
-- Golden draw-list tests and the 60 s fuzz run listed in the plan's testing section are not written.
-- `RD_DEBUG_IDS` (duplicate-ID report in debug builds) is not implemented.
+- **Windows, Web, iOS** builds, and all CI jobs (none have run).
+- **The APK on a device**: built and signature-verified only. Touch, soft keyboard and safe-area code are untested on hardware.
+- **Mouse interaction in the real window**: clicks and drags are covered by unit tests with synthetic input; the screenshots are scripted with a fixed pointer. Nobody drove the live windows.
+- **Light theme** was checked by eye in one screenshot only.
+- **Font-dependent tests** run against a system Noto Sans because `examples/assets/font.ttf` is not in the repo; without any font they print a skip message.
+- Golden draw-list tests and a timed fuzz run are not written. `RD_DEBUG_IDS` is not implemented.
+- Intermediate milestone commits M1-M5 do not build on their own (ADR 0006).
 
-## Release decision
+## Release
 
-`v0.1.0` is **not tagged**. M8 requires all five targets to build in CI, and only Linux has been built.
-Missing: a green CI run on Windows, Web, Android and iOS; `examples/assets/font.ttf`; a screenshot gallery.
+`v0.1.0` is not tagged: it needs green CI on Windows, Web, Android and iOS, and the owner's `font.ttf`.

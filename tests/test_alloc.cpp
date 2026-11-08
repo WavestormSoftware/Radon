@@ -73,14 +73,19 @@ TEST_CASE("zero heap allocations per frame after warm-up") {
         MESSAGE("no font: text paths not exercised");
     }
     h.ctx.set_theme(t);
+    h.in.screen_size = {800, 600};
 
     Rect win{10, 10, 320, 300}, win2{200, 80, 200, 200};
     bool check = true, open = true;
     float sl = 0.3f, dr = 2;
     int sel = 1;
     const char* items[] = {"alpha", "beta", "gamma"};
+    int radio = 0, ival = 3, tab = 0;
+    Color col{200, 50, 90, 255};
+    float plot[8] = {1, 3, 2, 5, 4, 2, 1, 3};
     char text[32] = "hello";
     TextBuffer tb{text, sizeof text, 5};
+    bool modal_requested = true;
     auto ui = [&] {
         if (begin_window(h.ctx, "Main", win, WindowDefault | WindowClosable | WindowScrollable)) {
             const float cols[] = {80, -1};
@@ -105,6 +110,43 @@ TEST_CASE("zero heap allocations per frame after warm-up") {
                 push_id(h.ctx, std::to_string(i));
                 button(h.ctx, "row");
                 pop_id(h.ctx);
+            }
+            separator_text(h.ctx, "More");
+            layout_row(h.ctx, 3, nullptr, 0, 0);
+            radio_button(h.ctx, "r0", radio, 0);
+            radio_button(h.ctx, "r1", radio, 1);
+            toggle(h.ctx, "tg", check);
+            layout_row(h.ctx, 1, nullptr, 0, 0);
+            slider_int(h.ctx, "##si", ival, 0, 10);
+            drag_int(h.ctx, "##di", ival);
+            stepper(h.ctx, "##st", sl, 0.1f, 0, 1);
+            tab_bar(h.ctx, "##tabs", tab, items, 3);
+            listbox(h.ctx, "##lb", sel, items, 3, 70);
+            if (tree_node(h.ctx, "tree", open)) {
+                bullet_text(h.ctx, "leaf");
+                tree_pop(h.ctx);
+            }
+            color_picker(h.ctx, "##col", col, true);
+            plot_lines(h.ctx, plot, 8, 0, 0, 40);
+            plot_histogram(h.ctx, plot, 8, 0, 1, 40);
+            spinner(h.ctx);
+            badge(h.ctx, "badge", {255, 0, 0, 255});
+            icon_button(h.ctx, "ic", Icon::Search);
+            push_theme(h.ctx, t);
+            button(h.ctx, "scoped", ButtonStyle::Primary);
+            pop_theme(h.ctx);
+            if (begin_menu_bar(h.ctx)) {
+                if (begin_menu(h.ctx, "File")) {
+                    menu_item(h.ctx, "Open", "Ctrl+O");
+                    end_menu(h.ctx);
+                }
+                end_menu_bar(h.ctx);
+            }
+            if (modal_requested) open_modal(h.ctx, "m");
+            modal_requested = false;
+            if (modal_begin(h.ctx, "m", "Modal", 200)) {
+                button(h.ctx, "ok");
+                modal_end(h.ctx);
             }
             end_window(h.ctx);
         }

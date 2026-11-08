@@ -1,4 +1,4 @@
-# 0004: API details the plan left open
+# 0004: API details settled during the first build
 
 - Added `open_window`, `close_popup`, `layout_next`, `Context::{theme,dpi_scale,set_dpi_scale,warning,
   atlas_*,wants_text_input,pointer_over_ui}`, and `Input::touch` (touch has no hover and scrolls by drag).

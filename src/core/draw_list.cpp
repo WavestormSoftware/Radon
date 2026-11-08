@@ -92,6 +92,17 @@ void DrawList::image(TextureId tex, const Rect& q, const Rect& uv, Color tint) {
     quad(tex, q, {uv.x, uv.y}, {uv.x + uv.w, uv.y + uv.h}, tint, {0, 0}, {0, 0, (float)ShapeImage, 0});
 }
 
+void DrawList::gradient_rect(const Rect& r, Color tl, Color tr, Color br, Color bl) {
+    if (r.w <= 0 || r.h <= 0 || !begin(0, 4, 6)) return;
+    const Vec4 sh{0, 0, (float)ShapeSolid, 0};
+    const Vec2 p[4] = {{r.x, r.y}, {r.x + r.w, r.y}, {r.x + r.w, r.y + r.h}, {r.x, r.y + r.h}};
+    const Color c[4] = {tl, tr, br, bl};
+    uint32_t base = nv_;
+    for (int i = 0; i < 4; i++) verts_[nv_++] = DrawVertex{p[i], {0, 0}, c[i], {0, 0}, sh};
+    static const uint32_t order[6] = {0, 1, 2, 0, 2, 3};
+    for (uint32_t o : order) idx_[ni_++] = base + o;
+}
+
 void DrawList::triangle(Vec2 a, Vec2 b, Vec2 c, Color col) {
     if (!begin(0, 3, 3)) return;
     Vec4 sh{0, 0, (float)ShapeSolid, 0};

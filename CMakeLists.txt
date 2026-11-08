@@ -21,7 +21,8 @@ add_library(radon
     src/core/context.cpp src/core/ids.cpp src/core/layout.cpp src/core/window.cpp
     src/core/draw_list.cpp src/core/text.cpp src/core/theme.cpp
     src/core/widgets/basic.cpp src/core/widgets/value.cpp src/core/widgets/popup.cpp
-    src/core/widgets/textbox.cpp)
+    src/core/widgets/textbox.cpp src/core/widgets/extra.cpp src/core/widgets/icons.cpp
+    src/core/widgets/container.cpp src/core/widgets/color.cpp)
 add_library(radon::radon ALIAS radon)
 target_include_directories(radon PUBLIC include)
 target_include_directories(radon SYSTEM PRIVATE src/third_party)

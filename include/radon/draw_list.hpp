@@ -48,6 +48,8 @@ public:
     void shadow(const Rect& r, Color c, float radius, float blur, Vec2 offset);
     void glyph(const Rect& quad, const Rect& uv, Color c);
     void image(TextureId tex, const Rect& quad, const Rect& uv, Color tint);
+    /// Axis-aligned quad with a color per corner (top-left, top-right, bottom-right, bottom-left).
+    void gradient_rect(const Rect& r, Color tl, Color tr, Color br, Color bl);
     void line(Vec2 a, Vec2 b, Color c, float thickness = 1);
     void triangle(Vec2 a, Vec2 b, Vec2 c, Color col);
 

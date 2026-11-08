@@ -16,6 +16,8 @@ constexpr int kMaxWinStack = 8;
 constexpr float kTouchSlop = 8.0f;
 constexpr uint32_t kOverlayLayer = 1u << 24;
 constexpr uint32_t kTooltipLayer = kOverlayLayer + 4096;
+constexpr int kMaxChildStack = 8;
+constexpr int kMaxThemeStack = 8;
 constexpr size_t kArenaSize = 1u << 20;
 
 struct Layout {
@@ -55,6 +57,24 @@ struct TextEdit {
     int cursor = 0, anchor = 0;
     float scroll = 0;
     uint32_t last_frame = 0;
+};
+
+struct ChildState {
+    ID id = 0;
+    float scroll = 0, content_h = 0;
+    uint32_t last_frame = 0;
+};
+
+struct ChildFrame {
+    int slot = 0, layout_index = 0, clip_base = 0;
+    Rect rect;
+    float pad = 0;
+};
+
+struct PickerState {
+    ID id = 0;
+    float h = 0, s = 0, v = 0;
+    uint32_t last_rgb = 0, last_frame = 0;
 };
 
 struct Anim {
@@ -137,6 +157,20 @@ struct State {
 
     std::unique_ptr<Anim[]> anims;
 
+    std::unique_ptr<ChildState[]> children;
+    ChildFrame cstack[kMaxChildStack];
+    int cstack_n = 0;
+    bool wheel_used = false;
+    float time = 0, drag_acc = 0;
+    PickerState pickers[8];
+    Theme theme_stack[kMaxThemeStack];
+    int theme_n = 0;
+    ID modal_id = 0;
+    uint32_t modal_open_frame = 0;
+    bool modal_seen = false, popup_is_menu = false, in_menu = false;
+    Rect menu_bar;
+    float menu_x = 0;
+
     std::unique_ptr<FontSlot[]> fonts;
     int font_n = 0;
     FontHandle default_font = -1;
@@ -209,7 +243,7 @@ inline void draw_frame(State& s, const Rect& r, Color fill, bool focused, bool a
     const Theme& t = s.cfg.theme;
     s.dl.rect(r, fill, t.corner_radius);
     bool ring = focused && (s.kbd_nav || always_ring);
-    s.dl.rect(r, ring ? t.focus_ring : t.border, t.corner_radius, ring ? 2.0f : t.border_width);
+    s.dl.rect(r, ring ? t.focus_ring : t.border, t.corner_radius, ring ? t.focus_ring_width : t.border_width);
 }
 
 /// Draws text vertically centered in `r`, clipped to `r` only when it would overflow.

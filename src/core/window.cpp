@@ -18,6 +18,8 @@ void begin_frame_windows(State& s) {
             s.hover_window = w.id;
         }
     }
+    // A modal blocks everything except itself and a popup opened from it.
+    if (s.modal_id && s.hover_window != s.modal_id && s.hover_window != s.popup_id) s.hover_window = 0;
 }
 
 void end_frame_windows(State&) {}
@@ -91,7 +93,7 @@ bool begin_window_impl(Context& ctx, ID id, std::string_view title, Rect& rect, 
 
     const bool titlebar = flags & WindowTitleBar;
     const float th = titlebar ? t.title_height : 0;
-    const float pad = t.padding, rad = t.corner_radius;
+    const float pad = t.padding, rad = t.window_radius;
     Rect cb{};
     if (titlebar) {
         Rect tr{rect.x, rect.y, rect.w, th};
@@ -126,7 +128,7 @@ bool begin_window_impl(Context& ctx, ID id, std::string_view title, Rect& rect, 
     }
 
     const Rect r = rect;
-    if (flags & WindowBorder) s.dl.shadow(r, t.shadow, rad, 18, {0, 8});
+    if ((flags & WindowBorder) && t.shadows) s.dl.shadow(r, t.shadow, rad, t.shadow_blur, {0, 8});
     s.dl.rect(r, t.surface, rad);
     if (titlebar) {
         s.dl.rect({r.x, r.y, r.w, th}, t.surface_hover, rad);
@@ -194,7 +196,8 @@ void end_window(Context& ctx) {
         const float maxs = std::fmax(0.0f, w.content_h - view);
         s.layout_n = f.layout_index;  // widgets are done; drop nested layouts
         update_control(ctx, hash_u32(f.id, 4), f.content, false, false);
-        if (s.hover_window == f.id && s.in.wheel != 0) w.scroll -= s.in.wheel * t.cell_height;
+        if (s.hover_window == f.id && s.in.wheel != 0 && !s.wheel_used)
+            w.scroll -= s.in.wheel * t.cell_height;
         if (s.in.touch && s.in.pointer_down && s.touch_moved && !s.active_captures && s.press_window == f.id)
             w.scroll -= s.pointer_delta.y;
         if (maxs > 0) {

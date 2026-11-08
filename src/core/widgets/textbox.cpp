@@ -81,7 +81,7 @@ struct Editor {
 
 }  // namespace
 
-Response textbox(Context& ctx, std::string_view label, TextBuffer& buf) {
+Response textbox(Context& ctx, std::string_view label, TextBuffer& buf, const char* hint) {
     State& s = state(ctx);
     const Theme& t = s.cfg.theme;
     ID id = get_id(s, label);
@@ -207,6 +207,7 @@ Response textbox(Context& ctx, std::string_view label, TextBuffer& buf) {
         float x1 = ir.x - scroll + x_of_index(s, fh, text, b);
         s.dl.rect({x0, ty, x1 - x0, sz.y}, with_alpha(t.accent, 0.4f));
     }
+    if (buf.length == 0 && hint) draw_text(s, fh, {ir.x, ty}, hint, t.text_muted);
     draw_text(s, fh, {ir.x - scroll, ty}, text, t.text);
     if (ed && std::fmod(s.blink, 1.0f) < 0.5f) {
         float cx = ir.x - scroll + x_of_index(s, fh, text, ed->cursor);

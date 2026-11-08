@@ -2,3 +2,15 @@ build/
 .cache/
 compile_commands.json
 *.user
+
+# Planning documents stay out of the repo
+docs/PLAN.md
+radon-plan.md
+*PLAN*.md
+*-plan.md
+# Local release artifacts
+dist/
+.gradle/
+local.properties
+.cxx/
+*.apk
