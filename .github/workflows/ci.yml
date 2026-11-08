@@ -1,0 +1,61 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        preset: [linux-gcc-debug, linux-clang-release]
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build clang libgl1-mesa-dev libx11-dev libxext-dev libwayland-dev libxkbcommon-dev libasound2-dev
+      - run: scripts/check_core_includes.sh
+      - run: cmake --preset ${{ matrix.preset }}
+      - run: cmake --build --preset ${{ matrix.preset }}
+      - run: ctest --preset ${{ matrix.preset }}
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: find include src/core backends examples tests -name '*.cpp' -o -name '*.hpp' | xargs clang-format --dry-run --Werror
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake --preset windows-msvc-release
+      - run: cmake --build --preset windows-msvc-release
+      - run: ctest --preset windows-msvc-release
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mymindstorm/setup-emsdk@v14
+        with: { version: 3.1.74 }
+      - run: echo "EMSDK=$EMSDK" >> "$GITHUB_ENV"
+      - run: cmake --preset web-emscripten-release
+      - run: cmake --build --preset web-emscripten-release
+      - run: test -f build/web-emscripten-release/examples/web_demo/radon_web.html && test -f build/web-emscripten-release/examples/web_demo/radon_web.js && test -f build/web-emscripten-release/examples/web_demo/radon_web.wasm
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "ndk;27.0.12077973" "platforms;android-34" "build-tools;34.0.0" "cmake;3.22.1"
+      - run: |
+          cd examples/mobile_demo/android
+          gradle --no-daemon assembleRelease -Pandroid.ndkVersion=27.0.12077973
+      - run: ls examples/mobile_demo/android/app/build/outputs/apk/release/
+
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake --preset ios-simulator-release
+      - run: cmake --build --preset ios-simulator-release -- -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO
