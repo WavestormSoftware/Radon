@@ -30,7 +30,8 @@ void loop(void* arg) {
     rd::sdl3::framebuffer_size(s.plat, fw, fh);
     s.ctx->set_dpi_scale(rd::sdl3::dpi_scale(s.plat));
     s.ctx->begin_frame(s.input, dt);
-    s.app.frame(*s.ctx, s.input, (int)((float)fw / s.ctx->dpi_scale()), (int)((float)fh / s.ctx->dpi_scale()));
+    s.app.frame(*s.ctx, s.input, (int)((float)fw / s.ctx->dpi_scale()),
+                (int)((float)fh / s.ctx->dpi_scale()));
     s.ctx->end_frame();
     rd::gl::clear(s.rend, s.ctx->theme().background);
     rd::gl::render(s.rend, *s.ctx, fw, fh);

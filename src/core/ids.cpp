@@ -37,8 +37,12 @@ ID hash_u32(ID seed, uint32_t v) {
     return h;
 }
 
-ID top_id(const State& s) { return s.id_n > 0 ? s.id_stack[s.id_n - 1] : 0; }
-ID get_id(State& s, std::string_view label) { return hash_id(top_id(s), label); }
+ID top_id(const State& s) {
+    return s.id_n > 0 ? s.id_stack[s.id_n - 1] : 0;
+}
+ID get_id(State& s, std::string_view label) {
+    return hash_id(top_id(s), label);
+}
 
 std::string_view visible_label(std::string_view l) {
     size_t p = l.find("##");

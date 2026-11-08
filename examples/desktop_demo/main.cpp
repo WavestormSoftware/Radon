@@ -15,9 +15,12 @@ int main(int argc, char** argv) {
     const char* shot = nullptr;
     int frames = 0;
     for (int i = 1; i < argc; i++) {
-        if (!std::strcmp(argv[i], "--font") && i + 1 < argc) font_path = argv[++i];
-        else if (!std::strcmp(argv[i], "--screenshot") && i + 1 < argc) shot = argv[++i];
-        else if (!std::strcmp(argv[i], "--frames") && i + 1 < argc) frames = std::atoi(argv[++i]);
+        if (!std::strcmp(argv[i], "--font") && i + 1 < argc)
+            font_path = argv[++i];
+        else if (!std::strcmp(argv[i], "--screenshot") && i + 1 < argc)
+            shot = argv[++i];
+        else if (!std::strcmp(argv[i], "--frames") && i + 1 < argc)
+            frames = std::atoi(argv[++i]);
     }
     if (shot && frames <= 0) frames = 30;
 
@@ -75,8 +78,12 @@ int main(int argc, char** argv) {
             std::vector<uint8_t> px((size_t)fw * fh * 4);
             rd::gl::read_pixels(rend, fw, fh, px.data());
             SDL_Surface* s = SDL_CreateSurfaceFrom(fw, fh, SDL_PIXELFORMAT_RGBA32, px.data(), fw * 4);
-            if (s && SDL_SavePNG(s, shot)) std::printf("radon demo: wrote %s (%dx%d)\n", shot, fw, fh);
-            else { std::fprintf(stderr, "radon demo: screenshot failed: %s\n", SDL_GetError()); ret = 1; }
+            if (s && SDL_SavePNG(s, shot))
+                std::printf("radon demo: wrote %s (%dx%d)\n", shot, fw, fh);
+            else {
+                std::fprintf(stderr, "radon demo: screenshot failed: %s\n", SDL_GetError());
+                ret = 1;
+            }
             if (s) SDL_DestroySurface(s);
             break;
         }

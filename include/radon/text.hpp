@@ -15,15 +15,15 @@ int utf8_decode(const char* p, const char* end, uint32_t& cp);
 Vec2 measure_text(const Context& ctx, FontHandle font, std::string_view text);
 
 struct TextLine {
-    int start = 0;  ///< byte offset into the source text
-    int length = 0; ///< bytes, without the trailing space or newline
+    int start = 0;   ///< byte offset into the source text
+    int length = 0;  ///< bytes, without the trailing space or newline
 };
 
 /// Splits `text` into lines no wider than `max_width`. Breaks at spaces, then inside long words at
 /// code point boundaries; '\n' always breaks. Writes at most `max_lines` lines and returns the count
 /// that would be needed, clamped to `max_lines`.
-int wrap_text(const Context& ctx, FontHandle font, std::string_view text, float max_width,
-              TextLine* lines, int max_lines);
+int wrap_text(const Context& ctx, FontHandle font, std::string_view text, float max_width, TextLine* lines,
+              int max_lines);
 
 namespace detail {
 /// Wrapping with a caller-supplied per-code-point advance (used by tests and wrap_text).

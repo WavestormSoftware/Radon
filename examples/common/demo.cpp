@@ -40,7 +40,8 @@ std::vector<uint8_t> find_font(const char* explicit_path) {
         }
     }
     std::fprintf(stderr,
-                 "radon demo: ERROR: no font found. Put a TrueType font at examples/assets/font.ttf, set RD_FONT, or pass "
+                 "radon demo: ERROR: no font found. Put a TrueType font at examples/assets/font.ttf, set "
+                 "RD_FONT, or pass "
                  "--font <path>. Running without text.\n");
     return {};
 }
@@ -120,9 +121,10 @@ void App::frame(rd::Context& ctx, const rd::Input& in, int w, int h) {
         layout_row(ctx, 1, nullptr, 0, 0);
         if (collapsing_header(ctx, "Text and images", open_text_)) {
             layout_row(ctx, 1, nullptr, 0, 0);
-            label_wrapped(ctx,
-                          "Radon is an immediate-mode UI library. Widgets are called every frame and return what "
-                          "happened. Tab moves focus, Enter and Space activate.");
+            label_wrapped(
+                ctx,
+                "Radon is an immediate-mode UI library. Widgets are called every frame and return what "
+                "happened. Tab moves focus, Enter and Space activate.");
             if (checker_) {
                 layout_row(ctx, 1, nullptr, 0, 0);
                 image(ctx, checker_, {96, 96});
@@ -137,7 +139,8 @@ void App::frame(rd::Context& ctx, const rd::Input& in, int w, int h) {
         layout_row(ctx, 1, nullptr, 0, 0);
         std::snprintf(b, sizeof b, "vertices %d / commands %d", dl.vertex_count(), dl.command_count());
         label(ctx, b);
-        std::snprintf(b, sizeof b, "scale %.2f  error %s", (double)ctx.dpi_scale(), ctx.error() ? "yes" : "no");
+        std::snprintf(b, sizeof b, "scale %.2f  error %s", (double)ctx.dpi_scale(),
+                      ctx.error() ? "yes" : "no");
         label(ctx, b);
         std::snprintf(b, sizeof b, "pointer %.0f, %.0f%s", (double)in.pointer.x, (double)in.pointer.y,
                       in.touch ? " (touch)" : "");

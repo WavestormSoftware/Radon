@@ -6,8 +6,8 @@ namespace rd {
 
 struct Theme {
     // Colors
-    Color background, surface, surface_hover, surface_active, text, text_muted, accent, accent_text,
-        border, shadow, error, focus_ring;
+    Color background, surface, surface_hover, surface_active, text, text_muted, accent, accent_text, border,
+        shadow, error, focus_ring;
     // Metrics (logical pixels)
     float padding = 8, spacing = 6, corner_radius = 6, border_width = 1, scrollbar_width = 10,
           title_height = 30, cell_height = 28;

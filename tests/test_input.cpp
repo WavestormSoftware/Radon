@@ -14,9 +14,15 @@ struct One {
             end_window(h.ctx);
         }
     }
-    void frame() { h.frame([&] { ui(); }); }
-    void press() { h.press([&] { ui(); }); }
-    void release() { h.release([&] { ui(); }); }
+    void frame() {
+        h.frame([&] { ui(); });
+    }
+    void press() {
+        h.press([&] { ui(); });
+    }
+    void release() {
+        h.release([&] { ui(); });
+    }
 };
 }  // namespace
 

@@ -58,8 +58,8 @@ bool begin_window_impl(Context& ctx, ID id, std::string_view title, Rect& rect, 
                        bool overlay) {
     State& s = state(ctx);
     const Theme& t = s.cfg.theme;
-    if (s.wstack_n >= kMaxWinStack || s.id_n >= s.cfg.max_id_stack ||
-        s.layout_n >= s.cfg.max_layout_stack || s.clip_n + 2 > kMaxClip) {
+    if (s.wstack_n >= kMaxWinStack || s.id_n >= s.cfg.max_id_stack || s.layout_n >= s.cfg.max_layout_stack ||
+        s.clip_n + 2 > kMaxClip) {
         s.error = true;
         return false;
     }
@@ -70,8 +70,7 @@ bool begin_window_impl(Context& ctx, ID id, std::string_view title, Rect& rect, 
     }
     w->last_frame = s.frame;
     if (!w->open) return false;
-    if (!overlay && s.in.pointer_pressed && s.hover_window == id && w->z != s.z_counter)
-        w->z = ++s.z_counter;
+    if (!overlay && s.in.pointer_pressed && s.hover_window == id && w->z != s.z_counter) w->z = ++s.z_counter;
 
     WindowFrame& f = s.wstack[s.wstack_n++];
     f = WindowFrame{};
@@ -133,8 +132,8 @@ bool begin_window_impl(Context& ctx, ID id, std::string_view title, Rect& rect, 
         s.dl.rect({r.x, r.y, r.w, th}, t.surface_hover, rad);
         s.dl.rect({r.x, r.y + th / 2, r.w, th / 2}, t.surface_hover, 0);
         s.dl.rect({r.x, r.y + th - 1, r.w, 1}, t.border);
-        draw_text_centered(s, t.font_heading, {r.x + pad, r.y, r.w - 2 * pad - th, th},
-                           visible_label(title), t.text, false);
+        draw_text_centered(s, t.font_heading, {r.x + pad, r.y, r.w - 2 * pad - th, th}, visible_label(title),
+                           t.text, false);
         if (flags & WindowClosable) {
             bool hov = s.hover == hash_u32(id, 2);
             Color c = hov ? t.error : t.text_muted;
@@ -196,8 +195,7 @@ void end_window(Context& ctx) {
         s.layout_n = f.layout_index;  // widgets are done; drop nested layouts
         update_control(ctx, hash_u32(f.id, 4), f.content, false, false);
         if (s.hover_window == f.id && s.in.wheel != 0) w.scroll -= s.in.wheel * t.cell_height;
-        if (s.in.touch && s.in.pointer_down && s.touch_moved && !s.active_captures &&
-            s.press_window == f.id)
+        if (s.in.touch && s.in.pointer_down && s.touch_moved && !s.active_captures && s.press_window == f.id)
             w.scroll -= s.pointer_delta.y;
         if (maxs > 0) {
             const float sbw = t.scrollbar_width;
@@ -223,6 +221,8 @@ void end_window(Context& ctx) {
     unwind(s, f);
 }
 
-bool Context::pointer_over_ui() const { return s_->hover_window != 0; }
+bool Context::pointer_over_ui() const {
+    return s_->hover_window != 0;
+}
 
 }  // namespace rd

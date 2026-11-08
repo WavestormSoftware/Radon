@@ -66,15 +66,15 @@ using TextEvents = FixedQueue<char, 256>;  ///< raw UTF-8 bytes
 
 /// Filled by the platform backend once per frame.
 struct Input {
-    Vec2 pointer{};                ///< logical pixels, top-left origin
-    bool pointer_down = false;     ///< held this frame
-    bool pointer_pressed = false;  ///< went down this frame
-    bool pointer_released = false; ///< went up this frame
-    bool touch = false;            ///< pointer comes from a finger (no hover, scroll by drag)
-    float wheel = 0;               ///< vertical scroll, logical lines (positive = content moves down)
+    Vec2 pointer{};                 ///< logical pixels, top-left origin
+    bool pointer_down = false;      ///< held this frame
+    bool pointer_pressed = false;   ///< went down this frame
+    bool pointer_released = false;  ///< went up this frame
+    bool touch = false;             ///< pointer comes from a finger (no hover, scroll by drag)
+    float wheel = 0;                ///< vertical scroll, logical lines (positive = content moves down)
     KeyEvents keys;
     TextEvents text;
-    Rect safe_area{};              ///< mobile insets in logical px: x=left, y=top, w=right, h=bottom; zero on desktop
+    Rect safe_area{};  ///< mobile insets in logical px: x=left, y=top, w=right, h=bottom; zero on desktop
 };
 
 struct Response {

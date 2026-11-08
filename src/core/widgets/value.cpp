@@ -4,8 +4,7 @@
 namespace rd {
 using namespace detail;
 
-Response slider(Context& ctx, std::string_view label, float& value, float lo, float hi,
-                const char* format) {
+Response slider(Context& ctx, std::string_view label, float& value, float lo, float hi, const char* format) {
     State& s = state(ctx);
     const Theme& t = s.cfg.theme;
     ID id = get_id(s, label);

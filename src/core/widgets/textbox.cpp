@@ -22,7 +22,9 @@ TextEdit* find_edit(State& s, ID id) {
     return e;
 }
 
-bool is_cont(char c) { return (static_cast<unsigned char>(c) & 0xC0) == 0x80; }
+bool is_cont(char c) {
+    return (static_cast<unsigned char>(c) & 0xC0) == 0x80;
+}
 
 int prev_boundary(const TextBuffer& b, int i) {
     if (i <= 0) return 0;
@@ -114,25 +116,41 @@ Response textbox(Context& ctx, std::string_view label, TextBuffer& buf) {
             const KeyEvent& ke = s.in.keys.items[k];
             switch (ke.key) {
                 case KeyBackspace:
-                    if (ep.has_sel()) ep.erase(ep.lo(), ep.hi());
-                    else ep.erase(prev_boundary(buf, ed->cursor), ed->cursor);
+                    if (ep.has_sel())
+                        ep.erase(ep.lo(), ep.hi());
+                    else
+                        ep.erase(prev_boundary(buf, ed->cursor), ed->cursor);
                     break;
                 case KeyDelete:
-                    if (ep.has_sel()) ep.erase(ep.lo(), ep.hi());
-                    else ep.erase(ed->cursor, next_boundary(buf, ed->cursor));
+                    if (ep.has_sel())
+                        ep.erase(ep.lo(), ep.hi());
+                    else
+                        ep.erase(ed->cursor, next_boundary(buf, ed->cursor));
                     break;
                 case KeyLeft:
-                    if (ep.has_sel() && !ke.shift) ep.move(ep.lo(), false);
-                    else ep.move(prev_boundary(buf, ed->cursor), ke.shift);
+                    if (ep.has_sel() && !ke.shift)
+                        ep.move(ep.lo(), false);
+                    else
+                        ep.move(prev_boundary(buf, ed->cursor), ke.shift);
                     break;
                 case KeyRight:
-                    if (ep.has_sel() && !ke.shift) ep.move(ep.hi(), false);
-                    else ep.move(next_boundary(buf, ed->cursor), ke.shift);
+                    if (ep.has_sel() && !ke.shift)
+                        ep.move(ep.hi(), false);
+                    else
+                        ep.move(next_boundary(buf, ed->cursor), ke.shift);
                     break;
-                case KeyHome: ep.move(0, ke.shift); break;
-                case KeyEnd: ep.move(buf.length, ke.shift); break;
-                case KeyEnter: rs.clicked = true; break;
-                case KeyEscape: s.focus = 0; break;
+                case KeyHome:
+                    ep.move(0, ke.shift);
+                    break;
+                case KeyEnd:
+                    ep.move(buf.length, ke.shift);
+                    break;
+                case KeyEnter:
+                    rs.clicked = true;
+                    break;
+                case KeyEscape:
+                    s.focus = 0;
+                    break;
                 case KeyA:
                     if (ke.ctrl) {
                         ed->anchor = 0;
@@ -156,7 +174,8 @@ Response textbox(Context& ctx, std::string_view label, TextBuffer& buf) {
                         ep.insert(tmp, m);
                     }
                     break;
-                default: break;
+                default:
+                    break;
             }
             s.blink = 0;
         }

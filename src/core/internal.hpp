@@ -74,7 +74,7 @@ struct Glyph {
     FontHandle font = -1;
     uint32_t cp = 0;
     bool used = false;
-    float u0 = 0, v0 = 0, u1 = 0, v1 = 0;  // atlas uv of the bitmap
+    float u0 = 0, v0 = 0, u1 = 0, v1 = 0;                 // atlas uv of the bitmap
     float xoff = 0, yoff = 0, w = 0, h = 0, advance = 0;  // logical px
 };
 
@@ -178,8 +178,7 @@ void extend_height(State& s, Rect& r, float needed);
 const FontSlot* font_of(const State& s, FontHandle f);
 Vec2 text_size(const State& s, FontHandle f, std::string_view text);
 void draw_text(State& s, FontHandle f, Vec2 top_left, std::string_view text, Color c);
-void draw_text_centered(State& s, FontHandle f, const Rect& r, std::string_view text, Color c,
-                        bool center_x);
+void draw_text_centered(State& s, FontHandle f, const Rect& r, std::string_view text, Color c, bool center_x);
 void reset_atlas(State& s);
 float x_of_index(const State& s, FontHandle f, std::string_view text, int byte_index);
 int index_at_x(const State& s, FontHandle f, std::string_view text, float x);
@@ -187,8 +186,7 @@ int index_at_x(const State& s, FontHandle f, std::string_view text, float x);
 // window.cpp
 void begin_frame_windows(State& s);
 void end_frame_windows(State& s);
-bool begin_window_impl(Context& ctx, ID id, std::string_view title, Rect& rect, uint32_t flags,
-                       bool overlay);
+bool begin_window_impl(Context& ctx, ID id, std::string_view title, Rect& rect, uint32_t flags, bool overlay);
 
 // widgets
 Response selectable(Context& ctx, std::string_view text, bool selected);

@@ -28,23 +28,40 @@ namespace {
 int map_key(SDL_Keycode k) {
     switch (k) {
         case SDLK_RETURN:
-        case SDLK_KP_ENTER: return KeyEnter;
-        case SDLK_BACKSPACE: return KeyBackspace;
-        case SDLK_DELETE: return KeyDelete;
-        case SDLK_LEFT: return KeyLeft;
-        case SDLK_RIGHT: return KeyRight;
-        case SDLK_UP: return KeyUp;
-        case SDLK_DOWN: return KeyDown;
-        case SDLK_HOME: return KeyHome;
-        case SDLK_END: return KeyEnd;
-        case SDLK_TAB: return KeyTab;
-        case SDLK_ESCAPE: return KeyEscape;
-        case SDLK_SPACE: return KeySpace;
-        case SDLK_A: return KeyA;
-        case SDLK_C: return KeyC;
-        case SDLK_V: return KeyV;
-        case SDLK_X: return KeyX;
-        default: return KeyNone;
+        case SDLK_KP_ENTER:
+            return KeyEnter;
+        case SDLK_BACKSPACE:
+            return KeyBackspace;
+        case SDLK_DELETE:
+            return KeyDelete;
+        case SDLK_LEFT:
+            return KeyLeft;
+        case SDLK_RIGHT:
+            return KeyRight;
+        case SDLK_UP:
+            return KeyUp;
+        case SDLK_DOWN:
+            return KeyDown;
+        case SDLK_HOME:
+            return KeyHome;
+        case SDLK_END:
+            return KeyEnd;
+        case SDLK_TAB:
+            return KeyTab;
+        case SDLK_ESCAPE:
+            return KeyEscape;
+        case SDLK_SPACE:
+            return KeySpace;
+        case SDLK_A:
+            return KeyA;
+        case SDLK_C:
+            return KeyC;
+        case SDLK_V:
+            return KeyV;
+        case SDLK_X:
+            return KeyX;
+        default:
+            return KeyNone;
     }
 }
 
@@ -65,7 +82,8 @@ void clipboard_set(void*, const char* text, int len) {
 bool make_window(Platform* p, const PlatformConfig& cfg, bool es) {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, es ? 0 : 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, es ? SDL_GL_CONTEXT_PROFILE_ES : SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                        es ? SDL_GL_CONTEXT_PROFILE_ES : SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_WindowFlags flags = SDL_WINDOW_OPENGL | SDL_WINDOW_HIGH_PIXEL_DENSITY;
     if (cfg.resizable) flags |= SDL_WINDOW_RESIZABLE;
@@ -120,10 +138,16 @@ float dpi_scale(const Platform* p) {
     return d > 0 ? d : 1.0f;
 }
 
-bool is_gles(const Platform* p) { return p->gles; }
-void request_quit(Platform* p) { p->quit = true; }
+bool is_gles(const Platform* p) {
+    return p->gles;
+}
+void request_quit(Platform* p) {
+    p->quit = true;
+}
 
-void framebuffer_size(const Platform* p, int& w, int& h) { SDL_GetWindowSizeInPixels(p->window, &w, &h); }
+void framebuffer_size(const Platform* p, int& w, int& h) {
+    SDL_GetWindowSizeInPixels(p->window, &w, &h);
+}
 
 void attach(Platform* p, Context& ctx) {
     ctx.set_dpi_scale(dpi_scale(p));
@@ -141,7 +165,9 @@ bool poll(Platform* p, Input& in, float& dt) {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
-            case SDL_EVENT_QUIT: p->quit = true; break;
+            case SDL_EVENT_QUIT:
+                p->quit = true;
+                break;
             case SDL_EVENT_MOUSE_MOTION:
                 p->pointer = {e.motion.x, e.motion.y};
                 p->touch = false;
@@ -199,7 +225,8 @@ bool poll(Platform* p, Input& in, float& dt) {
             case SDL_EVENT_TEXT_INPUT:
                 for (const char* c = e.text.text; *c; c++) in.text.push(*c);
                 break;
-            default: break;
+            default:
+                break;
         }
     }
     in.pointer = p->pointer;
@@ -209,8 +236,10 @@ bool poll(Platform* p, Input& in, float& dt) {
     SDL_Rect safe{0, 0, ww, wh};
     in.safe_area = {};
     if (SDL_GetWindowSafeArea(p->window, &safe)) {
-        in.safe_area = {(float)safe.x, (float)safe.y, (float)(ww - safe.x - safe.w), (float)(wh - safe.y - safe.h)};
-        if (in.safe_area.x < 0 || in.safe_area.y < 0 || in.safe_area.w < 0 || in.safe_area.h < 0) in.safe_area = {};
+        in.safe_area = {(float)safe.x, (float)safe.y, (float)(ww - safe.x - safe.w),
+                        (float)(wh - safe.y - safe.h)};
+        if (in.safe_area.x < 0 || in.safe_area.y < 0 || in.safe_area.w < 0 || in.safe_area.h < 0)
+            in.safe_area = {};
     }
 
     Uint64 now = SDL_GetTicksNS();
@@ -223,8 +252,10 @@ bool poll(Platform* p, Input& in, float& dt) {
 void finish_frame(Platform* p, Context& ctx) {
     const bool want = ctx.wants_text_input();
     if (want != p->text_input) {
-        if (want) SDL_StartTextInput(p->window);
-        else SDL_StopTextInput(p->window);
+        if (want)
+            SDL_StartTextInput(p->window);
+        else
+            SDL_StopTextInput(p->window);
         p->text_input = want;
     }
     SDL_GL_SwapWindow(p->window);

@@ -53,8 +53,7 @@ void DrawList::sort_by_layer() {
     }
 }
 
-void DrawList::quad(TextureId tex, const Rect& r, Vec2 uv0, Vec2 uv1, Color c, Vec2 center,
-                    Vec4 shape) {
+void DrawList::quad(TextureId tex, const Rect& r, Vec2 uv0, Vec2 uv1, Color c, Vec2 center, Vec4 shape) {
     if (!begin(tex, 4, 6)) return;
     const float xs[4] = {r.x, r.x + r.w, r.x + r.w, r.x};
     const float ys[4] = {r.y, r.y, r.y + r.h, r.y + r.h};
@@ -62,13 +61,14 @@ void DrawList::quad(TextureId tex, const Rect& r, Vec2 uv0, Vec2 uv1, Color c, V
     const float vs[4] = {uv0.y, uv0.y, uv1.y, uv1.y};
     uint32_t base = nv_;
     for (int i = 0; i < 4; i++)
-        verts_[nv_++] = DrawVertex{{xs[i], ys[i]}, {us[i], vs[i]}, c, {xs[i] - center.x, ys[i] - center.y}, shape};
+        verts_[nv_++] =
+            DrawVertex{{xs[i], ys[i]}, {us[i], vs[i]}, c, {xs[i] - center.x, ys[i] - center.y}, shape};
     static const uint32_t order[6] = {0, 1, 2, 0, 2, 3};
     for (uint32_t o : order) idx_[ni_++] = base + o;
 }
 
-void DrawList::rect_shape(const Rect& r, Color c, float radius, float border, float margin,
-                          float blur, Vec2 off) {
+void DrawList::rect_shape(const Rect& r, Color c, float radius, float border, float margin, float blur,
+                          Vec2 off) {
     if (c.a == 0 || r.w <= 0 || r.h <= 0) return;
     Rect q{r.x - margin + off.x, r.y - margin + off.y, r.w + 2 * margin, r.h + 2 * margin};
     Vec2 center{r.x + r.w / 2 + off.x, r.y + r.h / 2 + off.y};

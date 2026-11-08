@@ -26,8 +26,8 @@ private:
 
     rd::FontHandle font_ = -1, small_ = -1;
     bool dark_ = true, laid_out_ = false, check_ = true, open_text_ = true, open_misc_ = true;
-    float volume_ = 0.35f, speed_ = 2.0f, progress_ = 0.0f;
-    int counter_ = 0, combo_ = 0, last_w_ = 0, last_h_ = 0;
+    float volume_ = 0.35f, speed_ = 2.0f;
+    int counter_ = 0, last_w_ = 0, last_h_ = 0;
     rd::TextureId checker_ = 0;
     rd::Rect main_{24, 24, 380, 520}, stats_{430, 24, 240, 170};
     char name_[48] = "Radon";

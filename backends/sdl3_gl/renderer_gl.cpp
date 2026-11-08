@@ -35,43 +35,93 @@ using GLsizeiptr = std::ptrdiff_t;
 using GLchar = char;
 
 enum : GLenum {
-    GL_TRIANGLES = 0x0004, GL_UNSIGNED_INT = 0x1405, GL_FLOAT = 0x1406, GL_UNSIGNED_BYTE = 0x1401,
-    GL_ARRAY_BUFFER = 0x8892, GL_ELEMENT_ARRAY_BUFFER = 0x8893, GL_STREAM_DRAW = 0x88E0,
-    GL_VERTEX_SHADER = 0x8B31, GL_FRAGMENT_SHADER = 0x8B30, GL_COMPILE_STATUS = 0x8B81,
-    GL_LINK_STATUS = 0x8B82, GL_INFO_LOG_LENGTH = 0x8B84, GL_TEXTURE_2D = 0x0DE1, GL_TEXTURE0 = 0x84C0,
-    GL_TEXTURE_MIN_FILTER = 0x2801, GL_TEXTURE_MAG_FILTER = 0x2800, GL_LINEAR = 0x2601,
-    GL_TEXTURE_WRAP_S = 0x2802, GL_TEXTURE_WRAP_T = 0x2803, GL_CLAMP_TO_EDGE = 0x812F, GL_R8 = 0x8229,
-    GL_RED = 0x1903, GL_RGBA = 0x1908, GL_RGBA8 = 0x8058, GL_BLEND = 0x0BE2, GL_SRC_ALPHA = 0x0302,
-    GL_ONE_MINUS_SRC_ALPHA = 0x0303, GL_ONE = 1, GL_SCISSOR_TEST = 0x0C11, GL_DEPTH_TEST = 0x0B71,
-    GL_CULL_FACE = 0x0B44, GL_COLOR_BUFFER_BIT = 0x4000, GL_UNPACK_ALIGNMENT = 0x0CF5,
-    GL_PACK_ALIGNMENT = 0x0D05, GL_FALSE_ = 0,
+    GL_TRIANGLES = 0x0004,
+    GL_UNSIGNED_INT = 0x1405,
+    GL_FLOAT = 0x1406,
+    GL_UNSIGNED_BYTE = 0x1401,
+    GL_ARRAY_BUFFER = 0x8892,
+    GL_ELEMENT_ARRAY_BUFFER = 0x8893,
+    GL_STREAM_DRAW = 0x88E0,
+    GL_VERTEX_SHADER = 0x8B31,
+    GL_FRAGMENT_SHADER = 0x8B30,
+    GL_COMPILE_STATUS = 0x8B81,
+    GL_LINK_STATUS = 0x8B82,
+    GL_INFO_LOG_LENGTH = 0x8B84,
+    GL_TEXTURE_2D = 0x0DE1,
+    GL_TEXTURE0 = 0x84C0,
+    GL_TEXTURE_MIN_FILTER = 0x2801,
+    GL_TEXTURE_MAG_FILTER = 0x2800,
+    GL_LINEAR = 0x2601,
+    GL_TEXTURE_WRAP_S = 0x2802,
+    GL_TEXTURE_WRAP_T = 0x2803,
+    GL_CLAMP_TO_EDGE = 0x812F,
+    GL_R8 = 0x8229,
+    GL_RED = 0x1903,
+    GL_RGBA = 0x1908,
+    GL_RGBA8 = 0x8058,
+    GL_BLEND = 0x0BE2,
+    GL_SRC_ALPHA = 0x0302,
+    GL_ONE_MINUS_SRC_ALPHA = 0x0303,
+    GL_ONE = 1,
+    GL_SCISSOR_TEST = 0x0C11,
+    GL_DEPTH_TEST = 0x0B71,
+    GL_CULL_FACE = 0x0B44,
+    GL_COLOR_BUFFER_BIT = 0x4000,
+    GL_UNPACK_ALIGNMENT = 0x0CF5,
+    GL_PACK_ALIGNMENT = 0x0D05,
+    GL_FALSE_ = 0,
 };
 
-#define RD_GL_FUNCS(X)                                                                                     \
-    X(GLuint, CreateShader, (GLenum)) X(void, ShaderSource, (GLuint, GLsizei, const GLchar* const*, const GLint*)) \
-    X(void, CompileShader, (GLuint)) X(void, GetShaderiv, (GLuint, GLenum, GLint*))                        \
-    X(void, GetShaderInfoLog, (GLuint, GLsizei, GLsizei*, GLchar*)) X(GLuint, CreateProgram, ())           \
-    X(void, AttachShader, (GLuint, GLuint)) X(void, LinkProgram, (GLuint))                                 \
-    X(void, GetProgramiv, (GLuint, GLenum, GLint*))                                                        \
-    X(void, GetProgramInfoLog, (GLuint, GLsizei, GLsizei*, GLchar*)) X(void, DeleteShader, (GLuint))       \
-    X(void, DeleteProgram, (GLuint)) X(void, UseProgram, (GLuint))                                         \
-    X(GLint, GetUniformLocation, (GLuint, const GLchar*)) X(void, Uniform2f, (GLint, GLfloat, GLfloat))    \
-    X(void, Uniform1i, (GLint, GLint)) X(void, GenBuffers, (GLsizei, GLuint*))                             \
-    X(void, BindBuffer, (GLenum, GLuint)) X(void, BufferData, (GLenum, GLsizeiptr, const void*, GLenum))   \
-    X(void, DeleteBuffers, (GLsizei, const GLuint*)) X(void, GenVertexArrays, (GLsizei, GLuint*))          \
-    X(void, BindVertexArray, (GLuint)) X(void, DeleteVertexArrays, (GLsizei, const GLuint*))               \
-    X(void, EnableVertexAttribArray, (GLuint))                                                             \
-    X(void, VertexAttribPointer, (GLuint, GLint, GLenum, GLboolean, GLsizei, const void*))                 \
-    X(void, GenTextures, (GLsizei, GLuint*)) X(void, BindTexture, (GLenum, GLuint))                        \
-    X(void, TexImage2D, (GLenum, GLint, GLint, GLsizei, GLsizei, GLint, GLenum, GLenum, const void*))      \
-    X(void, TexSubImage2D, (GLenum, GLint, GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, const void*))   \
-    X(void, TexParameteri, (GLenum, GLenum, GLint)) X(void, DeleteTextures, (GLsizei, const GLuint*))      \
-    X(void, ActiveTexture, (GLenum)) X(void, PixelStorei, (GLenum, GLint)) X(void, Enable, (GLenum))       \
-    X(void, Disable, (GLenum)) X(void, BlendFuncSeparate, (GLenum, GLenum, GLenum, GLenum))                \
-    X(void, Viewport, (GLint, GLint, GLsizei, GLsizei)) X(void, Scissor, (GLint, GLint, GLsizei, GLsizei)) \
-    X(void, DrawElements, (GLenum, GLsizei, GLenum, const void*))                                          \
-    X(void, ClearColor, (GLfloat, GLfloat, GLfloat, GLfloat)) X(void, Clear, (GLbitfield))                \
-    X(void, ReadPixels, (GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, void*))
+// clang-format off
+#define RD_GL_FUNCS(X)                                                                                       \
+    X(GLuint, CreateShader, (GLenum))                                                                        \
+    X(void, ShaderSource, (GLuint, GLsizei, const GLchar* const*, const GLint*)) X(                          \
+        void, CompileShader, (GLuint)) X(void, GetShaderiv, (GLuint, GLenum, GLint*))                        \
+        X(void, GetShaderInfoLog, (GLuint, GLsizei, GLsizei*, GLchar*)) X(GLuint, CreateProgram, ()) X(      \
+            void, AttachShader, (GLuint, GLuint)) X(void, LinkProgram, (GLuint)) X(void, GetProgramiv,       \
+                                                                                   (GLuint, GLenum, GLint*)) \
+            X(void, GetProgramInfoLog, (GLuint, GLsizei, GLsizei*, GLchar*)) X(void, DeleteShader, (GLuint)) \
+                X(void, DeleteProgram, (GLuint)) X(void, UseProgram, (GLuint)) X(                            \
+                    GLint, GetUniformLocation,                                                               \
+                    (GLuint, const GLchar*)) X(void, Uniform2f, (GLint, GLfloat, GLfloat))                   \
+                    X(void, Uniform1i, (GLint, GLint)) X(void, GenBuffers, (GLsizei, GLuint*)) X(            \
+                        void,                                                                                \
+                        BindBuffer,                                                                          \
+                        (GLenum, GLuint)) X(void, BufferData, (GLenum, GLsizeiptr, const void*, GLenum))     \
+                        X(void, DeleteBuffers, (GLsizei, const GLuint*)) X(                                  \
+                            void,                                                                            \
+                            GenVertexArrays, (GLsizei, GLuint*)) X(void, BindVertexArray, (GLuint))          \
+                            X(void, DeleteVertexArrays,                                                      \
+                              (GLsizei, const GLuint*)) X(void, EnableVertexAttribArray, (GLuint))           \
+                                X(void, VertexAttribPointer,                                                 \
+                                  (GLuint, GLint, GLenum, GLboolean, GLsizei,                                \
+                                   const void*)) X(void, GenTextures, (GLsizei, GLuint*))                    \
+                                    X(void, BindTexture, (GLenum, GLuint)) X(                                \
+                                        void,                                                                \
+                                        TexImage2D,                                                          \
+                                        (GLenum, GLint, GLint, GLsizei, GLsizei, GLint, GLenum, GLenum,      \
+                                         const void*))                                                       \
+                                        X(void, TexSubImage2D,                                               \
+                                          (GLenum, GLint, GLint, GLint, GLsizei, GLsizei, GLenum, GLenum,    \
+                                           const void*)) X(void, TexParameteri, (GLenum, GLenum, GLint))     \
+                                            X(void, DeleteTextures, (GLsizei, const GLuint*)) X(             \
+                                                void,                                                        \
+                                                ActiveTexture,                                               \
+                                                (GLenum)) X(void, PixelStorei, (GLenum, GLint))              \
+                                                X(void, Enable, (GLenum)) X(void, Disable, (GLenum)) X(      \
+                                                    void,                                                    \
+                                                    BlendFuncSeparate, (GLenum, GLenum, GLenum, GLenum))     \
+                                                    X(void, Viewport, (GLint, GLint, GLsizei, GLsizei))      \
+                                                        X(void, Scissor, (GLint, GLint, GLsizei, GLsizei))   \
+                                                            X(void, DrawElements,                            \
+                                                              (GLenum, GLsizei, GLenum, const void*))        \
+                                                                X(void, ClearColor,                          \
+                                                                  (GLfloat, GLfloat, GLfloat, GLfloat))      \
+                                                                    X(void, Clear, (GLbitfield))             \
+                                                                        X(void, ReadPixels,                  \
+                                                                          (GLint, GLint, GLsizei, GLsizei,   \
+                                                                           GLenum, GLenum, void*))
+// clang-format on
 
 #define RD_DECL(ret, name, args) ret(RD_GLCALL* name) args = nullptr;
 }  // namespace
@@ -88,11 +138,11 @@ struct Renderer {
 namespace {
 
 bool load_functions(Renderer* r) {
-#define RD_LOAD(ret, name, args)                                                                       \
-    r->name = reinterpret_cast<ret(RD_GLCALL*) args>(SDL_GL_GetProcAddress("gl" #name));               \
-    if (!r->name) {                                                                                    \
-        std::fprintf(stderr, "radon: missing GL function gl%s\n", #name);                              \
-        return false;                                                                                  \
+#define RD_LOAD(ret, name, args)                                                         \
+    r->name = reinterpret_cast<ret(RD_GLCALL*) args>(SDL_GL_GetProcAddress("gl" #name)); \
+    if (!r->name) {                                                                      \
+        std::fprintf(stderr, "radon: missing GL function gl%s\n", #name);                \
+        return false;                                                                    \
     }
     RD_GL_FUNCS(RD_LOAD)
 #undef RD_LOAD
@@ -128,8 +178,9 @@ void set_tex_params(Renderer* r) {
 Renderer* create_renderer(const RendererConfig& cfg) {
     std::unique_ptr<Renderer> r(new Renderer);
     if (!load_functions(r.get())) return nullptr;
-    const std::string header = cfg.gles ? "#version 300 es\nprecision highp float;\nprecision highp sampler2D;\n"
-                                        : "#version 330 core\n";
+    const std::string header = cfg.gles
+                                   ? "#version 300 es\nprecision highp float;\nprecision highp sampler2D;\n"
+                                   : "#version 330 core\n";
     GLuint vs = compile(r.get(), GL_VERTEX_SHADER, header + kVertexBody);
     GLuint fs = compile(r.get(), GL_FRAGMENT_SHADER, header + kFragmentBody);
     if (!vs || !fs) return nullptr;
@@ -215,7 +266,8 @@ void render(Renderer* r, const Context& ctx, int fb_w, int fb_h) {
         r->PixelStorei(GL_UNPACK_ALIGNMENT, 1);
         const int n = ctx.atlas_size();
         if (r->atlas_size != n) {
-            r->TexImage2D(GL_TEXTURE_2D, 0, (GLint)GL_R8, n, n, 0, GL_RED, GL_UNSIGNED_BYTE, ctx.atlas_pixels());
+            r->TexImage2D(GL_TEXTURE_2D, 0, (GLint)GL_R8, n, n, 0, GL_RED, GL_UNSIGNED_BYTE,
+                          ctx.atlas_pixels());
             set_tex_params(r);
             r->atlas_size = n;
         } else {
@@ -226,9 +278,11 @@ void render(Renderer* r, const Context& ctx, int fb_w, int fb_h) {
 
     r->BindVertexArray(r->vao);
     r->BindBuffer(GL_ARRAY_BUFFER, r->vbo);
-    r->BufferData(GL_ARRAY_BUFFER, (GLsizeiptr)dl.vertex_count() * (GLsizeiptr)sizeof(DrawVertex), dl.vertices(), GL_STREAM_DRAW);
+    r->BufferData(GL_ARRAY_BUFFER, (GLsizeiptr)dl.vertex_count() * (GLsizeiptr)sizeof(DrawVertex),
+                  dl.vertices(), GL_STREAM_DRAW);
     r->BindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
-    r->BufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)dl.index_count() * (GLsizeiptr)sizeof(uint32_t), dl.indices(), GL_STREAM_DRAW);
+    r->BufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)dl.index_count() * (GLsizeiptr)sizeof(uint32_t),
+                  dl.indices(), GL_STREAM_DRAW);
 
     GLuint bound = r->atlas_tex;
     for (int i = 0; i < dl.command_count(); i++) {
@@ -237,9 +291,11 @@ void render(Renderer* r, const Context& ctx, int fb_w, int fb_h) {
         float x1 = std::fmin((float)fb_w, (c.clip.x + c.clip.w) * dpi);
         float y1 = std::fmin((float)fb_h, (c.clip.y + c.clip.h) * dpi);
         if (x1 <= x0 || y1 <= y0) continue;
-        r->Scissor((GLint)x0, (GLint)((float)fb_h - y1), (GLsizei)(x1 - x0 + 0.5f), (GLsizei)(y1 - y0 + 0.5f));
-        GLuint want = c.texture == 0 ? r->atlas_tex
-                                     : (c.texture <= r->textures.size() ? r->textures[c.texture - 1] : r->atlas_tex);
+        r->Scissor((GLint)x0, (GLint)((float)fb_h - y1), (GLsizei)(x1 - x0 + 0.5f),
+                   (GLsizei)(y1 - y0 + 0.5f));
+        GLuint want = c.texture == 0
+                          ? r->atlas_tex
+                          : (c.texture <= r->textures.size() ? r->textures[c.texture - 1] : r->atlas_tex);
         if (want != bound) {
             r->BindTexture(GL_TEXTURE_2D, want);
             bound = want;

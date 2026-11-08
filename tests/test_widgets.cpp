@@ -124,7 +124,7 @@ TEST_CASE("combo opens a popup and selects an item") {
     u.frame();
     u.click(20, 20);  // open
     u.frame();
-    u.frame();        // popup rect known
+    u.frame();  // popup rect known
     // popup: below the combo (y = 36 + 2), rows 28 px high with 6 px padding => item 2 at ~y 38+8+68
     u.click(20, 38 + 8 + 2 * 34 + 10);
     CHECK(sel == 2);
@@ -209,7 +209,8 @@ TEST_CASE("label, wrapped label, progress, image allocate layout cells") {
         cells[1] = after;
     };
     u.frame();
-    // label(34) + wrapped(34, no font => one line, height >= cell) + progress(34) + image(60+6) => next >= 8+34*3+66
+    // label(34) + wrapped(34, no font => one line, height >= cell) + progress(34) + image(60+6) => next >=
+    // 8+34*3+66
     CHECK(cells[1].y >= 8 + 34 * 3 + 66 - 0.01f);
     bool has_image = false;
     for (int i = 0; i < u.h.ctx.draw_list().command_count(); i++)

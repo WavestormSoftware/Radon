@@ -4,7 +4,9 @@
 namespace rd {
 namespace detail {
 
-Layout& top_layout(State& s) { return s.layouts[s.layout_n > 0 ? s.layout_n - 1 : 0]; }
+Layout& top_layout(State& s) {
+    return s.layouts[s.layout_n > 0 ? s.layout_n - 1 : 0];
+}
 
 bool push_layout(State& s, const Rect& body) {
     if (s.layout_n >= s.cfg.max_layout_stack) {

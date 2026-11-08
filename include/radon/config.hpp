@@ -12,13 +12,13 @@ struct Config {
     int max_draw_commands = 4096;
     int max_vertices = 65536;
     int max_indices = 196608;
-    int max_textboxes = 16;   ///< edit state, keyed by ID
+    int max_textboxes = 16;  ///< edit state, keyed by ID
     int max_fonts = 4;
-    int max_glyphs = 4096;    ///< glyph cache entries
-    int max_anims = 256;      ///< hover/press blend slots, keyed by ID
-    int atlas_size = 1024;    ///< glyph atlas, square
+    int max_glyphs = 4096;  ///< glyph cache entries
+    int max_anims = 256;    ///< hover/press blend slots, keyed by ID
+    int atlas_size = 1024;  ///< glyph atlas, square
     float dpi_scale = 1.0f;
-    bool animations = true;   ///< cosmetic only; never changes interaction results
+    bool animations = true;  ///< cosmetic only; never changes interaction results
     Theme theme = Theme::dark();
 };
 

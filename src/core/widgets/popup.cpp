@@ -17,9 +17,9 @@ bool popup_begin_id(Context& ctx, ID pid, float min_w) {
     s.popup_seen = true;
     float h = 24;
     for (int i = 0; i < s.cfg.max_windows; i++)
-        if (s.wins[i].used && s.wins[i].id == pid) h = std::fmin(std::fmax(s.wins[i].content_h, 24.0f), 260.0f);
-    Rect r{s.popup_anchor.x, s.popup_anchor.y + s.popup_anchor.h + 2,
-           std::fmax(s.popup_anchor.w, min_w), h};
+        if (s.wins[i].used && s.wins[i].id == pid)
+            h = std::fmin(std::fmax(s.wins[i].content_h, 24.0f), 260.0f);
+    Rect r{s.popup_anchor.x, s.popup_anchor.y + s.popup_anchor.h + 2, std::fmax(s.popup_anchor.w, min_w), h};
     return begin_window_impl(ctx, pid, "", r, WindowBorder | WindowScrollable, true);
 }
 
@@ -55,14 +55,18 @@ void open_popup(Context& ctx, std::string_view id) {
     detail::open_popup_id(s, hash_id(detail::top_id(s), id));
 }
 
-void close_popup(Context& ctx) { detail::state(ctx).popup_id = 0; }
+void close_popup(Context& ctx) {
+    detail::state(ctx).popup_id = 0;
+}
 
 bool popup_begin(Context& ctx, std::string_view id) {
     auto& s = detail::state(ctx);
     return detail::popup_begin_id(ctx, hash_id(detail::top_id(s), id), 120);
 }
 
-void popup_end(Context& ctx) { end_window(ctx); }
+void popup_end(Context& ctx) {
+    end_window(ctx);
+}
 
 bool combo(Context& ctx, std::string_view label, int& selected, const char* const* items, int count) {
     using namespace detail;

@@ -21,8 +21,7 @@ Response label_wrapped(Context& ctx, std::string_view text) {
     float lh = measure_text(ctx, t.font_body, "M").y;
     extend_height(s, r, n * lh);
     for (int i = 0; i < n; i++)
-        draw_text(s, t.font_body, {r.x, r.y + i * lh},
-                  text.substr(lines[i].start, lines[i].length), t.text);
+        draw_text(s, t.font_body, {r.x, r.y + i * lh}, text.substr(lines[i].start, lines[i].length), t.text);
     return {};
 }
 

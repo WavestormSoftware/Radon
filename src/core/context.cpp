@@ -166,8 +166,12 @@ Context::Context(const Config& cfg) : s_(new detail::State(cfg)) {}
 Context::~Context() = default;
 
 namespace detail {
-State& state(Context& c) { return *c.s_; }
-const State& state(const Context& c) { return *c.s_; }
+State& state(Context& c) {
+    return *c.s_;
+}
+const State& state(const Context& c) {
+    return *c.s_;
+}
 }  // namespace detail
 
 void Context::begin_frame(const Input& input, float dt) {
@@ -260,22 +264,44 @@ void Context::end_frame() {
     if (s.dl.overflow()) s.error = true;
 }
 
-const DrawList& Context::draw_list() const { return s_->dl; }
-bool Context::error() const { return s_->error; }
-bool Context::warning() const { return s_->warning; }
-void Context::set_theme(const Theme& t) { s_->cfg.theme = t; }
-const Theme& Context::theme() const { return s_->cfg.theme; }
-float Context::dpi_scale() const { return s_->cfg.dpi_scale; }
-void Context::set_default_font(FontHandle f) { s_->default_font = f; }
+const DrawList& Context::draw_list() const {
+    return s_->dl;
+}
+bool Context::error() const {
+    return s_->error;
+}
+bool Context::warning() const {
+    return s_->warning;
+}
+void Context::set_theme(const Theme& t) {
+    s_->cfg.theme = t;
+}
+const Theme& Context::theme() const {
+    return s_->cfg.theme;
+}
+float Context::dpi_scale() const {
+    return s_->cfg.dpi_scale;
+}
+void Context::set_default_font(FontHandle f) {
+    s_->default_font = f;
+}
 void Context::set_clipboard_callbacks(ClipboardGet g, ClipboardSet st, void* user) {
     s_->clip_get = g;
     s_->clip_set = st;
     s_->clip_user = user;
 }
-const uint8_t* Context::atlas_pixels() const { return s_->atlas.get(); }
-int Context::atlas_size() const { return s_->cfg.atlas_size; }
-uint32_t Context::atlas_version() const { return s_->atlas_ver; }
-bool Context::wants_text_input() const { return s_->wants_text; }
+const uint8_t* Context::atlas_pixels() const {
+    return s_->atlas.get();
+}
+int Context::atlas_size() const {
+    return s_->cfg.atlas_size;
+}
+uint32_t Context::atlas_version() const {
+    return s_->atlas_ver;
+}
+bool Context::wants_text_input() const {
+    return s_->wants_text;
+}
 
 void Context::set_dpi_scale(float scale) {
     if (scale <= 0 || scale == s_->cfg.dpi_scale) return;

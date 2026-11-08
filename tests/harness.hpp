@@ -71,9 +71,7 @@ struct Harness {
         press(ui);
         release(ui);
     }
-    void key(int k, bool shift = false, bool ctrl = false) {
-        in.keys.push({k, shift, ctrl, false});
-    }
+    void key(int k, bool shift = false, bool ctrl = false) { in.keys.push({k, shift, ctrl, false}); }
     void type(const char* s) {
         for (; *s; s++) in.text.push(*s);
     }

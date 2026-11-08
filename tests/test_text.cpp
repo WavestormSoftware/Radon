@@ -26,7 +26,9 @@ TEST_CASE("utf8_decode") {
 }
 
 namespace {
-float ten(void*, uint32_t) { return 10; }
+float ten(void*, uint32_t) {
+    return 10;
+}
 std::string join(std::string_view t, const TextLine* l, int n) {
     std::string out;
     for (int i = 0; i < n; i++) out += "[" + std::string(t.substr(l[i].start, l[i].length)) + "]";

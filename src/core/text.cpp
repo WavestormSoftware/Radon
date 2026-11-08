@@ -136,8 +136,8 @@ static const Glyph* glyph_for(State& s, FontHandle h, const FontSlot& f, uint32_
         }
         const int stride = s.cfg.atlas_size;
         s.arena.used = 0;
-        stbtt_MakeGlyphBitmap(&f.info, s.atlas.get() + (size_t)(rc.y + 1) * stride + rc.x + 1, bw, bh,
-                              stride, sc, sc, gi);
+        stbtt_MakeGlyphBitmap(&f.info, s.atlas.get() + (size_t)(rc.y + 1) * stride + rc.x + 1, bw, bh, stride,
+                              sc, sc, gi);
         s.arena.used = 0;
         const float inv = 1.0f / stride;
         g.u0 = (rc.x + 1) * inv;
@@ -167,8 +167,8 @@ void draw_text(State& s, FontHandle h, Vec2 pos, std::string_view text, Color c)
         if (p < e) utf8_decode(p, e, nx);
         const Glyph* g = glyph_for(s, h, *f, cp);
         if (g && g->w > 0 && g->h > 0)
-            s.dl.glyph({snap(pen + g->xoff), snap(base + g->yoff), g->w, g->h},
-                       {g->u0, g->v0, g->u1, g->v1}, c);
+            s.dl.glyph({snap(pen + g->xoff), snap(base + g->yoff), g->w, g->h}, {g->u0, g->v0, g->u1, g->v1},
+                       c);
         pen += advance_of(*f, cp, nx);
     }
 }
@@ -215,8 +215,7 @@ Vec2 measure_text(const Context& ctx, FontHandle font, std::string_view text) {
 
 namespace detail {
 
-int wrap_with(std::string_view text, float max_w, AdvanceFn adv, void* user, TextLine* lines,
-              int max_lines) {
+int wrap_with(std::string_view text, float max_w, AdvanceFn adv, void* user, TextLine* lines, int max_lines) {
     int n = 0;
     auto emit = [&](int start, int len) {
         if (n < max_lines && lines) lines[n] = TextLine{start, len};
@@ -227,8 +226,8 @@ int wrap_with(std::string_view text, float max_w, AdvanceFn adv, void* user, Tex
     const char* p = b;
     int line_start = 0;
     float w = 0;
-    int last_space = -1;           // byte index of the last space on this line
-    float w_at_space = 0;          // width before that space
+    int last_space = -1;   // byte index of the last space on this line
+    float w_at_space = 0;  // width before that space
     while (p < e) {
         uint32_t cp;
         int len = utf8_decode(p, e, cp);
@@ -274,8 +273,8 @@ int wrap_with(std::string_view text, float max_w, AdvanceFn adv, void* user, Tex
 
 }  // namespace detail
 
-int wrap_text(const Context& ctx, FontHandle font, std::string_view text, float max_width,
-              TextLine* lines, int max_lines) {
+int wrap_text(const Context& ctx, FontHandle font, std::string_view text, float max_width, TextLine* lines,
+              int max_lines) {
     struct Env {
         const detail::State* s;
         const detail::FontSlot* f;
@@ -286,8 +285,8 @@ int wrap_text(const Context& ctx, FontHandle font, std::string_view text, float 
     }
     return detail::wrap_with(
         text, max_width,
-        [](void* u, uint32_t cp) { return detail::advance_of(*static_cast<Env*>(u)->f, cp, 0); },
-        &env, lines, max_lines);
+        [](void* u, uint32_t cp) { return detail::advance_of(*static_cast<Env*>(u)->f, cp, 0); }, &env, lines,
+        max_lines);
 }
 
 }  // namespace rd
