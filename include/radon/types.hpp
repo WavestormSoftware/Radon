@@ -74,7 +74,7 @@ struct Input {
     float wheel = 0;               ///< vertical scroll, logical lines (positive = content moves down)
     KeyEvents keys;
     TextEvents text;
-    Rect safe_area{};              ///< mobile insets in logical pixels; zero on desktop
+    Rect safe_area{};              ///< mobile insets in logical px: x=left, y=top, w=right, h=bottom; zero on desktop
 };
 
 struct Response {

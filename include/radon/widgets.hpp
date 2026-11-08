@@ -39,6 +39,7 @@ void tooltip(Context& ctx, std::string_view text);  ///< shown while the last wi
 bool popup_begin(Context& ctx, std::string_view id);
 void popup_end(Context& ctx);
 void open_popup(Context& ctx, std::string_view id);
+void close_popup(Context& ctx);
 void push_id(Context& ctx, std::string_view id);
 void pop_id(Context& ctx);
 

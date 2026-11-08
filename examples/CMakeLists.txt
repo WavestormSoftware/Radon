@@ -1,0 +1,12 @@
+add_library(radon_demo_common STATIC common/demo.cpp)
+target_include_directories(radon_demo_common PUBLIC common)
+target_link_libraries(radon_demo_common PUBLIC radon radon_sdl3_gl)
+rd_warnings(radon_demo_common)
+
+add_subdirectory(desktop_demo)
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+    add_subdirectory(web_demo)
+endif()
+if(ANDROID OR IOS)
+    add_subdirectory(mobile_demo)
+endif()

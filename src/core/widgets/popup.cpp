@@ -55,6 +55,8 @@ void open_popup(Context& ctx, std::string_view id) {
     detail::open_popup_id(s, hash_id(detail::top_id(s), id));
 }
 
+void close_popup(Context& ctx) { detail::state(ctx).popup_id = 0; }
+
 bool popup_begin(Context& ctx, std::string_view id) {
     auto& s = detail::state(ctx);
     return detail::popup_begin_id(ctx, hash_id(detail::top_id(s), id), 120);

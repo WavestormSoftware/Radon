@@ -14,7 +14,7 @@ Theme Theme::dark() {
     t.accent = {0x4d, 0xa3, 0xff, 255};  // placeholder until the brand palette is confirmed
     t.accent_text = {0x0a, 0x0a, 0x0a, 255};
     t.border = {0x33, 0x33, 0x33, 255};
-    t.shadow = {0, 0, 0, 150};
+    t.shadow = {0, 0, 0, 110};
     t.error = {0xff, 0x5d, 0x5d, 255};
     t.focus_ring = t.accent;
     return t;
