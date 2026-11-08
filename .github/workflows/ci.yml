@@ -48,9 +48,10 @@ jobs:
         with: { distribution: temurin, java-version: 17 }
       - uses: android-actions/setup-android@v3
       - run: sdkmanager "ndk;27.0.12077973" "platforms;android-34" "build-tools;34.0.0" "cmake;3.22.1"
+      - run: git clone --depth 1 --branch release-3.2.8 https://github.com/libsdl-org/SDL.git "$RUNNER_TEMP/SDL"
       - run: |
           cd examples/mobile_demo/android
-          gradle --no-daemon assembleRelease -Pandroid.ndkVersion=27.0.12077973
+          gradle --no-daemon assembleRelease -Psdl3Dir="$RUNNER_TEMP/SDL" -Pandroid.ndkVersion=27.0.12077973
       - run: ls examples/mobile_demo/android/app/build/outputs/apk/release/
 
   ios:

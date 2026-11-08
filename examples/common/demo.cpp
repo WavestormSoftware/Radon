@@ -10,16 +10,12 @@
 namespace demo {
 
 std::vector<uint8_t> read_file(const std::string& path) {
+    // SDL_LoadFile also reads Android APK assets and iOS bundle resources.
     std::vector<uint8_t> out;
-    if (FILE* f = std::fopen(path.c_str(), "rb")) {
-        std::fseek(f, 0, SEEK_END);
-        long n = std::ftell(f);
-        std::fseek(f, 0, SEEK_SET);
-        if (n > 0) {
-            out.resize((size_t)n);
-            if (std::fread(out.data(), 1, out.size(), f) != out.size()) out.clear();
-        }
-        std::fclose(f);
+    size_t n = 0;
+    if (void* d = SDL_LoadFile(path.c_str(), &n)) {
+        out.assign(static_cast<uint8_t*>(d), static_cast<uint8_t*>(d) + n);
+        SDL_free(d);
     }
     return out;
 }
@@ -30,7 +26,12 @@ std::vector<uint8_t> find_font(const char* explicit_path) {
     if (const char* e = std::getenv("RD_FONT")) tried.push_back(e);
     tried.push_back("examples/assets/font.ttf");
     tried.push_back("assets/font.ttf");
-    if (const char* base = SDL_GetBasePath()) tried.push_back(std::string(base) + "assets/font.ttf");
+    tried.push_back("font.ttf");  // Android assets, web embed, iOS bundle
+    tried.push_back("/font.ttf");
+    if (const char* base = SDL_GetBasePath()) {
+        tried.push_back(std::string(base) + "assets/font.ttf");
+        tried.push_back(std::string(base) + "font.ttf");
+    }
     for (const auto& p : tried) {
         auto f = read_file(p);
         if (!f.empty()) {
