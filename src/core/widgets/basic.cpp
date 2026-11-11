@@ -58,6 +58,9 @@ Response checkbox(Context& ctx, std::string_view label, bool& value) {
     Rect box{r.x, r.y + (r.h - bs) / 2, bs, bs};
     const float on = anim_to(s, hash_u32(id, 77), value ? 1.0f : 0.0f, 0.12f, value ? 1.0f : 0.0f);
     draw_frame(s, box, lerp(control_color(s, id, rs), t.accent, on), rs.focused);
+    // The theme border is too faint to find an empty box by (WCAG 1.4.11 wants 3:1): outline it.
+    if (on < 0.98f && !(rs.focused && s.kbd_nav))
+        s.dl.rect(box, with_alpha(t.text_muted, 0.7f * (1 - on)), t.corner_radius, 1.5f);
     if (on > 0.02f) {
         Color c = with_alpha(t.accent_text, on);
         s.dl.line({box.x + bs * 0.24f, box.y + bs * 0.52f}, {box.x + bs * 0.43f, box.y + bs * 0.72f}, c, 2);
@@ -73,13 +76,25 @@ Response progress_bar(Context& ctx, float fraction) {
     const Theme& t = s.cfg.theme;
     Rect r = layout_next(ctx);
     Rect bar{r.x, r.y + r.h * 0.3f, r.w, r.h * 0.4f};
+    const bool busy = fraction < 0;
     fraction = fraction < 0 ? 0 : (fraction > 1 ? 1 : fraction);
     s.dl.rect(bar, t.background, bar.h / 2);
-    s.dl.rect({bar.x, bar.y, bar.w * fraction, bar.h}, t.accent, bar.h / 2);
+    if (busy) {  // a 30% segment sweeping across; still when animations are off
+        const float ph = s.cfg.animations ? std::fmod(s.time * 0.7f, 1.0f) : 0.35f;
+        const float x0 = std::fmax(bar.x, bar.x + bar.w * (ph * 1.3f - 0.3f));
+        const float x1 = std::fmin(bar.x + bar.w, bar.x + bar.w * ph * 1.3f);
+        push_clip(s, bar);
+        if (x1 > x0) s.dl.rect({x0, bar.y, x1 - x0, bar.h}, t.accent, bar.h / 2);
+        pop_clip(s);
+        if (s.cfg.animations) s.animating = true;
+    } else {
+        s.dl.rect({bar.x, bar.y, bar.w * fraction, bar.h}, t.accent, bar.h / 2);
+    }
     s.dl.rect(bar, t.border, bar.h / 2, t.border_width);
     if (s.cfg.a11y) {
         char v[16];
         std::snprintf(v, sizeof v, "%d%%", (int)(fraction * 100 + 0.5f));
+        if (busy) std::snprintf(v, sizeof v, "busy");
         s.last_id = get_id(s, "##progress");
         s.last_rect = r;
         a11y_node(s, A11yRole::ProgressBar, "progress", v);

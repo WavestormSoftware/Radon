@@ -194,6 +194,7 @@ bool Runner::step() {
     Impl& m = *m_;
     float dt = 0;
     if (!rd::sdl3::poll(m.plat, m.input, dt)) return false;
+    if (rd::sdl3::skip_frame(m.plat)) return true;  // web: nothing changed, keep the last frame
     if (rd::sdl3::system_theme_changed(m.plat) && !m.opt.light && !m.opt.dark) {
         if (m.cfg.system_theme)
             m.cfg.system_theme(*m.ctx, dark());
@@ -271,10 +272,13 @@ std::vector<uint8_t> art_rgba(int w, int h) {  // a pink-to-navy sunset with sun
             float r = 20 + 220 * (1 - fy) * (0.6f + 0.4f * fx), g = 14 + 40 * (1 - fy),
                   b = 50 + 110 * (1 - fy);
             const float dx = fx - 0.7f, dy = (fy - 0.45f) * (float)h / (float)w;
-            if (dx * dx + dy * dy < 0.012f)
-                r = 255, g = 120, b = 170;
-            else if (fy > 0.7f && ((y / 4) & 1))
-                r *= 0.55f, g *= 0.55f, b *= 0.7f;
+            if (fy > 0.7f && ((y * 32 / h) & 1)) r *= 0.55f, g *= 0.55f, b *= 0.7f;
+            // sun with an anti-aliased edge (one pixel wide) and a soft glow around it
+            const float d = std::sqrt(dx * dx + dy * dy) * (float)w, rad = 0.11f * (float)w;
+            const float sun = std::fmin(1.0f, std::fmax(0.0f, rad - d + 0.5f)) * (fy < 0.7f ? 1.0f : 0.35f);
+            const float glow = 0.35f * std::exp(-std::fmax(0.0f, d - rad) / (0.08f * (float)w));
+            r += (255 - r) * glow, g += (90 - g) * glow * 0.6f, b += (170 - b) * glow;
+            r += (255 - r) * sun, g += (130 - g) * sun, b += (180 - b) * sun;
             uint8_t* p = &px[((size_t)y * w + x) * 4];
             p[0] = (uint8_t)(r > 255 ? 255 : r), p[1] = (uint8_t)g, p[2] = (uint8_t)(b > 255 ? 255 : b),
             p[3] = 255;

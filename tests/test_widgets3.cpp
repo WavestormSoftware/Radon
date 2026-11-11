@@ -559,3 +559,52 @@ TEST_CASE("nav bar, splitter and display widgets run without errors") {
     CHECK(split == 130);
     CHECK_FALSE(u.h.ctx.error());
 }
+
+TEST_CASE("knob turns with vertical drag, keys and clamps") {
+    Ui u;
+    float v = 0.5f;
+    Response r;
+    u.body = [&] { r = knob(u.h.ctx, "k", v, 0, 1); };
+    u.frame();
+    u.h.move(30, 30);  // inside the two-row knob
+    u.frame();
+    u.h.in.pointer_down = u.h.in.pointer_pressed = true;
+    u.frame();
+    u.h.in.pointer_pressed = false;
+    u.h.move(30, 10);  // up 20 px: +0.1
+    u.frame();
+    CHECK(v == doctest::Approx(0.6f));
+    CHECK(r.changed);
+    u.h.move(30, -1000);
+    u.frame();
+    CHECK(v == doctest::Approx(1.0f));
+    u.h.in.pointer_down = false;
+    u.h.in.pointer_released = true;
+    u.frame();
+    u.h.in.pointer_released = false;
+    u.h.key(KeyHome);
+    u.frame();
+    CHECK(v == doctest::Approx(0.0f));
+}
+
+TEST_CASE("steps returns a finished step when clicked, ignores the rest") {
+    Ui u;
+    static const char* const items[] = {"A", "B", "C"};
+    int clicked = -2;
+    u.body = [&] {
+        const int c = steps(u.h.ctx, "s", items, 3, 1);
+        if (c != -1) clicked = c;
+    };
+    u.frame();
+    u.click(8 + 284 * 2 / 3.0f + 5, u.row(0));  // step C: not reached yet
+    CHECK(clicked == -2);
+    u.click(8 + 10, u.row(0));  // step A: done
+    CHECK(clicked == 0);
+}
+
+TEST_CASE("indeterminate progress bar keeps animating") {
+    Ui u;
+    u.body = [&] { progress_bar(u.h.ctx, -1); };
+    u.frames(2);
+    CHECK(u.h.ctx.animating());
+}

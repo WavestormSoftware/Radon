@@ -13,7 +13,8 @@ struct PlatformConfig {
     bool resizable = true;
     bool vsync = true;
     /// Sleep until the next input event while the UI is idle (Context::animating() is false) instead
-    /// of redrawing every frame. Saves battery. Ignored on the web, where the browser owns the loop.
+    /// of redrawing every frame. Saves battery. On the web, where the loop cannot block, idle frames
+    /// are skipped instead: check skip_frame after poll.
     bool wait_events = false;
     /// Play the haptic feedback widgets ask for (Context::haptic) on Android and iOS.
     bool haptics = true;
@@ -26,6 +27,11 @@ Platform* create_platform(const PlatformConfig& cfg);
 void destroy_platform(Platform* p);
 /// Pumps events and fills `input` for the next frame. Returns false when the app should quit.
 bool poll(Platform* p, Input& input, float& dt_seconds);
+/// True after poll when nothing changed since the last drawn frame (wait_events on, no input, nothing
+/// animating), so this frame can be skipped without begin_frame, render or finish_frame. Only the web
+/// build ever returns true: native builds sleep inside poll instead. A frame is still drawn every
+/// 250 ms so the text caret blinks.
+bool skip_frame(const Platform* p);
 /// Call once per frame after Context::end_frame: soft keyboard (with the field's keyboard type), haptics,
 /// cursor, swap.
 void finish_frame(Platform* p, Context& ctx);
@@ -50,6 +56,8 @@ enum class FileDialog { Open, Save, Folder };
 void show_file_dialog(Platform* p, FileDialog kind, const char* default_location = nullptr);
 /// Returns true once when a dialog has finished. `path` is empty if the user cancelled.
 bool poll_file_dialog(Platform* p, std::string& path);
+/// Returns true once per file dragged onto the window, oldest first. At most 64 wait unread.
+bool poll_dropped_file(Platform* p, std::string& path);
 bool is_gles(const Platform* p);
 /// Plays haptic feedback (Android: View.performHapticFeedback; iOS: UIFeedbackGenerator). No-op elsewhere.
 /// finish_frame calls it with Context::haptic().

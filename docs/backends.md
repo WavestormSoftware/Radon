@@ -19,6 +19,8 @@ bool system_dark(const Platform*);   bool system_theme_changed(Platform*);
 bool open_url(const char*);
 void show_file_dialog(Platform*, FileDialog, const char* where = nullptr);
 bool poll_file_dialog(Platform*, std::string& path);
+bool poll_dropped_file(Platform*, std::string& path);   // files dragged onto the window
+bool skip_frame(const Platform*);                        // web: nothing changed, skip this frame
 float dpi_scale(const Platform*);   bool is_gles(const Platform*);   void request_quit(Platform*);
 }
 namespace rd::gl {

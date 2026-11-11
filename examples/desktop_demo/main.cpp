@@ -15,8 +15,8 @@ int main(int argc, char** argv) {
     cfg.system_theme = [&](rd::Context& ctx, bool dark) { gallery.set_dark(ctx, dark); };
     if (!runner.start(argc, argv, cfg)) return 1;
     gallery.set_runner(&runner);
-    auto art = demo::art_rgba(256, 128);
-    gallery.set_checker(runner.create_texture(256, 128, art.data()));
+    auto art = demo::art_rgba(512, 256);
+    gallery.set_checker(runner.create_texture(512, 256, art.data()));
     while (runner.step()) {
     }
     return 0;

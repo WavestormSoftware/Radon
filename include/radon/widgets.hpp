@@ -35,7 +35,7 @@ Response textbox(Context& ctx, std::string_view label, TextBuffer& buffer, const
                  TextInputType type);
 Response label(Context& ctx, std::string_view text);
 Response label_wrapped(Context& ctx, std::string_view text);
-Response progress_bar(Context& ctx, float fraction);
+Response progress_bar(Context& ctx, float fraction);  ///< fraction < 0: indeterminate (sliding bar)
 Response image(Context& ctx, TextureId tex, Vec2 size, Rect uv = {0, 0, 1, 1});
 /// Result of `viewport`: where the view is and the input that belongs to it.
 struct ViewportResponse : Response {
@@ -282,6 +282,13 @@ bool nav_bar(Context& ctx, std::string_view label, int& selected, const Icon* ic
              const char* const* labels, int count);
 /// A clickable path ("Home > Docs > File"). Returns the clicked index or -1.
 int breadcrumbs(Context& ctx, std::string_view label, const char* const* items, int count);
+/// A rotary control two rows tall (audio, game tools). Drag up/down, scroll, or use the arrow keys;
+/// Home/End jump to the ends. The value shows in a tooltip while hovered.
+Response knob(Context& ctx, std::string_view label, float& value, float min, float max,
+              const char* format = "%.2f");
+/// Numbered steps joined by lines (setup wizards, checkout). Steps before `current` show a check and can
+/// be clicked to go back: returns the clicked index or -1.
+int steps(Context& ctx, std::string_view label, const char* const* items, int count, int current);
 
 // ---------------------------------------------------------------------------------------------
 // More display widgets

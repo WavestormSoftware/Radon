@@ -41,6 +41,9 @@ struct Platform {
     bool touch = false;
     bool wait_events = false, idle = false, background = false, theme_changed = false, can_dismiss = false;
     int quiet = 0;  // polls in a row without events
+    bool skip = false;
+    std::vector<std::string> drops;  // dropped file paths, oldest first
+    Uint64 last_draw = 0;
     SDL_Cursor* cursors[6] = {};
     std::vector<SDL_Gamepad*> pads;
     Cursor cursor = Cursor::Arrow;
@@ -166,6 +169,10 @@ void handle_event(Platform* p, Input& in, const SDL_Event& e, float k, int ww, i
             break;
         case SDL_EVENT_SYSTEM_THEME_CHANGED:
             p->theme_changed = true;
+            break;
+        case SDL_EVENT_DROP_FILE:
+            if (e.drop.data && p->drops.size() < 64)
+                p->drops.emplace_back(e.drop.data);  // bounded if never read
             break;
         case SDL_EVENT_MOUSE_MOTION:
             p->pointer = {e.motion.x * k, e.motion.y * k};
@@ -502,6 +509,9 @@ bool poll(Platform* p, Input& in, float& dt) {
     }
 #endif
     p->quiet = events ? 0 : p->quiet + 1;
+#if defined(__EMSCRIPTEN__)
+    p->skip = p->wait_events && p->idle && p->quiet >= 2 && SDL_GetTicksNS() - p->last_draw < 250000000;
+#endif
     in.pointer = p->pointer;
     in.pointer_down = p->down;
     in.touch = p->touch;
@@ -588,7 +598,19 @@ void finish_frame(Platform* p, Context& ctx) {
     }
     p->idle = !ctx.animating();
     p->can_dismiss = ctx.can_dismiss();
+    p->last_draw = SDL_GetTicksNS();
     SDL_GL_SwapWindow(p->window);
+}
+
+bool skip_frame(const Platform* p) {
+    return p->skip;
+}
+
+bool poll_dropped_file(Platform* p, std::string& path) {
+    if (!p || p->drops.empty()) return false;
+    path = std::move(p->drops.front());
+    p->drops.erase(p->drops.begin());
+    return true;
 }
 
 }  // namespace rd::sdl3

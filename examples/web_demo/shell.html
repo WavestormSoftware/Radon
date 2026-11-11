@@ -3,23 +3,67 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0b0e12" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f2f4f7" media="(prefers-color-scheme: light)">
 <title>Radon demo</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #0a0a0a; color: #eee; font: 14px system-ui, sans-serif; }
+  :root { --bg: #0b0e12; --fg: #dfe4ea; --muted: #8b95a1; --accent: #ec4899; }
+  @media (prefers-color-scheme: light) { :root { --bg: #f2f4f7; --fg: #14181e; --muted: #66707c; --accent: #d92f84; } }
+  html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; background: var(--bg);
+    color: var(--fg); font: 14px system-ui, sans-serif; -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent; }
   #canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; outline: none; touch-action: none; }
-  #status { position: fixed; left: 12px; bottom: 12px; opacity: .6; }
+  #overlay { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; padding: 16px;
+    background: var(--bg); transition: opacity .25s; }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+  #bar { width: min(240px, 60vw); height: 4px; margin: 12px auto 0; border-radius: 2px; background: #8883; overflow: hidden; }
+  #fill { width: 0; height: 100%; background: var(--accent); transition: width .15s; }
+  #status { color: var(--muted); }
+  .error #status { color: #ff5d6c; }
+  .error #bar { display: none; }
 </style>
 </head>
 <body>
-<canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
-<div id="status">Loading…</div>
+<canvas id="canvas" tabindex="-1" aria-label="Radon demo"></canvas>
+<div id="overlay" role="status" aria-live="polite"><div><div id="status">Loading…</div><div id="bar"><div id="fill"></div></div></div></div>
 <script>
-  var Module = {
-    canvas: document.getElementById('canvas'),
-    print: function (t) { console.log(t); },
-    printErr: function (t) { console.error(t); },
-    setStatus: function (t) { document.getElementById('status').textContent = t; },
-  };
+  (function () {
+    var canvas = document.getElementById('canvas');
+    var overlay = document.getElementById('overlay');
+    var status = document.getElementById('status');
+    var fill = document.getElementById('fill');
+    function fail(msg) {
+      overlay.classList.add('error');
+      overlay.classList.remove('hidden');
+      status.textContent = msg;
+    }
+    if (!document.createElement('canvas').getContext('webgl2')) {
+      fail('This demo needs WebGL 2, which this browser or device does not provide.');
+    }
+    // Keyboard input goes to the canvas: give it focus on any press, and keep right-click for the UI.
+    canvas.addEventListener('pointerdown', function () { canvas.focus(); });
+    canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    canvas.addEventListener('webglcontextlost', function (e) {
+      e.preventDefault();
+      fail('The GPU context was lost. Reload the page to continue.');
+    });
+    window.Module = {
+      canvas: canvas,
+      print: function (t) { console.log(t); },
+      printErr: function (t) { console.error(t); },
+      // Emscripten reports "Downloading data... (done/total)" and "" when running.
+      setStatus: function (t) {
+        if (overlay.classList.contains('error')) return;
+        if (!t) { overlay.classList.add('hidden'); canvas.focus(); return; }
+        var m = t.match(/\((\d+(\.\d+)?)\/(\d+)\)/);
+        if (m) fill.style.width = (100 * m[1] / m[3]) + '%';
+        status.textContent = t.replace(/\(.*\)/, '').trim() || 'Loading…';
+      },
+      onAbort: function (what) { fail('The demo stopped: ' + what); },
+    };
+    window.addEventListener('error', function (e) { fail('Error: ' + (e.message || e)); });
+  })();
 </script>
 {{{ SCRIPT }}}
 </body>

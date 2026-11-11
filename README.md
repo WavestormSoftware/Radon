@@ -1,54 +1,64 @@
 <p align="center">
-  <img src="docs/images/radon-logo.png" alt="Radon, a UI library" width="560">
+  <img src="docs/images/radon-logo.png" alt="Radon" width="480">
 </p>
 
-[![ci](https://github.com/WavestormSoftware/Radon/actions/workflows/ci.yml/badge.svg)](https://github.com/WavestormSoftware/Radon/actions/workflows/ci.yml)
-[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+<p align="center">
+  <b>A fast, good-looking immediate-mode UI library for C++17.</b><br>
+  Desktop, phone, browser and game engine, all from one small library with no dependencies.
+</p>
 
-A small, fast, immediate-mode UI library for C++17. Call widgets every frame, get results back, and
-render the draw list it produces with any renderer. No retained widget tree, no heap allocation per frame,
-no dependencies in the core.
+<p align="center">
+  <a href="https://github.com/WavestormSoftware/Radon/actions/workflows/ci.yml"><img src="https://github.com/WavestormSoftware/Radon/actions/workflows/ci.yml/badge.svg" alt="ci"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="license: MIT"></a>
+  <img src="https://img.shields.io/badge/C%2B%2B-17-ec4899.svg" alt="C++17">
+  <img src="https://img.shields.io/badge/heap%20allocations%20per%20frame-0-3dd68c.svg" alt="0 heap allocations per frame">
+</p>
 
-![Radon gallery](docs/screenshots/gallery-widgets.png)
+![A Radon desktop app with two phone layouts](docs/images/hero.png)
 
-| Desktop | Phone |
+Immediate-mode UI is the quickest way to build tools: you write a function that draws the interface every
+frame, and there's no widget tree to keep in sync with your data. The trade-off has usually been that it
+looks like a debug overlay. Radon gives you the same quick workflow with a UI you can put in front of
+users: smooth rounded shapes, animated transitions, a real theme system, touch gestures, and
+accessibility.
+
+```cpp
+if (rd::begin_window(ui, "Settings", rect)) {
+    rd::slider(ui, "Volume", volume, 0.0f, 1.0f);
+    rd::toggle(ui, "Dark mode", dark);
+    if (rd::button(ui, "Save", rd::ButtonStyle::Primary).clicked) save();
+    rd::end_window(ui);
+}
+```
+
+That's the whole model. Your variables are the state, and widgets return what happened this frame.
+
+## Why Radon
+
+|  |  |
 |---|---|
-| ![Data page](docs/screenshots/gallery-data.png) | ![Phone layout](docs/screenshots/gallery-phone.png) |
+| **Fast and predictable** | Every pool is allocated once at startup, and a test checks that frames make **zero heap allocations**. The full widget gallery takes about 0.3 ms of CPU per frame. When nothing moves, the app sleeps instead of redrawing. |
+| **Looks good by default** | Rounded shapes, borders and shadows are drawn by the GPU. Popups, tabs, switches and page changes animate, and one flag turns all motion off. Light and dark themes follow the system setting. |
+| **Built for touch too** | `Theme::touch()` gives finger-sized controls. You also get flick scrolling, pinch and swipe, pull to refresh, swipeable rows, bottom sheets, safe areas, soft-keyboard handling and haptics. |
+| **90+ widgets** | Everything from buttons to a docking system: sortable tables with 100,000 rows, charts, rich text and Markdown, date, time and color pickers, knobs, wizards, drag and drop, toasts, and 56 vector icons. |
+| **Runs anywhere** | Windows, Linux, macOS, Web (WebGL 2), Android and iOS through one SDL3 + OpenGL ES 3 backend. The core includes no platform headers, so a backend for your own engine is a few hundred lines. |
+| **Made for games** | Show your game or 3D view in a panel, draw sprites with `rd::Canvas`, read gamepads, play sounds, or drive Radon from any engine through the C API. A raylib backend is included. |
+| **Accessible** | It builds an accessibility tree with roles, labels, values and actions. You can operate everything from the keyboard or a gamepad, and fallback fonts bring in emoji, CJK and symbols. |
 
-- **90+ widgets**: buttons, checkbox, radio, switch, sliders, range slider, steppers, text boxes with
-  selection, clipboard and undo/redo, password and search fields, multi-line text area, combo, searchable
-  and multi-select combos, autocomplete, wheel and time pickers, number pad, segmented control, chips,
-  rating, tabs, list box, sortable tables with resizable columns and tree rows, a clipper for 100,000-row
-  lists, tree, calendar and date picker, pagination, breadcrumbs, menu bar, context menus, popups, modal
-  dialogs, drawers and bottom sheets, toasts, alerts, cards, carousels, accordions, avatars, color picker,
-  line/area/bar/stacked/scatter/pie charts and sparklines, rich text and Markdown, progress ring,
-  skeletons, 56 vector icons.
-- **Docking**: split, tabbed panels you can drag out into floating windows and dock again.
-- **Drag and drop**: a typed payload from any widget to any widget, and reorderable lists.
-- **Transitions**: popups, dialogs, drawers, toasts and tooltips animate in; tabs, switches and segmented
-  controls slide; `transition_begin` fades page changes; `animate()` drives your own. One flag turns all
-  motion off.
-- **Made for touch as well as mouse**: `Theme::touch()` gives finger-sized targets, flick scrolling has
-  momentum, a long-press is a right-click, and layouts respect the safe area. Multi-touch pinch, rotate
-  and pan, swipes, pull to refresh, swipeable list rows, edge-swipe drawers and swipe-to-dismiss sheets;
-  long-press text selection with handles; fields scroll above the soft keyboard and ask for the right
-  keyboard type; haptic feedback on Android and iOS. UI is laid out in logical pixels, so it has the
-  same physical size on a 4K monitor and a phone.
-- **Accessible**: an accessibility tree (roles, labels, values, states, bounds) and screen-reader actions,
-  ready for a platform bridge. Font fallback chains bring in emoji, CJK and symbol fonts.
-- **Native where it counts**: system light/dark theme, mouse cursors, IME and soft keyboard placement,
-  file dialogs, opening URLs, the Android back button, app background/foreground, and sleeping while
-  idle instead of redrawing. See [platforms](docs/platforms.md).
-- **Portable**: Windows, Linux, macOS, Web (WebGL2), Android and iOS through one SDL3 + OpenGL ES 3
-  backend. The core includes no platform headers; write your own backend in a few hundred lines.
-- **Made for games**: show a game or 3D view in a panel (`rd::viewport`, render targets), draw 2D shapes and
-  sprites (`rd::Canvas`), use gamepads and sound effects, or drive Radon from any engine through a C API.
-  See [game integration](docs/game-integration.md).
-- **Predictable**: all memory is allocated up front from a `Config`. A full pool never crashes: the work
-  is skipped and `ctx.error()` turns true. An allocation test checks zero heap allocations per frame.
+## A closer look
 
-Radon is young (0.3). Only Linux has been built and run so far; [docs/STATUS.md](docs/STATUS.md) lists what
-has been verified on each platform.
+| | |
+|---|---|
+| ![Charts](docs/images/tile-charts.png) | ![Docking](docs/images/tile-docking.png) |
+| **Charts**: line, area, bar, stacked, scatter, pie and sparklines, with axes and legends. | **Docking**: drag tabs out into floating windows and dock them back into splits. |
+| ![Data](docs/images/tile-data.png) | ![Rich text](docs/images/tile-richtext.png) |
+| **Data**: sortable, resizable tables, virtualized lists, calendars and cards. | **Rich text**: inline styles, colors, icons and links, Markdown, and selectable text. |
+
+One theme struct restyles everything, and it switches live between light and dark:
+
+![The same UI in dark and light themes](docs/images/theme-split.png)
+
+More pictures are in the [widget guide](docs/widgets.md) and the [examples](docs/examples.md).
 
 ## Quick start
 
@@ -78,6 +88,9 @@ void frame(const rd::Input& input, float dt) {
 }
 ```
 
+[Getting started](docs/getting-started.md) walks through a complete app, including the window, input and
+rendering.
+
 ## Use it in your project
 
 ```cmake
@@ -88,30 +101,31 @@ FetchContent_MakeAvailable(radon)
 target_link_libraries(app PRIVATE radon::radon radon::sdl3_gl)   # core + the SDL3/OpenGL backend
 ```
 
-The core alone can also be installed and found with `find_package(Radon)`; see
+You can also install the core on its own and find it with `find_package(Radon)`; see
 [building](docs/building.md).
 
-## Try it
+## Try the demos
 
 ```sh
 cmake --preset linux-clang-release            # or linux-gcc-debug, macos-release, windows-msvc-release
 cmake --build --preset linux-clang-release
 ./build/linux-clang-release/examples/desktop_demo/radon_desktop_demo      # the gallery
-./build/linux-clang-release/examples/radon_ex_11_mobile_app                # a phone-style example
+./build/linux-clang-release/examples/radon_ex_11_mobile_app                # a phone-style app
 ```
 
-The demos pick a system font, or yours: `examples/assets/font.ttf`, `--font <path>` or `RD_FONT=<path>`.
-Useful flags: `--page 0..7`, `--light` / `--dark`, `--touch`, `--size 400x800`, `--screenshot out.png`.
+The demos use a system font, or one you choose: put it at `examples/assets/font.ttf`, or pass
+`--font <path>` or `RD_FONT=<path>`. Useful flags: `--page 0..12`, `--light` / `--dark`, `--touch`,
+`--size 400x800` and `--screenshot out.png`.
 
 ## Documentation
 
 | | |
 |---|---|
 | [Getting started](docs/getting-started.md) | Embed Radon in your app, step by step |
-| [Game integration](docs/game-integration.md) | Show an engine view in a panel; Radon inside an engine |
 | [Widget guide](docs/widgets.md) | Every widget with code and pictures |
 | [Layout](docs/layout.md) | Rows, columns, regions, indentation |
 | [Theming](docs/theming.md) | Colors, metrics, presets, touch metrics, scoped overrides |
+| [Game integration](docs/game-integration.md) | Show an engine view in a panel; Radon inside an engine |
 | [Platforms](docs/platforms.md) | Mobile sizing, touch, and native features per platform |
 | [Examples](docs/examples.md) | Eleven small apps and the gallery |
 | [API reference](docs/usage.md) | Every public function |
@@ -119,10 +133,18 @@ Useful flags: `--page 0..7`, `--light` / `--dark`, `--touch`, `--size 400x800`, 
 | [Building](docs/building.md) | Linux, Windows, macOS, Web, Android, iOS |
 | [Status](docs/STATUS.md) | What has been built and tested on which platform |
 
+## Status
+
+Radon is young (0.3), and the API can still change between minor versions. Linux is the main development
+platform. CI builds and tests Windows, macOS, Web, Android and iOS, but most of what runs only on a
+device (touch, haptics, the soft keyboard) has been tested only in unit tests so far.
+[docs/STATUS.md](docs/STATUS.md) lists exactly what has been verified on each platform. Bug reports from
+real devices are very welcome.
+
 ## Contributing
 
-Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first; it is short. Please
-report security problems privately as described in [SECURITY.md](SECURITY.md).
+Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) is short, so please read it
+first. Report security problems privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 

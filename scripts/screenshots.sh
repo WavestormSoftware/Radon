@@ -31,3 +31,6 @@ shot ex-07-live-plots examples/radon_ex_07_live_plots 620x480 --pointer 10,10
 shot ex-08-palette examples/radon_ex_08_palette 440x580 --pointer 10,10
 shot ex-10-dashboard examples/radon_ex_10_dashboard 1280x760 --pointer 10,10
 shot ex-09-calculator examples/radon_ex_09_calculator 360x470 --pointer 10,10
+
+# README showcase images (hero, theme split, feature tiles); needs Pillow
+if python3 -c "import PIL" 2>/dev/null; then python3 scripts/readme_images.py; else echo "skipped README images: pip install pillow"; fi

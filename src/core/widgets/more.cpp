@@ -560,4 +560,106 @@ void list_clipper_end(Context& ctx) {
     s.clipper_rest = 0;
 }
 
+namespace {
+void arc(State& s, Vec2 c, float rad, float a0, float a1, Color col, float th) {
+    const int n = (int)std::ceil(std::fabs(a1 - a0) / 0.13f);
+    for (int i = 0; i < n; i++) {
+        const float u0 = a0 + (a1 - a0) * (float)i / (float)n,
+                    u1 = a0 + (a1 - a0) * (float)(i + 1) / (float)n;
+        s.dl.line({c.x + std::cos(u0) * rad, c.y + std::sin(u0) * rad},
+                  {c.x + std::cos(u1) * rad, c.y + std::sin(u1) * rad}, col, th);
+    }
+}
+}  // namespace
+
+Response knob(Context& ctx, std::string_view label, float& value, float min, float max, const char* format) {
+    State& s = state(ctx);
+    const Theme& t = s.cfg.theme;
+    const ID id = get_id(s, label);
+    Rect r = layout_next(ctx);
+    const float d = 2 * t.cell_height;
+    extend_height(s, r, d);
+    r.h = d;
+    r.w = std::fmin(r.w, d);
+    Response rs = update_control(ctx, id, r, true, true);
+    if (max > min) {
+        const float range = max - min;
+        float nv = value;
+        if (s.active == id && s.in.pointer_down) nv -= s.pointer_delta.y * range / 200;  // up turns right
+        if (rs.hovered) nv += s.in.wheel * range * 0.02f;
+        if (rs.focused) {
+            for (int k : {KeyRight, KeyUp})
+                if (key_pressed(s, k)) nv += range * 0.05f;
+            for (int k : {KeyLeft, KeyDown})
+                if (key_pressed(s, k)) nv -= range * 0.05f;
+            if (key_pressed(s, KeyHome)) nv = min;
+            if (key_pressed(s, KeyEnd)) nv = max;
+        }
+        nv = std::fmin(std::fmax(nv, min), max);
+        if (nv != value) value = nv, rs.changed = true;
+        if (rs.hovered || s.active == id) s.cursor = Cursor::ResizeNS;
+    }
+    char buf[64];
+    std::snprintf(buf, sizeof buf, format ? format : "%.2f", (double)value);
+    a11y_node(s, A11yRole::Slider, label, buf);
+    const float f = max > min ? clamp01((value - min) / (max - min)) : 0;
+    const Vec2 c{r.x + d / 2, r.y + d / 2};
+    const float th = std::fmax(3.0f, d * 0.07f), rad = d / 2 - th;
+    const float a0 = 2.356194f, sweep = 4.712389f;  // 270 degrees, gap at the bottom
+    arc(s, c, rad, a0, a0 + sweep, t.surface_active, th);
+    if (f > 0) arc(s, c, rad, a0, a0 + sweep * f, t.accent, th);
+    const float kr = rad - th * 1.5f;
+    s.dl.rect({c.x - kr, c.y - kr, 2 * kr, 2 * kr}, control_color(s, id, rs), kr);
+    const float a = a0 + sweep * f;
+    s.dl.line({c.x + std::cos(a) * kr * 0.45f, c.y + std::sin(a) * kr * 0.45f},
+              {c.x + std::cos(a) * kr * 0.9f, c.y + std::sin(a) * kr * 0.9f}, t.text, 2);
+    focus_ring(s, r, rs, d / 2);
+    if (rs.hovered || s.active == id) tooltip(ctx, buf);
+    return rs;
+}
+
+int steps(Context& ctx, std::string_view label, const char* const* items, int count, int current) {
+    State& s = state(ctx);
+    const Theme& t = s.cfg.theme;
+    const ID base = get_id(s, label);
+    const Rect r = layout_next(ctx);
+    if (count <= 0) return -1;
+    int clicked = -1;
+    const float sw = r.w / (float)count, dot = std::fmin(r.h * 0.8f, 24.0f);
+    push_clip(s, r);
+    for (int i = 0; i < count; i++) {
+        const Rect seg{r.x + sw * (float)i, r.y, sw, r.h};
+        const Rect circle{seg.x, r.y + (r.h - dot) / 2, dot, dot};
+        const bool done = i < current, now = i == current;
+        if (done) {  // finished steps are clickable, to go back
+            const ID id = hash_u32(base, (uint32_t)i);
+            const Response rs = update_control(ctx, id, seg, true, false);
+            if (activated(s, rs)) clicked = i;
+            if (rs.hovered) s.cursor = Cursor::Hand;
+            focus_ring(s, seg, rs, t.corner_radius);
+        }
+        s.dl.rect(circle, done || now ? t.accent : t.surface_active, dot / 2);
+        if (done) {
+            const Color c = t.accent_text;
+            s.dl.line({circle.x + dot * 0.27f, circle.y + dot * 0.52f},
+                      {circle.x + dot * 0.44f, circle.y + dot * 0.68f}, c, 2);
+            s.dl.line({circle.x + dot * 0.44f, circle.y + dot * 0.68f},
+                      {circle.x + dot * 0.74f, circle.y + dot * 0.33f}, c, 2);
+        } else {
+            char n[12];
+            std::snprintf(n, sizeof n, "%d", i + 1);
+            draw_text_centered(s, t.font_small, circle, n, now ? t.accent_text : t.text_muted, true);
+        }
+        const float lx = circle.x + dot + t.spacing;
+        const float tw = std::fmin(text_size(s, t.font_body, items[i]).x, seg.x + sw - lx);
+        draw_text_centered(s, t.font_body, {lx, r.y, tw, r.h}, items[i], now ? t.text : t.text_muted, false);
+        const float x0 = lx + tw + t.spacing, x1 = seg.x + sw - t.spacing;
+        if (i + 1 < count && x1 > x0)
+            s.dl.rect({x0, r.y + r.h / 2 - 1, x1 - x0, 2}, done ? t.accent : t.surface_active, 1);
+    }
+    pop_clip(s);
+    a11y_static(s, A11yRole::Text, r, current >= 0 && current < count ? items[current] : label);
+    return clicked;
+}
+
 }  // namespace rd

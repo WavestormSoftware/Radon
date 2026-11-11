@@ -4,8 +4,23 @@ Radon follows [semantic versioning](https://semver.org); before 1.0, minor versi
 
 ## 0.3.0 (unreleased)
 
+### Changed
+
+- New README with composite showcase images built by `scripts/readme_images.py` (run by
+  `scripts/screenshots.sh`); all screenshots regenerated. The demo artwork is twice the resolution with an
+  anti-aliased sun.
+- `slider` draws a track with a round thumb and shows its value in a column on the right, like
+  `range_slider`. Pointer positions map to the track, not the whole widget.
+- Empty checkboxes, radio buttons and off switches have a visible outline; the dark theme border is lighter.
+- Web: `rd::sdl3::skip_frame` skips idle frames, so the page stops redrawing at 60 fps when nothing
+  changes. The demo shell shows load progress, a WebGL 2 check, and errors and GPU context loss instead of
+  a blank canvas.
+
 ### Added
 
+- `knob` (rotary control), `steps` (wizard step indicator), indeterminate `progress_bar` (pass a
+  negative fraction), Home/End/PageUp/PageDown on `slider`, and `rd::sdl3::poll_dropped_file` for files
+  dragged onto the window.
 - **Mobile**: multi-touch (`Input::touches`) and `Context::gesture()` (pinch, rotate, two-finger pan, swipe,
   velocity); `pull_to_refresh`, `edge_swipe`, `swipe_item`; drawers and bottom sheets follow the finger and
   close on a swipe, bottom sheets have a grab handle; `Input::keyboard_inset` scrolls the focused field

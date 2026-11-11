@@ -91,6 +91,8 @@ date_picker(ui, "##date", year, month, day);                 // field + calendar
 calendar(ui, "##cal", year, month, day);                     // the month grid on its own
 pagination(ui, "##pages", page, page_count);                 // zero-based; ‹ 1 2 3 … 20 ›
 int i = breadcrumbs(ui, "##path", parts, n);                 // clicked index or -1
+knob(ui, "##gain", gain, 0, 1);                              // rotary, two rows tall; drag up/down
+int back = steps(ui, "##wizard", names, 3, current);         // wizard steps; clicked done step or -1
 if (link(ui, "Read the docs").clicked) open(url);            // accent text, hand cursor
 ```
 
@@ -111,7 +113,7 @@ preview row.
 ```cpp
 label(ui, "Plain");                          label_colored(ui, "Muted", t.text_muted);
 label_wrapped(ui, long_text);                bullet_text(ui, "A point");
-separator_text(ui, "Section");               progress_bar(ui, 0.4f);
+separator_text(ui, "Section");               progress_bar(ui, 0.4f);   // -1: indeterminate
 badge(ui, "new", t.accent);                  spinner(ui);
 plot_lines(ui, samples, n, 0, 1, 80);        plot_histogram(ui, samples, n, 0, 1, 60);
 image(ui, texture_id, {96, 96});             // texture ids come from the backend

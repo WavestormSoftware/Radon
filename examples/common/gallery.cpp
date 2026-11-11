@@ -106,8 +106,18 @@ void Gallery::panel_feedback(Context& ctx) {
     separator_text(ctx, "Feedback");
     row2(ctx, "Progress");
     progress_bar(ctx, slider_f_);
+    row2(ctx, "Working");
+    progress_bar(ctx, -1);
     row2(ctx, "Spinner");
     spinner(ctx);
+    row2(ctx, "Knob");
+    knob(ctx, "##knob", slider_f_, 0, 1);
+    row2(ctx, "Steps");
+    static const char* step_names[] = {"Account", "Details", "Confirm"};
+    static int step = 1;
+    if (int back = steps(ctx, "##steps", step_names, 3, step); back >= 0) step = back;
+    row2(ctx, "");
+    if (button(ctx, step < 3 ? "Next" : "Start over").clicked) step = step < 3 ? step + 1 : 0;
     row2(ctx, "Badges");
     layout_row(ctx, 4, nullptr, 0, 0);
     label(ctx, "");

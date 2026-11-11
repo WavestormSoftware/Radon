@@ -163,6 +163,9 @@ TEST_CASE("zero heap allocations per frame after warm-up") {
             date_picker(h.ctx, "##date", year, month, day);
             pagination(h.ctx, "##pages", page, 30);
             breadcrumbs(h.ctx, "##bc", items, 3);
+            knob(h.ctx, "##knob", sl, 0, 1);
+            steps(h.ctx, "##steps", items, 3, 1);
+            progress_bar(h.ctx, -1);
             heading(h.ctx, "Heading");
             avatar(h.ctx, "Ada Lovelace", col);
             alert(h.ctx, Tone::Warning, "An alert whose text is long enough to wrap onto a second line.");

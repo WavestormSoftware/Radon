@@ -56,8 +56,8 @@ Response radio_button(Context& ctx, std::string_view label, int& value, int opti
     const bool on = value == option;
     s.dl.rect(box, control_color(s, id, rs), bs / 2);
     bool ring = rs.focused && s.kbd_nav;
-    s.dl.rect(box, ring ? t.focus_ring : (on ? t.accent : t.border), bs / 2,
-              ring ? t.focus_ring_width : t.border_width + (on ? 0.5f : 0));
+    s.dl.rect(box, ring ? t.focus_ring : (on ? t.accent : with_alpha(t.text_muted, 0.7f)), bs / 2,
+              ring ? t.focus_ring_width : 1.5f);
     const float k = anim_to(s, hash_u32(id, 77), on ? 1.0f : 0.0f, 0.12f, on ? 1.0f : 0.0f) * bs * 0.22f;
     if (k > 0.1f) s.dl.rect({box.x + bs / 2 - k, box.y + bs / 2 - k, 2 * k, 2 * k}, t.accent, k);
     draw_text_fit(s, {r.x + bs + t.spacing, r.y, r.w - bs - t.spacing, r.h}, visible_label(label), t.text,
@@ -82,7 +82,10 @@ Response toggle(Context& ctx, std::string_view label, bool& value) {
     const float on = anim_to(s, hash_u32(id, 77), value ? 1.0f : 0.0f, 0.15f, value ? 1.0f : 0.0f);
     s.dl.rect(track, lerp(t.surface_active, t.accent, on), th / 2);
     bool ring = rs.focused && s.kbd_nav;
-    if (ring) s.dl.rect(track, t.focus_ring, th / 2, t.focus_ring_width);
+    if (ring)
+        s.dl.rect(track, t.focus_ring, th / 2, t.focus_ring_width);
+    else if (on < 0.98f)  // same outline as an empty checkbox, so "off" is still findable
+        s.dl.rect(track, with_alpha(t.text_muted, 0.5f * (1 - on)), th / 2, 1.5f);
     const float kd = th - 6;
     s.dl.rect({track.x + 3 + (tw - th) * on, track.y + 3, kd, kd}, {255, 255, 255, 255}, kd / 2);
     draw_text_fit(s, {r.x + tw + t.spacing, r.y, r.w - tw - t.spacing, r.h}, visible_label(label), t.text,

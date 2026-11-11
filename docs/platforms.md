@@ -79,6 +79,7 @@ feedback setting) and `UIImpactFeedbackGenerator` / `UISelectionFeedbackGenerato
 | Cmd instead of Ctrl for shortcuts | backend key mapping | - | - | yes | - | - | yes |
 | IME candidate window / soft keyboard | `wants_text_input`, `text_input_rect` | yes | yes | yes | browser | yes | yes |
 | File dialogs | `show_file_dialog`, `poll_file_dialog` | yes | yes (portal or zenity) | yes | no | partly | no |
+| Drop files onto the window | `poll_dropped_file` | untested | untested | untested | untested | - | - |
 | Open a URL in the browser | `open_url` | yes | yes | yes | yes | yes | yes |
 | Back button closes popups, then leaves | `Context::can_dismiss()` | - | - | - | - | yes | - |
 | Safe area (notch, home indicator) | `Input::safe_area` | - | - | - | yes | yes | yes |
