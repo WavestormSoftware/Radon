@@ -1,5 +1,22 @@
 # Examples
 
+## Showcase
+
+`radon_showcase` holds four small products, each with its own theme and typefaces
+([examples/showcase](../examples/showcase)). They are the pictures in the README.
+
+| Page | App | Shows |
+|---|---|---|
+| `--page 0` | Tilekit, a level editor | docking, `Canvas` tile map, tree, inspector, chips, segmented |
+| `--page 1` | Halcyon, a synthesizer | `knob`, `Canvas` screens and keyboard, cards, `push_theme` for black knobs |
+| `--page 2`, `3` | Stride, a running app (`--size 390x844`) | touch theme, progress ring, bar chart, `steps`, `nav_bar`, sparklines |
+| `--page 4` | Live ops, a dashboard (`--light` / `--dark`) | line and donut charts, sortable `table_begin`, sidebar, KPIs |
+
+The typefaces (IBM Plex Sans and Mono, Bricolage Grotesque, all SIL Open Font License) are in
+`examples/showcase/fonts` and copied next to the executable by the build.
+
+## Small examples
+
 The gallery shows everything; ten small programs show how to put the pieces together. All of them use
 `examples/common/runner.hpp`, which opens a window, loads the font and runs your frame callback, so each
 example is only its UI code.
@@ -11,7 +28,8 @@ build/linux-clang-release/examples/desktop_demo/radon_desktop_demo  # the galler
 ```
 
 Every program accepts `--font <ttf>`, `--light` / `--dark` (default: the system theme), `--touch`,
-`--size WxH`, `--screenshot out.png [--frames N]`, `--pointer x,y` and `--click x,y`. Without `--font`,
+`--size WxH`, `--scale k` (render k times sharper, for screenshots), `--screenshot out.png [--frames N]`,
+`--pointer x,y` and `--click x,y`. Without `--font`,
 `RD_FONT` or `examples/assets/font.ttf` they use a system font.
 
 | Example | Shows | |

@@ -10,6 +10,13 @@ Radon itself is MIT licensed (see [LICENSE](LICENSE)). It includes or links the 
 | [stb_rect_pack.h](https://github.com/nothings/stb) | Glyph atlas packing | MIT or public domain | [LICENSE.stb](src/third_party/LICENSE.stb) |
 | [doctest](https://github.com/doctest/doctest) | Unit tests only; not linked into the library | MIT | [LICENSE.doctest](src/third_party/LICENSE.doctest) |
 
+## Fonts in `examples/showcase/fonts/` (examples only, not part of the library)
+
+| Component | Use | License | Text |
+|---|---|---|---|
+| [IBM Plex Sans and Mono](https://github.com/IBM/plex) | Showcase typefaces | SIL Open Font License 1.1 | [OFL-IBMPlex.txt](examples/showcase/fonts/OFL-IBMPlex.txt) |
+| [Bricolage Grotesque](https://github.com/ateliertriay/bricolage) | Showcase typeface | SIL Open Font License 1.1 | [OFL-BricolageGrotesque.txt](examples/showcase/fonts/OFL-BricolageGrotesque.txt) |
+
 ## Linked, not vendored
 
 - [SDL3](https://libsdl.org) (zlib license) is used by `backends/sdl3_gl` and the demos. The core library

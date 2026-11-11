@@ -74,7 +74,8 @@ private:
     Context* ctx_ = nullptr;
 };
 /// Allocates a layout cell of `size` (width capped to the cell), fills it with `background` and starts
-/// drawing.
+/// drawing. A size of 0 or less takes the cell's width or height: after layout_row(ctx, 1, nullptr, 0,
+/// -1) a canvas of {0, 0} fills the rest of the window.
 Canvas canvas_begin(Context& ctx, Vec2 size, Color background = {0, 0, 0, 0});
 void canvas_end(Context& ctx);
 bool collapsing_header(Context& ctx, std::string_view label, bool& open);
@@ -282,8 +283,9 @@ bool nav_bar(Context& ctx, std::string_view label, int& selected, const Icon* ic
              const char* const* labels, int count);
 /// A clickable path ("Home > Docs > File"). Returns the clicked index or -1.
 int breadcrumbs(Context& ctx, std::string_view label, const char* const* items, int count);
-/// A rotary control two rows tall (audio, game tools). Drag up/down, scroll, or use the arrow keys;
-/// Home/End jump to the ends. The value shows in a tooltip while hovered.
+/// A rotary control two rows tall (audio, game tools), centered in its cell, with the visible part of
+/// `label` as a small caption under it ("Cutoff", or "##id" for none). Drag up/down, scroll, or use
+/// the arrow keys; Home/End jump to the ends. The value shows in a tooltip while hovered.
 Response knob(Context& ctx, std::string_view label, float& value, float min, float max,
               const char* format = "%.2f");
 /// Numbered steps joined by lines (setup wizards, checkout). Steps before `current` show a check and can

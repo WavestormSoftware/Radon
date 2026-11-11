@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/heap%20allocations%20per%20frame-0-3dd68c.svg" alt="0 heap allocations per frame">
 </p>
 
-![A Radon desktop app with two phone layouts](docs/images/hero.png)
+![Tilekit, a level editor built with Radon, next to two screens of Stride, a running app built with Radon](docs/images/hero.png)
 
 Immediate-mode UI is the quickest way to build tools: you write a function that draws the interface every
 frame, and there's no widget tree to keep in sync with your data. The trade-off has usually been that it
@@ -45,20 +45,20 @@ That's the whole model. Your variables are the state, and widgets return what ha
 | **Made for games** | Show your game or 3D view in a panel, draw sprites with `rd::Canvas`, read gamepads, play sounds, or drive Radon from any engine through the C API. A raylib backend is included. |
 | **Accessible** | It builds an accessibility tree with roles, labels, values and actions. You can operate everything from the keyboard or a gamepad, and fallback fonts bring in emoji, CJK and symbols. |
 
-## A closer look
+## Built with Radon
+
+Every picture on this page is a real Radon app, not a mock-up: four small products in
+[`examples/showcase`](examples/showcase), each with its own theme and typefaces.
 
 | | |
 |---|---|
-| ![Charts](docs/images/tile-charts.png) | ![Docking](docs/images/tile-docking.png) |
-| **Charts**: line, area, bar, stacked, scatter, pie and sparklines, with axes and legends. | **Docking**: drag tabs out into floating windows and dock them back into splits. |
-| ![Data](docs/images/tile-data.png) | ![Rich text](docs/images/tile-richtext.png) |
-| **Data**: sortable, resizable tables, virtualized lists, calendars and cards. | **Rich text**: inline styles, colors, icons and links, Markdown, and selectable text. |
+| ![Halcyon, a synthesizer plugin](docs/images/showcase-halcyon.png) | ![Live ops, a game-server dashboard in dark and light](docs/images/showcase-liveops.png) |
+| **Halcyon**, a synthesizer plugin: knobs, segmented controls, and scope, filter and envelope screens drawn with `rd::Canvas`. | **Live ops**, a game-server dashboard: line and donut charts, sparklines and a sortable table. The same code is shown in dark and light. |
+| ![Stride, a running app on two phones](docs/images/showcase-stride.png) | ![Tilekit, a level editor](docs/images/showcase-tilekit.png) |
+| **Stride**, a running app for phones: touch metrics, a progress ring, a bar chart, a training plan with `steps`, and a bottom navigation bar. | **Tilekit**, a level editor: docking panels, a tile-map scene drawn with `rd::Canvas`, a tree and an inspector. |
 
-One theme struct restyles everything, and it switches live between light and dark:
-
-![The same UI in dark and light themes](docs/images/theme-split.png)
-
-More pictures are in the [widget guide](docs/widgets.md) and the [examples](docs/examples.md).
+Run them with `radon_showcase --page 0..4` (Stride looks best at `--size 390x844`). The widget-by-widget
+[gallery](docs/widgets.md) and eleven [small examples](docs/examples.md) cover the rest.
 
 ## Quick start
 

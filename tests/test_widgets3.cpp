@@ -566,16 +566,16 @@ TEST_CASE("knob turns with vertical drag, keys and clamps") {
     Response r;
     u.body = [&] { r = knob(u.h.ctx, "k", v, 0, 1); };
     u.frame();
-    u.h.move(30, 30);  // inside the two-row knob
+    u.h.move(150, 30);  // the dial is centered in the 8..292 cell
     u.frame();
     u.h.in.pointer_down = u.h.in.pointer_pressed = true;
     u.frame();
     u.h.in.pointer_pressed = false;
-    u.h.move(30, 10);  // up 20 px: +0.1
+    u.h.move(150, 10);  // up 20 px: +0.1
     u.frame();
     CHECK(v == doctest::Approx(0.6f));
     CHECK(r.changed);
-    u.h.move(30, -1000);
+    u.h.move(150, -1000);
     u.frame();
     CHECK(v == doctest::Approx(1.0f));
     u.h.in.pointer_down = false;

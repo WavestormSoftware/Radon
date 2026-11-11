@@ -138,6 +138,8 @@ bool Runner::start(int argc, char** argv, const AppConfig& cfg) {
             o.dark = true;
         else if (!std::strcmp(a, "--touch"))
             o.touch = true;
+        else if (!std::strcmp(a, "--scale") && more)
+            o.scale = (float)std::atof(argv[++i]);
         else if (!std::strcmp(a, "--size") && more)
             std::sscanf(argv[++i], "%dx%d", &o.width, &o.height);
         else if (!std::strcmp(a, "--pointer") && more)
@@ -147,18 +149,19 @@ bool Runner::start(int argc, char** argv, const AppConfig& cfg) {
         else if (!std::strcmp(a, "--help")) {
             std::printf(
                 "options: --font <ttf> --screenshot <png> --frames <n> --page <n> --light --dark --touch "
-                "--size WxH "
+                "--size WxH --scale k "
                 "--pointer x,y --click x,y\n");
             return false;
         }
     }
     if (o.screenshot && o.frames <= 0) o.frames = 30;
+    if (!(o.scale >= 1 && o.scale <= 4)) o.scale = 1;
 
     m.font = find_font(o.font);
     rd::sdl3::PlatformConfig pc;
     pc.title = cfg.title;
-    pc.width = o.width > 0 ? o.width : cfg.width;
-    pc.height = o.height > 0 ? o.height : cfg.height;
+    pc.width = (int)((float)(o.width > 0 ? o.width : cfg.width) * o.scale);
+    pc.height = (int)((float)(o.height > 0 ? o.height : cfg.height) * o.scale);
     pc.wait_events = !o.screenshot;  // sleep while idle; screenshots need a fixed number of frames
     m.plat = rd::sdl3::create_platform(pc);
     if (!m.plat) {
@@ -172,7 +175,7 @@ bool Runner::start(int argc, char** argv, const AppConfig& cfg) {
         std::fprintf(stderr, "radon demo: renderer setup failed\n");
         return false;
     }
-    m.ctx.reset(new rd::Context);
+    m.ctx.reset(new rd::Context(cfg.config));
     rd::sdl3::attach(m.plat, *m.ctx);
     if (!m.font.empty()) {
         m.fonts.body = m.ctx->load_font(m.font.data(), m.font.size(), 16);
@@ -203,7 +206,7 @@ bool Runner::step() {
     }
     int fw, fh;
     rd::sdl3::framebuffer_size(m.plat, fw, fh);
-    const float dpi = rd::sdl3::dpi_scale(m.plat);
+    const float dpi = rd::sdl3::dpi_scale(m.plat) * m.opt.scale;
     m.ctx->set_dpi_scale(dpi);
     const int lw = (int)((float)fw / dpi), lh = (int)((float)fh / dpi);
     m.input.screen_size = {(float)lw, (float)lh};

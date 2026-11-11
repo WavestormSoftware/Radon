@@ -562,12 +562,16 @@ void list_clipper_end(Context& ctx) {
 
 namespace {
 void arc(State& s, Vec2 c, float rad, float a0, float a1, Color col, float th) {
-    const int n = (int)std::ceil(std::fabs(a1 - a0) / 0.13f);
-    for (int i = 0; i < n; i++) {
-        const float u0 = a0 + (a1 - a0) * (float)i / (float)n,
-                    u1 = a0 + (a1 - a0) * (float)(i + 1) / (float)n;
-        s.dl.line({c.x + std::cos(u0) * rad, c.y + std::sin(u0) * rad},
-                  {c.x + std::cos(u1) * rad, c.y + std::sin(u1) * rad}, col, th);
+    // Short straight pieces with a round dot on every joint, so thick arcs have no notches.
+    const int n = (int)std::ceil(std::fabs(a1 - a0) / 0.08f);
+    Vec2 prev{c.x + std::cos(a0) * rad, c.y + std::sin(a0) * rad};
+    s.dl.rect({prev.x - th / 2, prev.y - th / 2, th, th}, col, th / 2);
+    for (int i = 1; i <= n; i++) {
+        const float u = a0 + (a1 - a0) * (float)i / (float)n;
+        const Vec2 p{c.x + std::cos(u) * rad, c.y + std::sin(u) * rad};
+        s.dl.line(prev, p, col, th);
+        s.dl.rect({p.x - th / 2, p.y - th / 2, th, th}, col, th / 2);
+        prev = p;
     }
 }
 }  // namespace
@@ -578,9 +582,11 @@ Response knob(Context& ctx, std::string_view label, float& value, float min, flo
     const ID id = get_id(s, label);
     Rect r = layout_next(ctx);
     const float d = 2 * t.cell_height;
-    extend_height(s, r, d);
-    r.h = d;
-    r.w = std::fmin(r.w, d);
+    const std::string_view caption = visible_label(label);
+    const float ch = caption.empty() ? 0.0f : text_size(s, t.font_small, caption).y;
+    extend_height(s, r, d + ch);
+    const Rect cell{r.x, r.y, r.w, d + ch};  // dial centered, caption under it like a hardware label
+    r = {r.x + std::fmax(0.0f, (r.w - d) / 2), r.y, std::fmin(r.w, d), d};
     Response rs = update_control(ctx, id, r, true, true);
     if (max > min) {
         const float range = max - min;
@@ -609,11 +615,16 @@ Response knob(Context& ctx, std::string_view label, float& value, float min, flo
     arc(s, c, rad, a0, a0 + sweep, t.surface_active, th);
     if (f > 0) arc(s, c, rad, a0, a0 + sweep * f, t.accent, th);
     const float kr = rad - th * 1.5f;
-    s.dl.rect({c.x - kr, c.y - kr, 2 * kr, 2 * kr}, control_color(s, id, rs), kr);
+    const Rect disc{c.x - kr, c.y - kr, 2 * kr, 2 * kr};
+    if (t.shadows) s.dl.shadow(disc, t.shadow, kr, 4, {0, 2});
+    s.dl.rect(disc, control_color(s, id, rs), kr);
+    s.dl.rect(disc, t.border, kr, t.border_width);
     const float a = a0 + sweep * f;
-    s.dl.line({c.x + std::cos(a) * kr * 0.45f, c.y + std::sin(a) * kr * 0.45f},
-              {c.x + std::cos(a) * kr * 0.9f, c.y + std::sin(a) * kr * 0.9f}, t.text, 2);
+    s.dl.line({c.x + std::cos(a) * kr * 0.4f, c.y + std::sin(a) * kr * 0.4f},
+              {c.x + std::cos(a) * kr * 0.85f, c.y + std::sin(a) * kr * 0.85f}, t.text, 2.5f);
     focus_ring(s, r, rs, d / 2);
+    if (ch > 0)
+        draw_text_centered(s, t.font_small, {cell.x, cell.y + d, cell.w, ch}, caption, t.text_muted, true);
     if (rs.hovered || s.active == id) tooltip(ctx, buf);
     return rs;
 }

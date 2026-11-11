@@ -138,6 +138,8 @@ ViewportResponse viewport(Context& ctx, TextureId tex, Vec2 size, bool flip_y) {
 Canvas canvas_begin(Context& ctx, Vec2 size, Color background) {
     State& s = state(ctx);
     Rect r = layout_next(ctx);
+    if (size.x <= 0) size.x = r.w;  // fill the cell (e.g. a layout_row with height -1)
+    if (size.y <= 0) size.y = r.h;
     extend_height(s, r, size.y);
     r.w = std::fmin(r.w, size.x);
     r.h = size.y;

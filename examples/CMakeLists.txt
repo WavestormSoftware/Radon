@@ -14,6 +14,7 @@ endif()
 # Small standalone examples (desktop only): radon_ex_<name>
 if(NOT (CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR ANDROID OR IOS))
     file(GLOB _rd_examples CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/snippets/*.cpp)
+    add_subdirectory(showcase)
     foreach(_src ${_rd_examples})
         get_filename_component(_name ${_src} NAME_WE)
         add_executable(radon_ex_${_name} ${_src})

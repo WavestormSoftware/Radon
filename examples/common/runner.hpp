@@ -39,6 +39,7 @@ struct Options {
     bool dark = false;                     ///< --dark (default: follow the system theme)
     bool touch = false;                    ///< --touch: finger-sized metrics, as on phones
     int width = 0, height = 0;             ///< --size WxH
+    float scale = 1;                       ///< --scale k: render k times sharper (screenshots; not for input)
     float pointer_x = -1, pointer_y = -1;  ///< --pointer x,y: fixed pointer position (screenshots)
     float click_x = -1, click_y = -1;      ///< --click x,y: click there on frame 5 (screenshots of popups)
 };
@@ -50,7 +51,8 @@ using InitFn = std::function<void(rd::Context&, const Fonts&, const Options&)>;
 struct AppConfig {
     const char* title = "Radon";
     int width = 1100, height = 700;
-    InitFn init;  ///< optional, after fonts are loaded
+    rd::Config config;  ///< pool sizes for the context (more fonts, a bigger atlas, ...)
+    InitFn init;        ///< optional, after fonts are loaded
     FrameFn frame;
     /// Optional: the OS switched between light and dark. Default: apply make_theme(fonts, dark).
     std::function<void(rd::Context&, bool dark)> system_theme;

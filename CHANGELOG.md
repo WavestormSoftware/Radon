@@ -6,9 +6,8 @@ Radon follows [semantic versioning](https://semver.org); before 1.0, minor versi
 
 ### Changed
 
-- New README with composite showcase images built by `scripts/readme_images.py` (run by
-  `scripts/screenshots.sh`); all screenshots regenerated. The demo artwork is twice the resolution with an
-  anti-aliased sun.
+- README images come from the showcase apps, composed by `scripts/readme_images.py` (run by
+  `scripts/screenshots.sh`). The demo artwork is twice the resolution with an anti-aliased sun.
 - `slider` draws a track with a round thumb and shows its value in a column on the right, like
   `range_slider`. Pointer positions map to the track, not the whole widget.
 - Empty checkboxes, radio buttons and off switches have a visible outline; the dark theme border is lighter.
@@ -18,6 +17,11 @@ Radon follows [semantic versioning](https://semver.org); before 1.0, minor versi
 
 ### Added
 
+- `examples/showcase` (`radon_showcase`): four small products, each with its own theme and typefaces
+  (Tilekit level editor, Halcyon synth, Stride running app, Live ops dashboard). They make the README
+  images. The demo runner gained `AppConfig::config` and `--scale k` for sharper screenshots.
+- `knob` centers its dial in the cell and shows its label as a caption; arcs are drawn without notches.
+  `canvas_begin` takes a size of 0 or less to fill the cell.
 - `knob` (rotary control), `steps` (wizard step indicator), indeterminate `progress_bar` (pass a
   negative fraction), Home/End/PageUp/PageDown on `slider`, and `rd::sdl3::poll_dropped_file` for files
   dragged onto the window.
