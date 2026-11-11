@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Wavestorm Software
 #pragma once
+#include <ostream>  // MSVC: doctest streams string_view and needs the full ostream
 #include <doctest.h>
 #include <cstdio>
 #include <cstdlib>

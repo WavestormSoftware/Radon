@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Wavestorm Software
 // The C API runs a frame and exposes the same draw list as the C++ API.
+#include <ostream>  // MSVC: doctest streams string_view and needs the full ostream
 #include <doctest.h>
 #include <radon/radon_c.h>
 
