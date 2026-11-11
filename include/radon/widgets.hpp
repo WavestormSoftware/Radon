@@ -34,16 +34,40 @@ Response progress_bar(Context& ctx, float fraction);
 Response image(Context& ctx, TextureId tex, Vec2 size, Rect uv = {0, 0, 1, 1});
 /// Result of `viewport`: where the view is and the input that belongs to it.
 struct ViewportResponse : Response {
-    Rect rect;               ///< logical px, where the texture was drawn
-    Vec2 local;              ///< pointer relative to rect's top-left, logical px (valid also while dragging outside)
-    bool down = false;       ///< pointer held, and the press started inside the viewport
-    bool released = false;   ///< pointer went up this frame after a press that started inside
-    float wheel = 0;         ///< scroll, only while hovered
+    Rect rect;   ///< logical px, where the texture was drawn
+    Vec2 local;  ///< pointer relative to rect's top-left, logical px (valid also while dragging outside)
+    bool down = false;                ///< pointer held, and the press started inside the viewport
+    bool released = false;            ///< pointer went up this frame after a press that started inside
+    float wheel = 0;                  ///< scroll, only while hovered
     const KeyEvents* keys = nullptr;  ///< key events this frame, only while focused (else null)
 };
 /// Shows an engine/game texture in a cell and forwards input to it. Click focuses it; a drag that
-/// started inside keeps reporting `local` and `down` after the pointer leaves. `flip_y` for GL render targets.
+/// started inside keeps reporting `local` and `down` after the pointer leaves. `flip_y` for GL render
+/// targets.
 ViewportResponse viewport(Context& ctx, TextureId tex, Vec2 size, bool flip_y = false);
+/// Immediate-mode 2D drawing area. Coordinates are relative to the canvas top-left and everything is
+/// clipped to it. Pair `canvas_begin` with `canvas_end`. Shapes are drawn in call order.
+class Canvas {
+public:
+    Rect rect;          ///< where the canvas is, logical px
+    Response response;  ///< hover/press/focus of the canvas as a whole
+    Vec2 local;         ///< pointer relative to the canvas top-left
+    void fill_rect(Rect r, Color c, float radius = 0);
+    void stroke_rect(Rect r, Color c, float thickness = 1, float radius = 0);
+    void circle(Vec2 center, float radius, Color c);
+    void line(Vec2 a, Vec2 b, Color c, float thickness = 1);
+    void triangle(Vec2 a, Vec2 b, Vec2 c, Color col);
+    /// A sprite: `uv` selects the part of the texture (sprite sheets), `tint` multiplies the pixels.
+    void sprite(TextureId tex, Rect dst, Rect uv = {0, 0, 1, 1}, Color tint = {255, 255, 255, 255});
+
+private:
+    friend Canvas canvas_begin(Context&, Vec2, Color);
+    Context* ctx_ = nullptr;
+};
+/// Allocates a layout cell of `size` (width capped to the cell), fills it with `background` and starts
+/// drawing.
+Canvas canvas_begin(Context& ctx, Vec2 size, Color background = {0, 0, 0, 0});
+void canvas_end(Context& ctx);
 bool collapsing_header(Context& ctx, std::string_view label, bool& open);
 bool combo(Context& ctx, std::string_view label, int& selected, const char* const* items, int count);
 void tooltip(Context& ctx, std::string_view text);  ///< shown while the last widget is hovered

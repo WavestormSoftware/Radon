@@ -17,15 +17,20 @@ int main(int argc, char** argv) {
     rd::rl::Renderer* rr = rd::rl::create_renderer();
     rd::Context ui;
     // Font: $RD_FONT, the bundled one, or a common system font. The buffer must outlive the context.
-    const char* paths[] = {std::getenv("RD_FONT"), RD_FONT_PATH, "/usr/share/fonts/noto/NotoSans-Regular.ttf",
-                           "/usr/share/fonts/TTF/DejaVuSans.ttf", "C:/Windows/Fonts/segoeui.ttf",
+    const char* paths[] = {std::getenv("RD_FONT"),
+                           RD_FONT_PATH,
+                           "/usr/share/fonts/noto/NotoSans-Regular.ttf",
+                           "/usr/share/fonts/TTF/DejaVuSans.ttf",
+                           "C:/Windows/Fonts/segoeui.ttf",
                            "/System/Library/Fonts/Helvetica.ttc"};
     int font_size = 0;
     unsigned char* font = nullptr;
     for (const char* p : paths)
         if (p && FileExists(p) && (font = LoadFileData(p, &font_size))) break;
-    if (font) ui.set_default_font(ui.load_font(font, (size_t)font_size, 16.0f));
-    else std::fprintf(stderr, "no font found; set RD_FONT=/path/to/font.ttf\n");
+    if (font)
+        ui.set_default_font(ui.load_font(font, (size_t)font_size, 16.0f));
+    else
+        std::fprintf(stderr, "no font found; set RD_FONT=/path/to/font.ttf\n");
 
     RenderTexture2D rt = LoadRenderTexture(320, 200);
     rd::rl::set_texture(rr, 1, rt.texture);

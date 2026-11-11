@@ -6,6 +6,7 @@
 
 #include <cstring>
 #include <memory>
+#include <vector>
 #include <mutex>
 #include <string>
 
@@ -28,6 +29,7 @@ struct Platform {
     bool wait_events = false, idle = false, background = false, theme_changed = false, can_dismiss = false;
     int quiet = 0;  // polls in a row without events
     SDL_Cursor* cursors[6] = {};
+    std::vector<SDL_Gamepad*> pads;
     Cursor cursor = Cursor::Arrow;
     Rect text_area;
 };
@@ -206,6 +208,53 @@ void handle_event(Platform* p, Input& in, const SDL_Event& e, float k, int ww, i
             in.keys.push({key, (m & SDL_KMOD_SHIFT) != 0, ctrl, (m & SDL_KMOD_ALT) != 0});
             break;
         }
+        case SDL_EVENT_GAMEPAD_ADDED:
+            if (SDL_Gamepad* g = SDL_OpenGamepad(e.gdevice.which)) p->pads.push_back(g);
+            break;
+        case SDL_EVENT_GAMEPAD_REMOVED:
+            for (size_t i = 0; i < p->pads.size(); i++)
+                if (SDL_GetGamepadID(p->pads[i]) == e.gdevice.which) {
+                    SDL_CloseGamepad(p->pads[i]);
+                    p->pads.erase(p->pads.begin() + (long)i);
+                    break;
+                }
+            break;
+        case SDL_EVENT_GAMEPAD_BUTTON_DOWN: {  // D-pad and face buttons drive widget focus like a keyboard
+            int key = KeyNone;
+            switch (e.gbutton.button) {
+                case SDL_GAMEPAD_BUTTON_DPAD_UP:
+                    key = KeyUp;
+                    break;
+                case SDL_GAMEPAD_BUTTON_DPAD_DOWN:
+                    key = KeyDown;
+                    break;
+                case SDL_GAMEPAD_BUTTON_DPAD_LEFT:
+                    key = KeyLeft;
+                    break;
+                case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
+                    key = KeyRight;
+                    break;
+                case SDL_GAMEPAD_BUTTON_SOUTH:
+                    key = KeySpace;
+                    break;  // A: activate
+                case SDL_GAMEPAD_BUTTON_EAST:
+                    key = KeyEscape;
+                    break;  // B: back
+                case SDL_GAMEPAD_BUTTON_START:
+                    key = KeyEnter;
+                    break;
+                case SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER:
+                    key = KeyTab;
+                    break;
+                case SDL_GAMEPAD_BUTTON_LEFT_SHOULDER:
+                    in.keys.push({KeyTab, true, false, false});
+                    break;
+                default:
+                    break;
+            }
+            if (key != KeyNone) in.keys.push({key, false, false, false});
+            break;
+        }
         case SDL_EVENT_TEXT_INPUT: {
             // Push whole code points only: a commit longer than the queue must not end mid-character.
             const char* c = e.text.text;
@@ -226,12 +275,36 @@ void handle_event(Platform* p, Input& in, const SDL_Event& e, float k, int ww, i
 
 }  // namespace
 
+bool gamepad_state(const Platform* p, int index, GamepadState& out) {
+    out = GamepadState{};
+    if (!p || index < 0 || index >= (int)p->pads.size()) return false;
+    SDL_Gamepad* g = p->pads[(size_t)index];
+    auto axis = [&](SDL_GamepadAxis a) {
+        const float v = (float)SDL_GetGamepadAxis(g, a) / 32767.0f;
+        return v < -1 ? -1.0f : v;
+    };
+    out.connected = true;
+    out.left = {axis(SDL_GAMEPAD_AXIS_LEFTX), axis(SDL_GAMEPAD_AXIS_LEFTY)};
+    out.right = {axis(SDL_GAMEPAD_AXIS_RIGHTX), axis(SDL_GAMEPAD_AXIS_RIGHTY)};
+    out.left_trigger = axis(SDL_GAMEPAD_AXIS_LEFT_TRIGGER);
+    out.right_trigger = axis(SDL_GAMEPAD_AXIS_RIGHT_TRIGGER);
+    static const SDL_GamepadButton map[] = {
+        SDL_GAMEPAD_BUTTON_SOUTH,       SDL_GAMEPAD_BUTTON_EAST,          SDL_GAMEPAD_BUTTON_WEST,
+        SDL_GAMEPAD_BUTTON_NORTH,       SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER,
+        SDL_GAMEPAD_BUTTON_BACK,        SDL_GAMEPAD_BUTTON_START,         SDL_GAMEPAD_BUTTON_LEFT_STICK,
+        SDL_GAMEPAD_BUTTON_RIGHT_STICK, SDL_GAMEPAD_BUTTON_DPAD_UP,       SDL_GAMEPAD_BUTTON_DPAD_DOWN,
+        SDL_GAMEPAD_BUTTON_DPAD_LEFT,   SDL_GAMEPAD_BUTTON_DPAD_RIGHT};
+    for (int i = 0; i < 14; i++)
+        if (SDL_GetGamepadButton(g, map[i])) out.buttons |= 1u << i;
+    return true;
+}
+
 Platform* create_platform(const PlatformConfig& cfg) {
     // Touch is handled through finger events so a tap never also produces a synthetic mouse event.
     SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
     SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
     SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");  // delivered as SDLK_AC_BACK
-    if (!SDL_Init(SDL_INIT_VIDEO)) return nullptr;
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) return nullptr;
     std::unique_ptr<Platform> p(new Platform);
 #if defined(__EMSCRIPTEN__) || defined(__ANDROID__) || (defined(__APPLE__) && TARGET_OS_IPHONE)
     const bool prefer_es = true;
@@ -253,6 +326,8 @@ void destroy_platform(Platform* p) {
     if (!p) return;
     for (SDL_Cursor* c : p->cursors)
         if (c) SDL_DestroyCursor(c);
+    for (SDL_Gamepad* g : p->pads) SDL_CloseGamepad(g);
+    audio_shutdown();
     if (p->gl) SDL_GL_DestroyContext(p->gl);
     if (p->window) SDL_DestroyWindow(p->window);
     SDL_Quit();

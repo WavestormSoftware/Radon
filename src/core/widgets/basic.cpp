@@ -103,6 +103,47 @@ ViewportResponse viewport(Context& ctx, TextureId tex, Vec2 size, bool flip_y) {
     return vr;
 }
 
+Canvas canvas_begin(Context& ctx, Vec2 size, Color background) {
+    State& s = state(ctx);
+    Rect r = layout_next(ctx);
+    extend_height(s, r, size.y);
+    r.w = std::fmin(r.w, size.x);
+    r.h = size.y;
+    Canvas c;
+    c.ctx_ = &ctx;
+    c.rect = r;
+    c.local = {s.in.pointer.x - r.x, s.in.pointer.y - r.y};
+    c.response = update_control(ctx, get_id(s, "##canvas"), r, true, true);
+    if (background.a) s.dl.rect(r, background);
+    push_clip(s, r);
+    return c;
+}
+
+void canvas_end(Context& ctx) {
+    pop_clip(state(ctx));
+}
+
+void Canvas::fill_rect(Rect r, Color c, float radius) {
+    state(*ctx_).dl.rect({rect.x + r.x, rect.y + r.y, r.w, r.h}, c, radius);
+}
+void Canvas::stroke_rect(Rect r, Color c, float thickness, float radius) {
+    state(*ctx_).dl.rect({rect.x + r.x, rect.y + r.y, r.w, r.h}, c, radius, thickness);
+}
+void Canvas::circle(Vec2 center, float radius, Color c) {
+    state(*ctx_).dl.rect({rect.x + center.x - radius, rect.y + center.y - radius, radius * 2, radius * 2}, c,
+                         radius);
+}
+void Canvas::line(Vec2 a, Vec2 b, Color c, float thickness) {
+    state(*ctx_).dl.line({rect.x + a.x, rect.y + a.y}, {rect.x + b.x, rect.y + b.y}, c, thickness);
+}
+void Canvas::triangle(Vec2 a, Vec2 b, Vec2 c, Color col) {
+    state(*ctx_).dl.triangle({rect.x + a.x, rect.y + a.y}, {rect.x + b.x, rect.y + b.y},
+                             {rect.x + c.x, rect.y + c.y}, col);
+}
+void Canvas::sprite(TextureId tex, Rect dst, Rect uv, Color tint) {
+    state(*ctx_).dl.image(tex, {rect.x + dst.x, rect.y + dst.y, dst.w, dst.h}, uv, tint);
+}
+
 bool collapsing_header(Context& ctx, std::string_view label, bool& open) {
     State& s = state(ctx);
     const Theme& t = s.cfg.theme;

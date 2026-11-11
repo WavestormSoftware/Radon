@@ -32,8 +32,8 @@ int main(int argc, char** argv) {
                 my = v.local.y / v.rect.h;
             }
             char text[96];
-            std::snprintf(text, sizeof text, "%s  pointer %.0f, %.0f", v.focused ? "focused" : "click to focus",
-                          v.local.x, v.local.y);
+            std::snprintf(text, sizeof text, "%s  pointer %.0f, %.0f",
+                          v.focused ? "focused" : "click to focus", v.local.x, v.local.y);
             rd::label(ui, text);
             rd::end_window(ui);
         }

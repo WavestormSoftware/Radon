@@ -46,7 +46,13 @@ const rd_vertex* v = rd_vertices(ui, &nv);          // then rd_indices, rd_comma
 
 `rd_vertex` and `rd_draw_command` have the same layout as the C++ structs. The vertex layout and shader contract are in [backends.md](backends.md); `backends/sdl3_gl/shaders.cpp` is the reference shader. Textures other than the glyph atlas (id 0) use your own ids: pass them to `rd_viewport` and bind them yourself when a command's `texture` is non-zero.
 
-Wrapped in C: windows (with flags), layout row, label, wrapped label, buttons (with styles), checkbox, slider, drag float, textbox, progress bar, collapsing header, combo, image and viewport. Other widgets need a new wrapper in `src/core/radon_c.cpp` (one line each). For a shared library define `RD_C_BUILD_SHARED` when building and `RD_C_SHARED` when consuming on Windows; `RD_API` handles the export.
+The canvas is C++ only. Wrapped in C: windows (with flags), layout row, label, wrapped label, buttons (with styles), checkbox, slider, drag float, textbox, progress bar, collapsing header, combo, image and viewport. Other widgets need a new wrapper in `src/core/radon_c.cpp` (one line each). For a shared library define `RD_C_BUILD_SHARED` when building and `RD_C_SHARED` when consuming on Windows; `RD_API` handles the export.
+
+## 2D canvas, gamepad, audio
+
+- **Canvas:** `rd::Canvas c = rd::canvas_begin(ui, {w, h}, background); c.fill_rect / stroke_rect / circle / line / triangle / sprite; rd::canvas_end(ui);`. Coordinates are relative to the canvas and clipped to it; `c.local` and `c.response` give pointer and click state. `sprite` takes a uv rect for sprite sheets. See `examples/snippets/game_canvas.cpp`.
+- **Gamepad (SDL3 backend):** `rd::sdl3::gamepad_state(platform, index, state)` returns sticks, triggers and button bits for your game. Pads also drive the UI: D-pad = arrows, A = Space, B = Escape, Start = Enter, bumpers = Tab.
+- **Audio (SDL3 backend):** `load_sound(path)` / `load_sound_memory(...)` for WAV, `play_sound(sound, volume)` mixes up to 8 voices on the default device. It returns false when no audio device exists, so headless runs are safe. No music streaming or looping yet.
 
 ## raylib
 

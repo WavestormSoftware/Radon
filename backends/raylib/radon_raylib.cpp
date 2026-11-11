@@ -106,12 +106,14 @@ void fill_input(Input& in) {
     static const struct {
         int rk;
         Key k;
-    } map[] = {{KEY_ENTER, KeyEnter}, {KEY_BACKSPACE, KeyBackspace}, {KEY_DELETE, KeyDelete},
-               {KEY_LEFT, KeyLeft},   {KEY_RIGHT, KeyRight},         {KEY_UP, KeyUp},
-               {KEY_DOWN, KeyDown},   {KEY_HOME, KeyHome},           {KEY_END, KeyEnd},
-               {KEY_TAB, KeyTab},     {KEY_ESCAPE, KeyEscape},       {KEY_SPACE, KeySpace},
-               {KEY_A, KeyA},         {KEY_C, KeyC},                 {KEY_V, KeyV},
-               {KEY_X, KeyX}};
+    } map[] = {{KEY_ENTER, KeyEnter},   {KEY_BACKSPACE, KeyBackspace},
+               {KEY_DELETE, KeyDelete}, {KEY_LEFT, KeyLeft},
+               {KEY_RIGHT, KeyRight},   {KEY_UP, KeyUp},
+               {KEY_DOWN, KeyDown},     {KEY_HOME, KeyHome},
+               {KEY_END, KeyEnd},       {KEY_TAB, KeyTab},
+               {KEY_ESCAPE, KeyEscape}, {KEY_SPACE, KeySpace},
+               {KEY_A, KeyA},           {KEY_C, KeyC},
+               {KEY_V, KeyV},           {KEY_X, KeyX}};
     const bool shift = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
     const bool ctrl = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
     for (const auto& e : map)
@@ -194,8 +196,9 @@ void render(Renderer* r, const Context& ctx) {
         y1 = y1 > (float)fh ? (float)fh : y1;
         if (x1 <= x0 || y1 <= y0) continue;
         rlScissor((int)x0, (int)((float)fh - y1), (int)(x1 - x0 + 0.5f), (int)(y1 - y0 + 0.5f));
-        const unsigned want =
-            (c.texture > 0 && c.texture < kMaxTex && r->tex[c.texture].id) ? r->tex[c.texture].id : r->atlas.id;
+        const unsigned want = (c.texture > 0 && c.texture < kMaxTex && r->tex[c.texture].id)
+                                  ? r->tex[c.texture].id
+                                  : r->atlas.id;
         if (want != bound) {
             rlActiveTextureSlot(0);
             rlEnableTexture(want);

@@ -48,6 +48,43 @@ void show_file_dialog(Platform* p, FileDialog kind, const char* default_location
 /// Returns true once when a dialog has finished. `path` is empty if the user cancelled.
 bool poll_file_dialog(Platform* p, std::string& path);
 bool is_gles(const Platform* p);
+
+/// Gamepad bits for GamepadState::buttons.
+enum GamepadButton : uint32_t {
+    PadSouth = 1u << 0,
+    PadEast = 1u << 1,
+    PadWest = 1u << 2,
+    PadNorth = 1u << 3,
+    PadLeftShoulder = 1u << 4,
+    PadRightShoulder = 1u << 5,
+    PadBack = 1u << 6,
+    PadStart = 1u << 7,
+    PadLeftStick = 1u << 8,
+    PadRightStick = 1u << 9,
+    PadUp = 1u << 10,
+    PadDown = 1u << 11,
+    PadLeft = 1u << 12,
+    PadRight = 1u << 13,
+};
+struct GamepadState {
+    bool connected = false;
+    Vec2 left, right;                           ///< sticks, -1..1, y positive = down
+    float left_trigger = 0, right_trigger = 0;  ///< 0..1
+    uint32_t buttons = 0;                       ///< GamepadButton bits
+};
+/// State of the index-th connected gamepad for your game. Returns false when there is none.
+/// Gamepads also drive the UI: D-pad = arrows, A = Space, B = Escape, Start = Enter, bumpers = Tab.
+bool gamepad_state(const Platform* p, int index, GamepadState& out);
+
+/// Audio: short WAV sound effects mixed on the default output device. Needs no Platform.
+/// Every call returns false/null when no audio device exists (headless CI), so it is safe to leave in.
+struct Sound;
+Sound* load_sound(const char* wav_path);
+Sound* load_sound_memory(const uint8_t* wav, size_t size);
+/// Starts playback on a free voice (8 at once; extra plays are dropped). volume 0..1.
+bool play_sound(Sound* s, float volume = 1.0f);
+void destroy_sound(Sound* s);
+void audio_shutdown();  ///< Called by destroy_platform; call it yourself if you use audio without a Platform.
 void request_quit(Platform* p);
 
 }  // namespace rd::sdl3

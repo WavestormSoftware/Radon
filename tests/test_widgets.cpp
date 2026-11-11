@@ -344,3 +344,26 @@ TEST_CASE("viewport: click focuses, drag outside keeps reporting, keys only when
     u.click(280, 280);  // click elsewhere drops focus
     CHECK(v.keys == nullptr);
 }
+
+TEST_CASE("canvas: offsets shapes, clips them, reports pointer") {
+    Ui u;
+    Canvas c;
+    u.body = [&] {
+        c = canvas_begin(u.h.ctx, {100, 50}, {10, 10, 10, 255});
+        c.circle({10, 10}, 5, {255, 0, 0, 255});
+        c.sprite(9, {0, 0, 8, 8});
+        canvas_end(u.h.ctx);
+    };
+    u.h.move(30, 30);
+    u.frame();
+    CHECK(c.rect.w == 100);
+    CHECK(c.local.x == doctest::Approx(30 - c.rect.x));
+    bool sprite = false;
+    const DrawList& dl = u.h.ctx.draw_list();
+    for (int i = 0; i < dl.command_count(); i++)
+        if (dl.commands()[i].texture == 9) {
+            sprite = true;
+            CHECK(dl.commands()[i].clip.w == doctest::Approx(100));  // clipped to the canvas
+        }
+    CHECK(sprite);
+}

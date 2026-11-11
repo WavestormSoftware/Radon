@@ -11,6 +11,9 @@
 namespace rd::gl {
 struct Renderer;
 }
+namespace rd::sdl3 {
+struct Platform;
+}
 
 namespace demo {
 
@@ -76,6 +79,8 @@ public:
     rd::TextureId create_texture(int w, int h, const uint8_t* rgba);
     /// The GL renderer, for render targets (rd::gl::create_render_target). Valid after start().
     rd::gl::Renderer* renderer();
+    /// The SDL platform, for rd::sdl3::gamepad_state. Valid after start().
+    rd::sdl3::Platform* platform();
 
 private:
     struct Impl;

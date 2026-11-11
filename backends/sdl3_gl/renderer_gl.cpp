@@ -130,15 +130,18 @@ enum : GLenum {
                                                                           (GLint, GLint, GLsizei, GLsizei,   \
                                                                            GLenum, GLenum, void*))
 // clang-format on
-#define RD_GL_FBO_FUNCS(X)                                                                        \
-    X(void, GenFramebuffers, (GLsizei, GLuint*)) X(void, BindFramebuffer, (GLenum, GLuint))      \
-    X(void, DeleteFramebuffers, (GLsizei, const GLuint*))                                        \
-    X(void, FramebufferTexture2D, (GLenum, GLenum, GLenum, GLuint, GLint))                       \
-    X(GLenum, CheckFramebufferStatus, (GLenum)) X(void, GenRenderbuffers, (GLsizei, GLuint*))    \
-    X(void, BindRenderbuffer, (GLenum, GLuint)) X(void, DeleteRenderbuffers, (GLsizei, const GLuint*)) \
-    X(void, RenderbufferStorage, (GLenum, GLenum, GLsizei, GLsizei))                             \
-    X(void, FramebufferRenderbuffer, (GLenum, GLenum, GLenum, GLuint))                           \
-    X(void, GetIntegerv, (GLenum, GLint*))
+// clang-format off
+#define RD_GL_FBO_FUNCS(X)                                                                            \
+    X(void, GenFramebuffers, (GLsizei, GLuint*))                                                      \
+    X(void, BindFramebuffer, (GLenum, GLuint)) X(void, DeleteFramebuffers, (GLsizei, const GLuint*))  \
+        X(void, FramebufferTexture2D, (GLenum, GLenum, GLenum, GLuint, GLint))                        \
+            X(GLenum, CheckFramebufferStatus, (GLenum)) X(void, GenRenderbuffers, (GLsizei, GLuint*)) \
+                X(void, BindRenderbuffer, (GLenum, GLuint))                                           \
+                    X(void, DeleteRenderbuffers, (GLsizei, const GLuint*))                            \
+                        X(void, RenderbufferStorage, (GLenum, GLenum, GLsizei, GLsizei))              \
+                            X(void, FramebufferRenderbuffer, (GLenum, GLenum, GLenum, GLuint))        \
+                                X(void, GetIntegerv, (GLenum, GLint*))
+// clang-format on
 
 #define RD_DECL(ret, name, args) ret(RD_GLCALL* name) args = nullptr;
 }  // namespace

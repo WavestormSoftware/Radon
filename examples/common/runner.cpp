@@ -107,6 +107,9 @@ void Runner::show_open_dialog() {
 bool Runner::poll_dialog(std::string& path) {
     return rd::sdl3::poll_file_dialog(m_->plat, path);
 }
+rd::sdl3::Platform* Runner::platform() {
+    return m_->plat;
+}
 rd::gl::Renderer* Runner::renderer() {
     return m_->rend;
 }

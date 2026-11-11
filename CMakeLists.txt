@@ -45,6 +45,10 @@ target_include_directories(radon PUBLIC
 target_include_directories(radon SYSTEM PRIVATE src/third_party)
 target_compile_features(radon PUBLIC cxx_std_17)
 
+if(MSVC)
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)  # examples and tests use getenv/fopen/sscanf under /WX
+endif()
+
 function(rd_warnings target)
     if(MSVC)
         target_compile_options(${target} PRIVATE /W4)
@@ -72,7 +76,7 @@ if(RD_BACKEND_SDL3_GL)
     FetchContent_MakeAvailable(SDL3)
     add_library(radon_sdl3_gl
         backends/sdl3_gl/platform_sdl3.cpp backends/sdl3_gl/renderer_gl.cpp
-        backends/sdl3_gl/shaders.cpp)
+        backends/sdl3_gl/shaders.cpp backends/sdl3_gl/audio_sdl3.cpp)
     add_library(radon::sdl3_gl ALIAS radon_sdl3_gl)
     target_include_directories(radon_sdl3_gl PUBLIC backends/sdl3_gl)
     target_link_libraries(radon_sdl3_gl PUBLIC radon SDL3::SDL3)
