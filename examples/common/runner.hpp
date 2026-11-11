@@ -18,7 +18,7 @@ std::vector<uint8_t> find_font(const char* explicit_path);
 
 /// Fonts the runner loaded into the context. Handles are -1 when no font was found.
 struct Fonts {
-    rd::FontHandle body = -1, heading = -1, small = -1;
+    rd::FontHandle body = -1, heading = -1, small = -1, large = -1;
 };
 /// Wavestorm dark (or light) theme with the loaded fonts applied.
 rd::Theme make_theme(const Fonts& fonts, bool dark = true);
@@ -29,8 +29,11 @@ struct Options {
     int frames = 0;
     int page = 0;                          ///< --page n: first page of multi-page examples
     bool light = false;                    ///< --light
+    bool dark = false;                     ///< --dark (default: follow the system theme)
+    bool touch = false;                    ///< --touch: finger-sized metrics, as on phones
     int width = 0, height = 0;             ///< --size WxH
     float pointer_x = -1, pointer_y = -1;  ///< --pointer x,y: fixed pointer position (screenshots)
+    float click_x = -1, click_y = -1;      ///< --click x,y: click there on frame 5 (screenshots of popups)
 };
 
 /// Called every frame between begin_frame and end_frame. Sizes are logical pixels.
@@ -42,6 +45,8 @@ struct AppConfig {
     int width = 1100, height = 700;
     InitFn init;  ///< optional, after fonts are loaded
     FrameFn frame;
+    /// Optional: the OS switched between light and dark. Default: apply make_theme(fonts, dark).
+    std::function<void(rd::Context&, bool dark)> system_theme;
 };
 
 /// Window + GL + context + loop. Use run() on desktop, or start()/step()/stop() when something else
@@ -57,6 +62,12 @@ public:
     rd::Context& context();
     const Fonts& fonts() const;
     const Options& options() const;
+    /// True if the app should start dark: --dark / --light, else the system setting.
+    bool dark() const;
+    /// Native helpers, forwarded to the backend.
+    void open_url(const char* url);
+    void show_open_dialog();
+    bool poll_dialog(std::string& path);
     /// Registers an RGBA texture usable with rd::image. Valid after start().
     rd::TextureId create_texture(int w, int h, const uint8_t* rgba);
 

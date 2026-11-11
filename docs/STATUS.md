@@ -1,14 +1,15 @@
 # Status
 
-Environment: Linux (Artix), GCC 16.2.1, Clang, CMake 4.4.5, Ninja, system SDL 3.4.18, a live desktop
-session, Android SDK 34 / NDK 27 / Gradle 8.9 (installed for the APK build). No emsdk, no Xcode, no MSVC.
+Environment: Linux (Artix), GCC 16.2.1, Clang, CMake 4.4.5, Ninja, system SDL 3.4.18, a live Wayland
+desktop session, Android SDK 34 / NDK 27 / Gradle. No emsdk, no Xcode, no MSVC, no Android device.
 
 | Target | Built | Ran | Tested | Notes |
 |---|---|---|---|---|
+| Linux | Yes | Yes | Yes | GCC debug + Clang release, `-Wall -Wextra -Werror`; 95 test cases + allocation test pass; ASan/UBSan clean. Gallery and 11 examples render on the live desktop. |
+| Android | Yes (unsigned APK, arm64-v8a) | No | Core only | Built with NDK 27 against SDL 3.2.8. **Never installed on a device or emulator.** |
 | Windows | No | No | No | No Windows/MSVC here. CI job written, never run. |
-| Linux | Yes | Yes | Yes | GCC debug + Clang release; 75 test cases + allocation test pass; ASan/UBSan clean. Gallery and 10 examples run on the live desktop. |
-| Web | No | No | Core only | No emsdk here (installing it was not permitted in this session). Project and CI job written, never built. Instructions: `docs/building.md`. |
-| Android | Yes (unsigned + debug-signed APK) | No | Core only | Built with NDK 27 / Gradle 8.9. The APK was not installed on a device or emulator. |
+| macOS | No | No | No | Preset and CI job written, never run. |
+| Web | No | No | Core only | No emsdk here. Project and CI job written, never built. |
 | iOS | No | No | Core only | Not macOS. CMake/Xcode project and CI job written, never built. |
 
 "Core only" means the shared core tests pass on Linux; nothing ran on that target.
@@ -17,25 +18,33 @@ session, Android SDK 34 / NDK 27 / Gradle 8.9 (installed for the APK build). No 
 
 | Command | Result |
 |---|---|
-| `cmake --preset linux-gcc-debug && cmake --build --preset linux-gcc-debug && ctest --preset linux-gcc-debug` | Built with `-Wall -Wextra -Werror`; 2/2 pass (75 cases, allocation test) |
-| `cmake --preset linux-clang-release && cmake --build --preset linux-clang-release && ctest --preset linux-clang-release` | Built; 2/2 pass |
+| `cmake --preset linux-gcc-debug && cmake --build ... && ctest ...` | 2/2 pass (95 cases / 394 assertions, allocation test) |
+| `cmake --preset linux-clang-release && cmake --build ... && ctest ...` | 2/2 pass |
 | `scripts/check_core_includes.sh` | `check_core_includes: ok` |
-| `build/<preset>/tests/test_alloc` | 0 heap allocations over 200 frames after warm-up, with the whole widget set (menus, modal, color picker, plots...) |
-| `xargs clang-format --dry-run --Werror` on `include src/core backends examples tests` | clean |
-| ASan + UBSan build of the core tests | all pass, no reports |
-| `scripts/screenshots.sh` | regenerated `docs/screenshots/*.png` (gallery pages, light theme, phone width, 10 examples); checked by eye |
-| `gradle assembleRelease -Psdl3Dir=... -PfontFile=...` in `examples/mobile_demo/android` | BUILD SUCCESSFUL; `app-release-unsigned.apk` (arm64-v8a) |
+| `tests/test_alloc` | 0 heap allocations over 200 frames after warm-up, with every widget including the 0.2 set, toasts and context menus |
+| ASan + UBSan build of the core tests (`-fsanitize=address,undefined`) | all pass, no reports |
+| `clang-format -i` over `include src/core backends examples tests` | applied |
+| `cmake --install` + `tests/install` consumer with `find_package(Radon)` | builds and runs |
+| `scripts/screenshots.sh` | regenerated `docs/screenshots/*.png`; the new pages, light theme, phone layout and bottom sheet were checked by eye |
+| `gradle assembleRelease -Psdl3Dir=... -PfontFile=...` | BUILD SUCCESSFUL, `app-release-unsigned.apk` |
+| Live gallery left idle for 4 s with `wait_events` | about 1% CPU |
 
 ## Not verified
 
-- **Windows, Web, iOS** builds, and all CI jobs (none have run).
-- **The APK on a device**: built and signature-verified only. Touch, soft keyboard and safe-area code are untested on hardware.
-- **Mouse interaction in the real window**: clicks and drags are covered by unit tests with synthetic input; the screenshots are scripted with a fixed pointer. Nobody drove the live windows.
-- **Light theme** was checked by eye in one screenshot only.
-- **Font-dependent tests** run against a system Noto Sans because `examples/assets/font.ttf` is not in the repo; without any font they print a skip message.
-- Golden draw-list tests and a timed fuzz run are not written. `RD_DEBUG_IDS` is not implemented.
-- Intermediate milestone commits M1-M5 do not build on their own (ADR 0006).
+- **Windows, macOS, Web, iOS**: never built. Every CI job except Linux has never run.
+- **Anything on a phone.** The APK builds, but the display-scale sizing, flick scrolling, long-press,
+  soft keyboard placement, back button, safe area and background pause have only been exercised through
+  unit tests with synthetic input and by resizing the desktop window to phone size. Expect to tune on a
+  real device.
+- **Native features on the desktop**: system theme changes, cursors, the file dialog, `open_url` and IME
+  placement compile against SDL 3.2.8 and 3.4, but nobody clicked through them in a live window. Drawers,
+  toasts and the date popup were checked with scripted clicks in screenshots only.
+- **Fractional display scales** (125%, 150%): the conversion is written, not run on such a display.
+- **Font-dependent tests** use a system Noto Sans; without any font they print a skip message.
+- Golden draw-list tests and a fuzz run are not written.
+- There is no screen-reader accessibility support and no multi-touch.
 
 ## Release
 
-`v0.1.0` is not tagged: it needs green CI on Windows, Web, Android and iOS, and the owner's `font.ttf`.
+`v0.2.0` is not tagged: it needs green CI on Windows, macOS, Web, Android and iOS, and one pass on a
+real Android or iOS device.

@@ -85,7 +85,10 @@ TEST_CASE("zero heap allocations per frame after warm-up") {
     float plot[8] = {1, 3, 2, 5, 4, 2, 1, 3};
     char text[32] = "hello";
     TextBuffer tb{text, sizeof text, 5};
-    bool modal_requested = true;
+    bool modal_requested = true, asc = true;
+    float lo = 0.2f, hi = 0.7f;
+    int year = 2026, month = 11, day = 10, page = 3, sort = 0;
+    const Icon nav_icons[] = {Icon::Home, Icon::Search, Icon::User};
     auto ui = [&] {
         if (begin_window(h.ctx, "Main", win, WindowDefault | WindowClosable | WindowScrollable)) {
             const float cols[] = {80, -1};
@@ -132,6 +135,57 @@ TEST_CASE("zero heap allocations per frame after warm-up") {
             spinner(h.ctx);
             badge(h.ctx, "badge", {255, 0, 0, 255});
             icon_button(h.ctx, "ic", Icon::Search);
+            // third widget family
+            password_box(h.ctx, "##pw", tb);
+            search_box(h.ctx, "##find", tb);
+            text_area(h.ctx, "##area", tb, 60);
+            range_slider(h.ctx, "##range", lo, hi, 0, 1);
+            segmented(h.ctx, "##seg", tab, items, 3);
+            chip(h.ctx, "chip", check);
+            rating(h.ctx, "##stars", ival);
+            link(h.ctx, "link");
+            calendar(h.ctx, "##cal", year, month, day);
+            date_picker(h.ctx, "##date", year, month, day);
+            pagination(h.ctx, "##pages", page, 30);
+            breadcrumbs(h.ctx, "##bc", items, 3);
+            heading(h.ctx, "Heading");
+            avatar(h.ctx, "Ada Lovelace", col);
+            alert(h.ctx, Tone::Warning, "An alert whose text is long enough to wrap onto a second line.");
+            progress_ring(h.ctx, sl);
+            skeleton(h.ctx);
+            table_header(h.ctx, "tbl", items, 3, nullptr, &sort, &asc);
+            for (int i = 0; i < 3; i++) {
+                table_row(h.ctx, i, i == 1);
+                for (int c = 0; c < 3; c++) label(h.ctx, items[c]);
+            }
+            if (begin_child(h.ctx, "long", 80)) {
+                int first = 0, last = 0;
+                list_clipper_begin(h.ctx, 5000, 0, first, last);
+                for (int i = first; i < last; i++) {
+                    layout_row(h.ctx, 1, nullptr, 0, 0);
+                    label(h.ctx, "row");
+                }
+                list_clipper_end(h.ctx);
+                end_child(h.ctx);
+            }
+            layout_row(h.ctx, 1, nullptr, 0, 0);
+            if (begin_card(h.ctx, "card")) {
+                label(h.ctx, "in a card");
+                end_card(h.ctx);
+            }
+            begin_disabled(h.ctx);
+            button(h.ctx, "disabled");
+            end_disabled(h.ctx);
+            transition_begin(h.ctx, "tr", tab);
+            button(h.ctx, "fading");
+            if (context_menu_begin(h.ctx, "ctx")) {
+                menu_item(h.ctx, "Copy");
+                popup_end(h.ctx);
+            }
+            transition_end(h.ctx);
+            layout_row(h.ctx, 1, nullptr, 0, 50);
+            nav_bar(h.ctx, "##nav", tab, nav_icons, items, 3);
+            animate(h.ctx, "anim", sl);
             push_theme(h.ctx, t);
             button(h.ctx, "scoped", ButtonStyle::Primary);
             pop_theme(h.ctx);
@@ -176,6 +230,8 @@ TEST_CASE("zero heap allocations per frame after warm-up") {
     for (int i = 0; i < 200; i++) {
         h.in.pointer = {30.0f + (float)(i % 50), 40.0f + (float)(i % 30)};
         h.in.wheel = (i % 7 == 0) ? -1.0f : 0.0f;
+        h.in.secondary_pressed = i % 23 == 0;
+        if (i % 40 == 0) toast(h.ctx, "A toast", Tone::Success, 0.4f);
         if (i % 10 == 0) h.key(KeyA, false, true);
         if (i % 13 == 0) h.type("x");
         if (i % 17 == 0) h.key(KeyTab);

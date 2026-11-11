@@ -41,6 +41,9 @@ public:
     void set_clip(const Rect& r) { clip_ = r; }
     void set_layer(uint32_t layer) { layer_ = layer; }
     void break_command() { force_new_ = true; }
+    /// Multiplies the alpha of everything drawn afterwards (fades, disabled sections). 1 = opaque.
+    void set_alpha(float a) { alpha_ = a < 0 ? 0 : (a > 1 ? 1 : a); }
+    float alpha() const { return alpha_; }
     void sort_by_layer();
 
     /// Rounded rectangle. border > 0 draws only a ring of that width.
@@ -67,6 +70,11 @@ private:
     bool overflow_ = false, force_new_ = true;
     Rect clip_{-1e6f, -1e6f, 2e6f, 2e6f};
     uint32_t layer_ = 0;
+    float alpha_ = 1;
+    Color fade(Color c) const {
+        c.a = (uint8_t)((float)c.a * alpha_ + 0.5f);
+        return c;
+    }
 };
 
 }  // namespace rd

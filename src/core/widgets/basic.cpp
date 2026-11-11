@@ -48,9 +48,10 @@ Response checkbox(Context& ctx, std::string_view label, bool& value) {
     }
     const float bs = std::fmin(r.h * 0.64f, r.w);
     Rect box{r.x, r.y + (r.h - bs) / 2, bs, bs};
-    draw_frame(s, box, value ? t.accent : control_color(s, id, rs), rs.focused);
-    if (value) {
-        Color c = t.accent_text;
+    const float on = anim_to(s, hash_u32(id, 77), value ? 1.0f : 0.0f, 0.12f, value ? 1.0f : 0.0f);
+    draw_frame(s, box, lerp(control_color(s, id, rs), t.accent, on), rs.focused);
+    if (on > 0.02f) {
+        Color c = with_alpha(t.accent_text, on);
         s.dl.line({box.x + bs * 0.24f, box.y + bs * 0.52f}, {box.x + bs * 0.43f, box.y + bs * 0.72f}, c, 2);
         s.dl.line({box.x + bs * 0.43f, box.y + bs * 0.72f}, {box.x + bs * 0.77f, box.y + bs * 0.28f}, c, 2);
     }

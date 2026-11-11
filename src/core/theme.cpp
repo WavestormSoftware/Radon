@@ -15,6 +15,24 @@ Theme Theme::with_accent(Theme t, Color accent) {
     return t;
 }
 
+Theme Theme::scaled(Theme t, float k) {
+    for (float* m : {&t.padding, &t.spacing, &t.corner_radius, &t.scrollbar_width, &t.title_height,
+                     &t.cell_height, &t.window_radius, &t.shadow_blur, &t.indent})
+        *m *= k;
+    return t;
+}
+
+Theme Theme::touch(Theme t) {
+    t.cell_height = 44;  // the common minimum touch target (Apple HIG 44 pt, Material 48 dp)
+    t.title_height = 48;
+    t.padding = 12;
+    t.spacing = 8;
+    t.indent = 20;
+    t.scrollbar_width = 6;
+    t.corner_radius += 2;
+    return t;
+}
+
 Theme Theme::dark() {
     Theme t;
     t.background = {0x0b, 0x0e, 0x12, 255};

@@ -19,6 +19,8 @@ constexpr uint32_t kTooltipLayer = kOverlayLayer + 4096;
 constexpr int kMaxChildStack = 8;
 constexpr int kMaxThemeStack = 8;
 constexpr size_t kArenaSize = 1u << 20;
+constexpr int kMaxAlpha = 8;
+constexpr int kMaxToasts = 4;
 
 struct Layout {
     Rect body;
@@ -35,7 +37,7 @@ struct WindowState {
     ID id = 0;
     Rect rect;
     int z = 0;
-    float scroll = 0;
+    float scroll = 0, vel = 0;
     float content_h = 0;
     uint32_t last_frame = 0;
     bool open = true, used = false, overlay = false;
@@ -50,12 +52,13 @@ struct WindowFrame {
     Rect content;
     int layout_index = 0, clip_base = 0;
     bool overlay = false;
+    float prev_alpha = 1;
 };
 
 struct TextEdit {
     ID id = 0;
     int cursor = 0, anchor = 0;
-    float scroll = 0;
+    float scroll = 0, scroll_y = 0;
     uint32_t last_frame = 0;
 };
 
@@ -63,12 +66,14 @@ struct ChildState {
     ID id = 0;
     float scroll = 0, content_h = 0;
     uint32_t last_frame = 0;
+    float vel = 0;
 };
 
 struct ChildFrame {
     int slot = 0, layout_index = 0, clip_base = 0;
     Rect rect;
     float pad = 0;
+    bool card = false;
 };
 
 struct PickerState {
@@ -79,8 +84,15 @@ struct PickerState {
 
 struct Anim {
     ID id = 0;
-    float hover = 0, press = 0;
+    float hover = 0, press = 0;  // anim_to keeps its value in `hover`
     uint32_t last_frame = 0;
+    int key = 0;  // transition_begin: the key the content was last shown for
+};
+
+struct Toast {
+    char text[96];
+    Tone tone = Tone::Info;
+    float age = 0, duration = 0;  // duration 0 = free slot
 };
 
 struct FontSlot {
@@ -160,7 +172,7 @@ struct State {
     std::unique_ptr<ChildState[]> children;
     ChildFrame cstack[kMaxChildStack];
     int cstack_n = 0;
-    bool wheel_used = false;
+    bool wheel_used = false, drag_used = false;
     float time = 0, drag_acc = 0;
     PickerState pickers[8];
     Theme theme_stack[kMaxThemeStack];
@@ -170,6 +182,20 @@ struct State {
     bool modal_seen = false, popup_is_menu = false, in_menu = false;
     Rect menu_bar;
     float menu_x = 0;
+
+    float alpha = 1;  // current fade (popup transitions, disabled sections)
+    float alpha_stack[kMaxAlpha];
+    bool disabled_stack[kMaxAlpha];
+    int alpha_n = 0, disabled = 0;
+    bool animating = false, secondary = false, long_fired = false;
+    float press_time = 0;
+    Cursor cursor = Cursor::Arrow;
+    Rect text_rect;
+    Toast toasts[kMaxToasts];
+    float toast_offset = 0;
+    float tr_shift[kMaxAlpha];  // transition_begin slide offsets
+    int tr_n = 0;
+    float clipper_rest = 0;  // list_clipper: space to reserve after the visible rows
 
     std::unique_ptr<FontSlot[]> fonts;
     int font_n = 0;
@@ -201,6 +227,14 @@ void pop_clip(State& s);
 Color lerp(Color a, Color b, float t);
 Color with_alpha(Color c, float a);
 float animate(State& s, ID id, bool hover, bool press, float* press_out = nullptr);
+/// Eases a per-ID value toward `target` (about `duration` seconds). A value that was not animated on
+/// the previous frame restarts at `from`. Safe to call more than once per frame.
+float anim_to(State& s, ID id, float target, float duration, float from);
+Anim* anim_slot(State& s, ID id, bool& fresh);
+bool push_alpha(State& s, float mul);
+void pop_alpha(State& s);
+/// Touch flick scrolling: tracks the drag velocity and keeps scrolling after release.
+void kinetic(State& s, float& scroll, float& vel, bool dragging, float max_scroll);
 Rect intersect(const Rect& a, const Rect& b);
 
 // layout.cpp
@@ -223,9 +257,24 @@ void end_frame_windows(State& s);
 bool begin_window_impl(Context& ctx, ID id, std::string_view title, Rect& rect, uint32_t flags, bool overlay);
 
 // widgets
+void draw_toasts(State& s);
 Response selectable(Context& ctx, std::string_view text, bool selected);
 void open_popup_id(State& s, ID id);
 bool popup_begin_id(Context& ctx, ID id, float min_w);
+Response textbox_impl(Context& ctx, ID id, Rect r, TextBuffer& buf, const char* hint, int mode, float inset_l,
+                      float inset_r);
+enum { TextSingle = 0, TextPassword = 1, TextMulti = 2 };
+inline FontHandle small_font(const Theme& t) {
+    return t.font_small >= 0 ? t.font_small : t.font_body;
+}
+inline float clamp01(float v) {
+    return v < 0 ? 0 : (v > 1 ? 1 : v);
+}
+inline Color tone_color(const Theme& t, Tone tone) {
+    return tone == Tone::Success
+               ? t.success
+               : (tone == Tone::Warning ? t.warning : (tone == Tone::Error ? t.error : t.accent));
+}
 
 }  // namespace rd::detail
 

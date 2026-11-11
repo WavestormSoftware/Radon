@@ -5,12 +5,6 @@
 namespace rd {
 using namespace detail;
 
-namespace {
-float clamp01(float v) {
-    return v < 0 ? 0 : (v > 1 ? 1 : v);
-}
-}  // namespace
-
 Response button(Context& ctx, std::string_view label, ButtonStyle style) {
     if (style == ButtonStyle::Default) return button(ctx, label);
     State& s = state(ctx);
@@ -61,7 +55,8 @@ Response radio_button(Context& ctx, std::string_view label, int& value, int opti
     bool ring = rs.focused && s.kbd_nav;
     s.dl.rect(box, ring ? t.focus_ring : (on ? t.accent : t.border), bs / 2,
               ring ? t.focus_ring_width : t.border_width + (on ? 0.5f : 0));
-    if (on) s.dl.rect({box.x + bs * 0.28f, box.y + bs * 0.28f, bs * 0.44f, bs * 0.44f}, t.accent, bs * 0.22f);
+    const float k = anim_to(s, hash_u32(id, 77), on ? 1.0f : 0.0f, 0.12f, on ? 1.0f : 0.0f) * bs * 0.22f;
+    if (k > 0.1f) s.dl.rect({box.x + bs / 2 - k, box.y + bs / 2 - k, 2 * k, 2 * k}, t.accent, k);
     draw_text_fit(s, {r.x + bs + t.spacing, r.y, r.w - bs - t.spacing, r.h}, visible_label(label), t.text,
                   false);
     return rs;
@@ -79,7 +74,7 @@ Response toggle(Context& ctx, std::string_view label, bool& value) {
     }
     const float th = std::fmin(r.h * 0.62f, r.w), tw = th * 1.8f;
     Rect track{r.x, r.y + (r.h - th) / 2, tw, th};
-    const float on = animate(s, hash_u32(id, 77), value, false);  // hover slot reused as on/off blend
+    const float on = anim_to(s, hash_u32(id, 77), value ? 1.0f : 0.0f, 0.15f, value ? 1.0f : 0.0f);
     s.dl.rect(track, lerp(t.surface_active, t.accent, on), th / 2);
     bool ring = rs.focused && s.kbd_nav;
     if (ring) s.dl.rect(track, t.focus_ring, th / 2, t.focus_ring_width);
@@ -191,7 +186,11 @@ bool tab_bar(Context& ctx, std::string_view label, int& selected, const char* co
         const float h = animate(s, hash_u32(base, (uint32_t)i), rs.hovered, false);
         Color c = on ? t.text : lerp(t.text_muted, t.text, h);
         draw_text_fit(s, tr, tabs[i], c, true);
-        if (on) s.dl.rect({tr.x + t.padding * 0.5f, r.y + r.h - 2, tr.w - t.padding, 2}, t.accent, 1);
+        if (on) {
+            const float ux = anim_to(s, hash_u32(base, 1001), tr.x - r.x, 0.18f, tr.x - r.x);
+            const float uw = anim_to(s, hash_u32(base, 1002), tr.w, 0.18f, tr.w);
+            s.dl.rect({r.x + ux + t.padding * 0.5f, r.y + r.h - 2, uw - t.padding, 2}, t.accent, 1);
+        }
         if (rs.focused && s.kbd_nav) s.dl.rect(tr, t.focus_ring, t.corner_radius, t.focus_ring_width);
     }
     return changed;
@@ -211,7 +210,9 @@ Response list_row(Context& ctx, std::string_view label, bool selected, const Ico
     if (rs.focused && s.kbd_nav) s.dl.rect(r, t.focus_ring, t.corner_radius, t.focus_ring_width);
     float tx = r.x + t.padding;
     if (icon) {
-        draw_icon(ctx, *icon, {r.x + 4, r.y, r.h, r.h}, selected ? t.accent : t.text_muted);
+        const float side = std::fmin(r.h, 28.0f);  // rows grow with touch themes; the icon does not
+        draw_icon(ctx, *icon, {r.x + 4 + (r.h - side) / 2, r.y + (r.h - side) / 2, side, side},
+                  selected ? t.accent : t.text_muted);
         tx += r.h;
     }
     draw_text_fit(s, {tx, r.y, r.x + r.w - tx - t.padding, r.h}, visible_label(label), t.text, false);
@@ -276,6 +277,7 @@ void bullet_text(Context& ctx, std::string_view text) {
 void separator_text(Context& ctx, std::string_view text) {
     State& s = state(ctx);
     const Theme& t = s.cfg.theme;
+    layout_row(ctx, 1, nullptr, 0, 0);  // always a full-width row
     Rect r = layout_next(ctx);
     text = visible_label(text);
     Vec2 sz = text_size(s, t.font_body, text);
@@ -292,6 +294,7 @@ void spinner(Context& ctx) {
     const Vec2 c{r.x + r.h / 2, r.y + r.h / 2};
     const int n = 10;
     const float head = std::fmod(s.time * 1.2f, 1.0f);
+    s.animating = true;
     for (int i = 0; i < n; i++) {
         float f = (float)i / n, a = f * 6.283185f;
         float fade = std::fmod(head - f + 1.0f, 1.0f);

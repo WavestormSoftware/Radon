@@ -1,12 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
-project(Radon VERSION 0.1.0 LANGUAGES CXX)
+project(Radon VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR ANDROID OR IOS)
+# Demos and tests are on by default only when Radon is the top-level project on a desktop.
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR ANDROID OR IOS OR NOT CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     set(_rd_desktop OFF)
 else()
     set(_rd_desktop ON)
@@ -15,6 +16,7 @@ option(RD_BUILD_EXAMPLES "Build the demos" ${_rd_desktop})
 option(RD_BUILD_TESTS "Build the tests" ${_rd_desktop})
 option(RD_BACKEND_SDL3_GL "Build the SDL3 + OpenGL ES 3 backend" ON)
 option(RD_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
+option(RD_INSTALL "Install the core library and a CMake package (find_package(Radon))" ${_rd_desktop})
 
 # ---- core (no platform dependencies) ----
 add_library(radon
@@ -22,9 +24,11 @@ add_library(radon
     src/core/draw_list.cpp src/core/text.cpp src/core/theme.cpp
     src/core/widgets/basic.cpp src/core/widgets/value.cpp src/core/widgets/popup.cpp
     src/core/widgets/textbox.cpp src/core/widgets/extra.cpp src/core/widgets/icons.cpp
-    src/core/widgets/container.cpp src/core/widgets/color.cpp)
+    src/core/widgets/container.cpp src/core/widgets/color.cpp
+    src/core/widgets/more.cpp src/core/widgets/overlay.cpp)
 add_library(radon::radon ALIAS radon)
-target_include_directories(radon PUBLIC include)
+target_include_directories(radon PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
 target_include_directories(radon SYSTEM PRIVATE src/third_party)
 target_compile_features(radon PUBLIC cxx_std_17)
 
@@ -67,6 +71,22 @@ endif()
 
 if(RD_BUILD_EXAMPLES AND RD_BACKEND_SDL3_GL)
     add_subdirectory(examples)
+endif()
+
+# ---- install: the dependency-free core. Use the backend through add_subdirectory / FetchContent. ----
+if(RD_INSTALL)
+    include(GNUInstallDirs)
+    include(CMakePackageConfigHelpers)
+    install(TARGETS radon EXPORT RadonTargets ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(DIRECTORY include/radon DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    # The core has no dependencies, so the export file itself is the package config.
+    install(EXPORT RadonTargets FILE RadonConfig.cmake NAMESPACE radon::
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Radon)
+    write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/RadonConfigVersion.cmake
+        VERSION ${PROJECT_VERSION} COMPATIBILITY SameMinorVersion)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/RadonConfigVersion.cmake
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Radon)
 endif()
 
 if(RD_BUILD_TESTS)

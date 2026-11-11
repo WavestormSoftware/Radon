@@ -8,15 +8,17 @@ OUT=docs/screenshots
 mkdir -p "$OUT"
 shot() { # name binary size [extra args...]
   local name=$1 bin=$2 size=$3; shift 3
-  "$BUILD/$bin" --size "$size" --screenshot "$OUT/$name.png" --frames 20 "$@" >/dev/null
+  "$BUILD/$bin" --size "$size" --dark --screenshot "$OUT/$name.png" --frames 40 "$@" >/dev/null
   echo "wrote $OUT/$name.png"
 }
-pages=(widgets inputs layout lists theming dashboard)
-for i in 0 1 2 3 4 5; do
+pages=(widgets inputs layout lists theming dashboard data motion)
+for i in 0 1 2 3 4 5 6 7; do
   shot "gallery-${pages[$i]}" examples/desktop_demo/radon_desktop_demo 1280x760 --page "$i" --pointer 640,700
 done
 shot gallery-light examples/desktop_demo/radon_desktop_demo 1280x760 --page 0 --light --pointer 640,700
 shot gallery-phone examples/desktop_demo/radon_desktop_demo 420x860 --page 0 --pointer 10,10
+shot gallery-phone-sheet examples/desktop_demo/radon_desktop_demo 420x860 --page 7 --pointer 10,10 --click 110,726 --frames 60
+shot ex-11-mobile-app examples/radon_ex_11_mobile_app 400x800 --pointer 10,10
 shot ex-01-hello examples/radon_ex_01_hello 480x280 --pointer 120,110
 shot ex-02-settings-form examples/radon_ex_02_settings_form 520x540 --pointer 10,10
 shot ex-03-todo-list examples/radon_ex_03_todo_list 480x520 --pointer 10,10

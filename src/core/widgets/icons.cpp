@@ -133,6 +133,124 @@ void draw_icon(Context& ctx, Icon icon, const Rect& r, Color c) {
             L(-1.0f, 0.1f, -0.5f, 0.8f);
             L(-0.5f, 0.8f, 0.2f, 0.8f);
             break;
+        case Icon::ArrowLeft:
+            L(-1, 0, 1, 0);
+            L(-1, 0, -0.3f, -0.7f);
+            L(-1, 0, -0.3f, 0.7f);
+            break;
+        case Icon::ArrowRight:
+            L(-1, 0, 1, 0);
+            L(1, 0, 0.3f, -0.7f);
+            L(1, 0, 0.3f, 0.7f);
+            break;
+        case Icon::ArrowUp:
+            L(0, -1, 0, 1);
+            L(0, -1, -0.7f, -0.3f);
+            L(0, -1, 0.7f, -0.3f);
+            break;
+        case Icon::ArrowDown:
+            L(0, -1, 0, 1);
+            L(0, 1, -0.7f, 0.3f);
+            L(0, 1, 0.7f, 0.3f);
+            break;
+        case Icon::Home:
+            L(-1.1f, 0, 0, -1);
+            L(0, -1, 1.1f, 0);
+            L(-0.75f, -0.3f, -0.75f, 0.9f);
+            L(0.75f, -0.3f, 0.75f, 0.9f);
+            L(-0.75f, 0.9f, 0.75f, 0.9f);
+            break;
+        case Icon::User:
+            ring(0, -0.45f, 0.45f);
+            L(-0.9f, 1, -0.6f, 0.35f);
+            L(-0.6f, 0.35f, 0.6f, 0.35f);
+            L(0.6f, 0.35f, 0.9f, 1);
+            break;
+        case Icon::Bell:
+            d.rect({m.x - 0.7f * u, m.y - 0.9f * u, 1.4f * u, 1.9f * u}, c, 0.7f * u, w);
+            L(-1, 0.6f, 1, 0.6f);
+            dot(0, 0.95f, 0.18f);
+            break;
+        case Icon::Heart:
+            L(0, 0.9f, -1, -0.1f);
+            L(-1, -0.1f, -0.55f, -0.7f);
+            L(-0.55f, -0.7f, 0, -0.25f);
+            L(0, -0.25f, 0.55f, -0.7f);
+            L(0.55f, -0.7f, 1, -0.1f);
+            L(1, -0.1f, 0, 0.9f);
+            break;
+        case Icon::Info:
+            ring(0, 0, 1);
+            L(0, -0.1f, 0, 0.55f);
+            dot(0, -0.5f, 0.12f);
+            break;
+        case Icon::Warning:
+            L(0, -1, 1.1f, 0.85f);
+            L(1.1f, 0.85f, -1.1f, 0.85f);
+            L(-1.1f, 0.85f, 0, -1);
+            L(0, -0.3f, 0, 0.25f);
+            dot(0, 0.55f, 0.1f);
+            break;
+        case Icon::Calendar:
+            d.rect({m.x - 0.95f * u, m.y - 0.75f * u, 1.9f * u, 1.7f * u}, c, 2, w);
+            L(-0.95f, -0.2f, 0.95f, -0.2f);
+            L(-0.45f, -1, -0.45f, -0.55f);
+            L(0.45f, -1, 0.45f, -0.55f);
+            break;
+        case Icon::Clock:
+            ring(0, 0, 1);
+            L(0, -0.55f, 0, 0);
+            L(0, 0, 0.4f, 0.3f);
+            break;
+        case Icon::Sun:
+            ring(0, 0, 0.45f);
+            for (int i = 0; i < 8; i++) {
+                float a = (float)i * 0.785398f, cx = std::cos(a), cy = std::sin(a);
+                L(cx * 0.75f, cy * 0.75f, cx * 1.1f, cy * 1.1f);
+            }
+            break;
+        case Icon::Moon:
+            for (int i = 0; i < 10; i++) {  // outer arc, then a shallower inner arc back
+                float a0 = 0.9f + (float)i * 0.45f, a1 = a0 + 0.45f;
+                L(std::cos(a0), std::sin(a0), std::cos(a1), std::sin(a1));
+            }
+            L(std::cos(0.9f), std::sin(0.9f), 0.1f, 0.05f);
+            L(0.1f, 0.05f, std::cos(5.4f), std::sin(5.4f));
+            break;
+        case Icon::Play:
+            L(-0.6f, -0.9f, 0.9f, 0);
+            L(0.9f, 0, -0.6f, 0.9f);
+            L(-0.6f, 0.9f, -0.6f, -0.9f);
+            break;
+        case Icon::Pause:
+            L(-0.45f, -0.9f, -0.45f, 0.9f);
+            L(0.45f, -0.9f, 0.45f, 0.9f);
+            break;
+        case Icon::Refresh:
+            for (int i = 0; i < 9; i++) {
+                float a0 = -0.6f + (float)i * 0.6f, a1 = a0 + 0.6f;
+                L(std::cos(a0) * 0.9f, std::sin(a0) * 0.9f, std::cos(a1) * 0.9f, std::sin(a1) * 0.9f);
+            }
+            L(0.74f, -0.51f, 0.95f, -1.05f);
+            L(0.74f, -0.51f, 0.2f, -0.6f);
+            break;
+        case Icon::Copy:
+            d.rect({m.x - 0.95f * u, m.y - 0.95f * u, 1.35f * u, 1.35f * u}, c, 2, w);
+            d.rect({m.x - 0.4f * u, m.y - 0.4f * u, 1.35f * u, 1.35f * u}, c, 2, w);
+            break;
+        case Icon::Download:
+            L(0, -1, 0, 0.35f);
+            L(0, 0.35f, -0.6f, -0.25f);
+            L(0, 0.35f, 0.6f, -0.25f);
+            L(-0.95f, 0.9f, 0.95f, 0.9f);
+            break;
+        case Icon::Share:
+            dot(-0.7f, 0, 0.28f);
+            dot(0.7f, -0.75f, 0.28f);
+            dot(0.7f, 0.75f, 0.28f);
+            L(-0.7f, 0, 0.7f, -0.75f);
+            L(-0.7f, 0, 0.7f, 0.75f);
+            break;
     }
 }
 

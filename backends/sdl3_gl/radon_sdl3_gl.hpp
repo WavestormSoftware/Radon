@@ -3,6 +3,8 @@
 #pragma once
 #include <radon/radon.hpp>
 
+#include <string>
+
 namespace rd::sdl3 {
 
 struct PlatformConfig {
@@ -10,6 +12,9 @@ struct PlatformConfig {
     int width = 960, height = 600;
     bool resizable = true;
     bool vsync = true;
+    /// Sleep until the next input event while the UI is idle (Context::animating() is false) instead
+    /// of redrawing every frame. Saves battery. Ignored on the web, where the browser owns the loop.
+    bool wait_events = false;
 };
 
 struct Platform;
@@ -24,7 +29,24 @@ void finish_frame(Platform* p, Context& ctx);
 /// Applies DPI scale and clipboard callbacks to a context. Call once after creating it.
 void attach(Platform* p, Context& ctx);
 void framebuffer_size(const Platform* p, int& width, int& height);
+/// Physical pixels per logical pixel: the OS display scale (Windows/Linux scaling, Android density,
+/// Retina). Radon lays out in logical pixels, so UI has the same physical size on every screen.
 float dpi_scale(const Platform* p);
+/// Window size in logical pixels (framebuffer size / dpi_scale).
+void logical_size(const Platform* p, int& width, int& height);
+/// True if the OS is set to a dark theme (also when the OS does not say).
+bool system_dark(const Platform* p);
+/// True once after the OS switched between light and dark.
+bool system_theme_changed(Platform* p);
+/// Opens a URL in the system browser.
+bool open_url(const char* url);
+
+enum class FileDialog { Open, Save, Folder };
+/// Shows the native file dialog (Windows, macOS, Linux portals/zenity; Android partly; not iOS or
+/// the web). It does not block: fetch the result with poll_file_dialog on a later frame.
+void show_file_dialog(Platform* p, FileDialog kind, const char* default_location = nullptr);
+/// Returns true once when a dialog has finished. `path` is empty if the user cancelled.
+bool poll_file_dialog(Platform* p, std::string& path);
 bool is_gles(const Platform* p);
 void request_quit(Platform* p);
 

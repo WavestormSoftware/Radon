@@ -19,7 +19,7 @@ struct Config {
     int max_anims = 256;    ///< hover/press blend slots, keyed by ID
     int atlas_size = 1024;  ///< glyph atlas, square
     float dpi_scale = 1.0f;
-    bool animations = true;  ///< cosmetic only; never changes interaction results
+    bool animations = true;  ///< transitions; widget results never depend on them
     Theme theme = Theme::dark();
 };
 

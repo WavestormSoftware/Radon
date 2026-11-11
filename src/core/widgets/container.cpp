@@ -60,6 +60,52 @@ bool begin_child(Context& ctx, std::string_view label, float height, bool border
     return true;
 }
 
+bool begin_card(Context& ctx, std::string_view label) {
+    State& s = state(ctx);
+    const Theme& t = s.cfg.theme;
+    if (s.cstack_n >= kMaxChildStack || s.layout_n >= s.cfg.max_layout_stack || s.clip_n >= kMaxClip) {
+        s.error = true;
+        return false;
+    }
+    ChildState* c = find_child(s, get_id(s, label));
+    if (!c) {
+        s.error = true;
+        return false;
+    }
+    c->last_frame = s.frame;
+    // The card is as tall as its content was last frame.
+    layout_row(ctx, 1, nullptr, 0, std::fmax(c->content_h, t.cell_height));
+    Rect r = layout_next(ctx);
+    s.dl.rect(r, t.surface_hover, t.window_radius);
+    s.dl.rect(r, t.border, t.window_radius, t.border_width);
+    ChildFrame& f = s.cstack[s.cstack_n++];
+    f = ChildFrame{};
+    f.slot = (int)(c - s.children.get());
+    f.rect = r;
+    f.pad = t.padding;
+    f.card = true;
+    f.clip_base = s.clip_n;
+    f.layout_index = s.layout_n;
+    push_clip(s, r);
+    push_layout(s, {r.x + f.pad, r.y + f.pad, r.w - 2 * f.pad, r.h - 2 * f.pad});
+    return true;
+}
+
+void end_card(Context& ctx) {
+    State& s = state(ctx);
+    if (s.cstack_n == 0 || !s.cstack[s.cstack_n - 1].card) {
+        s.error = true;
+        return;
+    }
+    ChildFrame f = s.cstack[--s.cstack_n];
+    ChildState& c = s.children[f.slot];
+    const Layout& L = s.layouts[f.layout_index];
+    c.content_h = L.max.y - L.body.y + 2 * f.pad;
+    if (c.content_h != f.rect.h) s.animating = true;  // one more frame to settle the height
+    s.layout_n = f.layout_index;
+    while (s.clip_n > f.clip_base) pop_clip(s);
+}
+
 void end_child(Context& ctx) {
     State& s = state(ctx);
     if (s.cstack_n == 0) {
@@ -82,9 +128,11 @@ void end_child(Context& ctx) {
                 s.wheel_used = true;
             }
         }
-        if (s.in.touch && s.in.pointer_down && s.touch_moved && !s.active_captures &&
-            f.rect.contains(s.press_pos) && s.press_window == s.cur_window)
-            c.scroll = std::fmin(std::fmax(c.scroll - s.pointer_delta.y, 0.0f), maxs);
+        const bool drag = s.in.touch && s.in.pointer_down && s.touch_moved && !s.active_captures &&
+                          !s.drag_used && f.rect.contains(s.press_pos) && s.press_window == s.cur_window;
+        if (drag) s.drag_used = true;  // the enclosing window must not scroll too
+        kinetic(s, c.scroll, c.vel, drag, maxs);
+        c.scroll = std::fmin(std::fmax(c.scroll, 0.0f), maxs);
         const float sbw = t.scrollbar_width * 0.6f;
         Rect track{f.rect.x + f.rect.w - sbw - 2, f.rect.y + 3, sbw, f.rect.h - 6};
         const float thumb_h = std::fmax(20.0f, track.h * f.rect.h / c.content_h);
@@ -234,7 +282,7 @@ bool modal_begin(Context& ctx, std::string_view id, std::string_view title, floa
     s.dl.break_command();
     s.dl.set_clip({-1e6f, -1e6f, 2e6f, 2e6f});
     const Vec2 sc = s.in.screen_size;
-    s.dl.rect({0, 0, sc.x, sc.y}, {0, 0, 0, 150});
+    s.dl.rect({0, 0, sc.x, sc.y}, {0, 0, 0, (uint8_t)(150 * anim_to(s, hash_u32(mid, 90), 1, 0.14f, 0))});
     s.dl.set_layer(layer);
     s.dl.break_command();
     float h = 60;

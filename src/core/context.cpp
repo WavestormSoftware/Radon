@@ -67,42 +67,102 @@ bool key_pressed(const State& s, int key, bool* shift, bool* ctrl) {
     return false;
 }
 
-float animate(State& s, ID id, bool hover, bool press, float* press_out) {
-    float th = hover ? 1.0f : 0.0f, tp = press ? 1.0f : 0.0f;
-    if (!s.cfg.animations) {
-        if (press_out) *press_out = tp;
-        return th;
-    }
-    Anim* slot = nullptr;
+Anim* anim_slot(State& s, ID id, bool& fresh) {
     Anim* oldest = &s.anims[0];
     for (int i = 0; i < s.cfg.max_anims; i++) {
         Anim& a = s.anims[i];
         if (a.id == id) {
-            slot = &a;
-            break;
+            fresh = a.last_frame + 1 < s.frame;  // not shown last frame: restart
+            return &a;
         }
         if (a.last_frame < oldest->last_frame) oldest = &a;
     }
-    if (!slot) {
-        if (oldest->last_frame + 1 >= s.frame && oldest->id != 0) {
-            s.error = true;  // every slot is in use this frame; skip the blend
-            if (press_out) *press_out = tp;
-            return th;
-        }
-        slot = oldest;
-        *slot = Anim{id, th, tp, s.frame};
+    if (oldest->last_frame + 1 >= s.frame && oldest->id != 0) {
+        s.error = true;  // every slot is in use this frame; skip the blend
+        return nullptr;
     }
-    float k = std::fmin(1.0f, s.dt / 0.12f);
-    slot->hover += (th - slot->hover) * k;
-    slot->press += (tp - slot->press) * k;
-    slot->last_frame = s.frame;
+    *oldest = Anim{};
+    oldest->id = id;
+    fresh = true;
+    return oldest;
+}
+
+float animate(State& s, ID id, bool hover, bool press, float* press_out) {
+    float th = hover ? 1.0f : 0.0f, tp = press ? 1.0f : 0.0f;
+    bool fresh = false;
+    Anim* slot = s.cfg.animations ? anim_slot(s, id, fresh) : nullptr;
+    if (!slot) {
+        if (press_out) *press_out = tp;
+        return th;
+    }
+    if (fresh) slot->hover = th, slot->press = tp;
+    if (slot->last_frame != s.frame) {
+        float k = std::fmin(1.0f, s.dt / 0.12f);
+        slot->hover += (th - slot->hover) * k;
+        slot->press += (tp - slot->press) * k;
+        if (std::fabs(th - slot->hover) < 0.004f) slot->hover = th;
+        if (std::fabs(tp - slot->press) < 0.004f) slot->press = tp;
+        slot->last_frame = s.frame;
+    }
+    if (slot->hover != th || slot->press != tp) s.animating = true;
     if (press_out) *press_out = slot->press;
     return slot->hover;
+}
+
+float anim_to(State& s, ID id, float target, float duration, float from) {
+    bool fresh = false;
+    Anim* a = (s.cfg.animations && duration > 0) ? anim_slot(s, id, fresh) : nullptr;
+    if (!a) return target;
+    if (fresh) a->hover = from;
+    if (a->last_frame != s.frame) {
+        a->hover += (target - a->hover) * (1.0f - std::exp(-s.dt * 5.0f / duration));
+        if (std::fabs(target - a->hover) < 0.004f) a->hover = target;
+        a->last_frame = s.frame;
+    }
+    if (a->hover != target) s.animating = true;
+    return a->hover;
+}
+
+bool push_alpha(State& s, float mul) {
+    if (s.alpha_n >= kMaxAlpha) {
+        s.error = true;
+        return false;
+    }
+    s.alpha_stack[s.alpha_n++] = s.alpha;
+    s.alpha *= mul;
+    s.dl.set_alpha(s.alpha);
+    return true;
+}
+
+void pop_alpha(State& s) {
+    if (s.alpha_n > 0) s.alpha = s.alpha_stack[--s.alpha_n];
+    s.dl.set_alpha(s.alpha);
+}
+
+void kinetic(State& s, float& scroll, float& vel, bool dragging, float maxs) {
+    if (s.in.pointer_pressed) vel = 0;  // a new touch stops the glide
+    if (dragging) {
+        scroll -= s.pointer_delta.y;
+        if (s.dt > 0) vel = 0.6f * vel + 0.4f * (-s.pointer_delta.y / s.dt);
+    } else if (s.cfg.animations && !s.in.pointer_down && std::fabs(vel) > 8.0f) {
+        scroll += vel * s.dt;
+        vel *= std::exp(-4.0f * s.dt);
+        if (scroll <= 0 || scroll >= maxs) vel = 0;
+        s.animating = true;
+    } else if (!s.in.pointer_down) {
+        vel = 0;
+    }
 }
 
 Response update_control(Context& ctx, ID id, const Rect& r, bool focusable, bool captures) {
     State& s = state(ctx);
     Response rs;
+    if (s.disabled > 0) {  // disabled sections draw but never react
+        s.last_id = id;
+        s.last_rect = r;
+        s.last_hovered = false;
+        return rs;
+    }
     const Vec2 p = s.in.pointer;
     const bool geo = r.contains(p) && (s.clip_n == 0 || s.clips[s.clip_n - 1].contains(p));
     const bool win_ok = s.hover_window == s.cur_window || s.active == id;
@@ -183,7 +243,13 @@ void Context::begin_frame(const Input& input, float dt) {
     s.frame++;
     s.blink += dt;
     s.time += dt;
-    s.wheel_used = false;
+    s.wheel_used = s.drag_used = false;
+    s.animating = false;
+    s.cursor = Cursor::Arrow;
+    s.text_rect = {};
+    s.alpha = 1;
+    s.alpha_n = s.disabled = s.tr_n = 0;
+    s.clipper_rest = 0;
     s.cstack_n = 0;
     s.in_menu = false;
     s.error = false;
@@ -215,6 +281,17 @@ void Context::begin_frame(const Input& input, float dt) {
         const float dx = input.pointer.x - s.press_pos.x, dy = input.pointer.y - s.press_pos.y;
         if (std::sqrt(dx * dx + dy * dy) > kTouchSlop) s.touch_moved = true;
     }
+    // A right click, or a finger held still for half a second, is a "secondary click" (context menus).
+    s.secondary = input.secondary_pressed;
+    if (input.pointer_pressed) s.press_time = 0, s.long_fired = false;
+    if (input.touch && input.pointer_down && !s.touch_moved && !s.long_fired) {
+        s.press_time += dt;
+        s.animating = true;  // keep frames coming while the hold timer runs
+        if (s.press_time >= 0.5f) {
+            s.secondary = s.long_fired = true;
+            s.touch_moved = true;  // the release must not also click
+        }
+    }
     s.hover = 0;
     s.updated_focus = false;
     s.press_claimed = false;
@@ -232,7 +309,7 @@ void Context::begin_frame(const Input& input, float dt) {
             s.modal_id = 0;
     }
     s.modal_seen = false;
-    if (input.pointer_pressed && s.popup_id && s.hover_window != s.popup_id) {
+    if ((input.pointer_pressed || input.secondary_pressed) && s.popup_id && s.hover_window != s.popup_id) {
         s.popup_suppress = s.popup_id;
         s.popup_id = 0;
     }
@@ -258,7 +335,12 @@ void Context::end_frame() {
     if (s.popup_id && !s.popup_seen && s.frame > s.popup_open_frame + 1) s.popup_id = 0;
     if (s.modal_id && !s.modal_seen && s.frame > s.modal_open_frame + 1) s.modal_id = 0;
     if (s.layout_n != 0 || s.wstack_n != 0 || s.cstack_n != 0) s.error = true;  // unbalanced begin/end
-    while (s.theme_n > 0) {                                                     // unbalanced push_theme
+    if (s.alpha_n != 0 || s.disabled != 0 || s.tr_n != 0) s.error = true;  // unbalanced disabled/transition
+    s.alpha = 1;
+    s.dl.set_alpha(1);
+    if (s.in.pointer_down || s.in.pointer_released || s.in.wheel != 0 || s.in.keys.count || s.in.text.count)
+        s.animating = true;
+    while (s.theme_n > 0) {  // unbalanced push_theme
         s.cfg.theme = s.theme_stack[--s.theme_n];
         s.error = true;
     }
@@ -270,11 +352,17 @@ void Context::end_frame() {
         s.dl.set_layer(kTooltipLayer);
         s.dl.break_command();
         s.dl.set_clip({-1e6f, -1e6f, 2e6f, 2e6f});
+        // keep the tip on screen
+        if (s.in.screen_size.x > 0) r.x = std::fmax(0.0f, std::fmin(r.x, s.in.screen_size.x - r.w));
+        if (s.in.screen_size.y > 0 && r.y + r.h > s.in.screen_size.y) r.y = s.tip_pos.y - 18 - r.h - 6;
+        s.dl.set_alpha(anim_to(s, 0x7171u, 1, 0.12f, 0));
         s.dl.shadow(r, t.shadow, t.corner_radius, 8, {0, 3});
         s.dl.rect(r, t.surface_active, t.corner_radius);
         s.dl.rect(r, t.border, t.corner_radius, t.border_width);
         draw_text(s, t.font_body, {r.x + t.padding, r.y + t.padding / 2}, s.tip, t.text);
+        s.dl.set_alpha(1);
     }
+    draw_toasts(s);
     end_frame_windows(s);
     s.dl.sort_by_layer();
     if (s.dl.overflow()) s.error = true;
@@ -317,6 +405,21 @@ uint32_t Context::atlas_version() const {
 }
 bool Context::wants_text_input() const {
     return s_->wants_text;
+}
+Rect Context::text_input_rect() const {
+    return s_->text_rect;
+}
+Cursor Context::cursor() const {
+    return s_->cursor;
+}
+bool Context::animating() const {
+    return s_->animating;
+}
+bool Context::can_dismiss() const {
+    return s_->popup_id != 0 || s_->modal_id != 0 || s_->wants_text;
+}
+void Context::set_animations(bool enabled) {
+    s_->cfg.animations = enabled;
 }
 
 void Context::set_dpi_scale(float scale) {

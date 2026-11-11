@@ -16,6 +16,11 @@
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "CMAKE_C_COMPILER": "clang", "CMAKE_CXX_COMPILER": "clang++" }
     },
     {
+      "name": "macos-release",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
       "name": "windows-msvc-release",
       "generator": "Visual Studio 17 2022", "architecture": "x64",
       "binaryDir": "${sourceDir}/build/${presetName}",
@@ -46,6 +51,7 @@
     { "name": "linux-gcc-debug", "configurePreset": "linux-gcc-debug" },
     { "name": "linux-clang-release", "configurePreset": "linux-clang-release" },
     { "name": "windows-msvc-release", "configurePreset": "windows-msvc-release", "configuration": "Release" },
+    { "name": "macos-release", "configurePreset": "macos-release" },
     { "name": "web-emscripten-release", "configurePreset": "web-emscripten-release" },
     { "name": "android-ndk-release", "configurePreset": "android-ndk-release" },
     { "name": "ios-simulator-release", "configurePreset": "ios-simulator-release", "configuration": "Release" }
@@ -53,6 +59,7 @@
   "testPresets": [
     { "name": "linux-gcc-debug", "configurePreset": "linux-gcc-debug", "output": { "outputOnFailure": true } },
     { "name": "linux-clang-release", "configurePreset": "linux-clang-release", "output": { "outputOnFailure": true } },
-    { "name": "windows-msvc-release", "configurePreset": "windows-msvc-release", "configuration": "Release", "output": { "outputOnFailure": true } }
+    { "name": "windows-msvc-release", "configurePreset": "windows-msvc-release", "configuration": "Release", "output": { "outputOnFailure": true } },
+    { "name": "macos-release", "configurePreset": "macos-release", "output": { "outputOnFailure": true } }
   ]
 }

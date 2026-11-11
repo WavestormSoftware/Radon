@@ -10,8 +10,9 @@ build/linux-clang-release/examples/radon_ex_02_settings_form        # any exampl
 build/linux-clang-release/examples/desktop_demo/radon_desktop_demo  # the gallery
 ```
 
-Every program accepts `--font <ttf>`, `--light`, `--size WxH`, `--screenshot out.png [--frames N]` and
-`--pointer x,y`. Set `RD_FONT` once instead of passing `--font`.
+Every program accepts `--font <ttf>`, `--light` / `--dark` (default: the system theme), `--touch`,
+`--size WxH`, `--screenshot out.png [--frames N]`, `--pointer x,y` and `--click x,y`. Without `--font`,
+`RD_FONT` or `examples/assets/font.ttf` they use a system font.
 
 | Example | Shows | |
 |---|---|---|
@@ -25,11 +26,14 @@ Every program accepts `--font <ttf>`, `--light`, `--size WxH`, `--screenshot out
 | `08_palette` | Swatches + `color_picker` editing a color in place | ![](screenshots/ex-08-palette.png) |
 | `09_calculator` | A button grid with `layout_row` and primary-styled operators | ![](screenshots/ex-09-calculator.png) |
 | `10_dashboard` | A docked creative-app layout: menu, toolbar, canvas, color/brush/layer panels | ![](screenshots/ex-10-dashboard.png) |
+| `11_mobile_app` | A phone app: `Theme::touch`, safe area, bottom `nav_bar`, bottom sheet, toasts, a clipped 2,000-row list | ![](screenshots/ex-11-mobile-app.png) |
 
 ## The gallery
 
-Six pages (`--page 0..5`): **Widgets**, **Inputs**, **Layout**, **Lists and menus**, **Theming**, and the
-**Dashboard**. It adapts to narrow screens (below 760 logical pixels it swaps the sidebar for a combo box):
+Eight pages (`--page 0..7`): **Widgets**, **Inputs**, **Layout**, **Lists and menus**, **Theming**, the
+**Dashboard**, **Data** (table, calendar, card, 100,000-row list) and **Motion and native** (alerts,
+toasts, drawers, context menu, transitions, file dialog). It adapts to narrow screens: below 760 logical
+pixels it switches to touch metrics, one column, and a bottom navigation bar with a page sheet:
 
 ![Phone layout](screenshots/gallery-phone.png) ![Light theme](screenshots/gallery-light.png)
 

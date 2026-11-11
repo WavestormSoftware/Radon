@@ -5,15 +5,20 @@ render `Context::draw_list()` out.
 
 ## The SDL3 + OpenGL backend (`radon::sdl3_gl`)
 
-One implementation covers Windows, Linux, Web, Android and iOS. Header: `backends/sdl3_gl/radon_sdl3_gl.hpp`.
+One implementation covers Windows, Linux, macOS, Web, Android and iOS. Header: `backends/sdl3_gl/radon_sdl3_gl.hpp`.
 
 ```cpp
 namespace rd::sdl3 {
 Platform* create_platform(const PlatformConfig&);    // SDL_Init, window, GL 3.3 core (desktop) or GLES 3
 bool poll(Platform*, Input&, float& dt);              // events -> Input; false on quit
 void attach(Platform*, Context&);                     // DPI scale + clipboard callbacks
-void finish_frame(Platform*, Context&);               // soft keyboard start/stop, swap buffers
+void finish_frame(Platform*, Context&);               // soft keyboard + IME rect, cursor, swap buffers
 void framebuffer_size(const Platform*, int& w, int& h);
+void logical_size(const Platform*, int& w, int& h);   // framebuffer size / dpi_scale
+bool system_dark(const Platform*);   bool system_theme_changed(Platform*);
+bool open_url(const char*);
+void show_file_dialog(Platform*, FileDialog, const char* where = nullptr);
+bool poll_file_dialog(Platform*, std::string& path);
 float dpi_scale(const Platform*);   bool is_gles(const Platform*);   void request_quit(Platform*);
 }
 namespace rd::gl {
@@ -29,8 +34,13 @@ Radon disables hover and scrolls by drag), keys to `rd::Key*`, text input to UTF
 lines, and `SDL_GetWindowSafeArea` to `Input::safe_area`. Ctrl is Cmd on Apple platforms. `finish_frame`
 calls `SDL_StartTextInput` while a text box is focused, which shows the soft keyboard on phones.
 
-Logical pixels are SDL window coordinates; `dpi_scale` is the pixel density. Pass `fb_width/height` in
-physical pixels to `render`.
+`poll` also maps the right mouse button to `secondary_pressed`, the Android back button to Escape (or
+quit when `ctx.can_dismiss()` is false), blocks while the app is in the background, and with
+`PlatformConfig::wait_events` sleeps while the UI is idle. All of this is described in
+[platforms.md](platforms.md).
+
+Logical pixels are physical pixels divided by `dpi_scale`, the OS display scale. Pointer positions and
+the safe area are converted for you. Pass `fb_width/height` in physical pixels to `render`.
 
 GL entry points are loaded through `SDL_GL_GetProcAddress`, so there is no GL loader dependency. On
 Emscripten link with `-sGL_ENABLE_GET_PROC_ADDRESS=1` (the web demo does).

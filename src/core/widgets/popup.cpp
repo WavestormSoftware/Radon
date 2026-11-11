@@ -7,6 +7,7 @@ namespace detail {
 void open_popup_id(State& s, ID id) {
     s.popup_id = id;
     s.popup_anchor = s.last_rect;
+    s.popup_is_menu = false;
     s.popup_open_frame = s.frame;
     s.popup_seen = true;
 }
@@ -18,8 +19,11 @@ bool popup_begin_id(Context& ctx, ID pid, float min_w) {
     float h = 24;
     for (int i = 0; i < s.cfg.max_windows; i++)
         if (s.wins[i].used && s.wins[i].id == pid)
-            h = std::fmin(std::fmax(s.wins[i].content_h, 24.0f), 260.0f);
+            h = std::fmin(std::fmax(s.wins[i].content_h, 24.0f), 340.0f);
     Rect r{s.popup_anchor.x, s.popup_anchor.y + s.popup_anchor.h + 2, std::fmax(s.popup_anchor.w, min_w), h};
+    const Vec2 sc = s.in.screen_size;  // keep the popup on screen: flip above the anchor, shift left
+    if (sc.y > 0 && r.y + r.h > sc.y && s.popup_anchor.y - h - 2 >= 0) r.y = s.popup_anchor.y - h - 2;
+    if (sc.x > 0) r.x = std::fmax(0.0f, std::fmin(r.x, sc.x - r.w));
     return begin_window_impl(ctx, pid, "", r, WindowBorder | WindowScrollable, true);
 }
 

@@ -14,6 +14,9 @@ jobs:
       - run: cmake --preset ${{ matrix.preset }}
       - run: cmake --build --preset ${{ matrix.preset }}
       - run: ctest --preset ${{ matrix.preset }}
+      # the installed package must be usable with find_package(Radon)
+      - run: cmake --install build/${{ matrix.preset }} --prefix "$RUNNER_TEMP/radon"
+      - run: cmake -S tests/install -B "$RUNNER_TEMP/consumer" -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/radon" && cmake --build "$RUNNER_TEMP/consumer"
 
   format:
     runs-on: ubuntu-latest
@@ -28,6 +31,14 @@ jobs:
       - run: cmake --preset windows-msvc-release
       - run: cmake --build --preset windows-msvc-release
       - run: ctest --preset windows-msvc-release
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake --preset macos-release
+      - run: cmake --build --preset macos-release --parallel
+      - run: ctest --preset macos-release
 
   web:
     runs-on: ubuntu-latest

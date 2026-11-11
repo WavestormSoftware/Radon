@@ -1,8 +1,10 @@
 // Copyright (c) 2026 Wavestorm Software
 #include "gallery.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <functional>
 #include <vector>
 
@@ -11,9 +13,11 @@ using namespace rd;
 
 namespace {
 
-const char* const kPages[] = {"Widgets", "Inputs", "Layout", "Lists and menus", "Theming", "Dashboard"};
-constexpr int kPageCount = 6;
-const Icon kPageIcons[] = {Icon::Star, Icon::Pencil, Icon::Menu, Icon::Folder, Icon::Settings, Icon::Eye};
+const char* const kPages[] = {"Widgets", "Inputs",    "Layout", "Lists and menus",
+                              "Theming", "Dashboard", "Data",   "Motion and native"};
+constexpr int kPageCount = 8, kDashboard = 5;
+const Icon kPageIcons[] = {Icon::Star,     Icon::Pencil, Icon::Menu,     Icon::Folder,
+                           Icon::Settings, Icon::Eye,    Icon::Calendar, Icon::Play};
 
 bool s_eye(Context& ctx, int i, bool visible) {
     char id[8];
@@ -38,7 +42,8 @@ void Gallery::apply_theme(Context& ctx) {
     theme_.font_body = fonts_.body;
     theme_.font_heading = fonts_.heading;
     theme_.font_small = fonts_.small;
-    ctx.set_theme(theme_);
+    theme_.font_large = fonts_.large;
+    ctx.set_theme(touch_ ? Theme::touch(theme_) : theme_);
 }
 
 void Gallery::panel_buttons(Context& ctx) {
@@ -297,10 +302,6 @@ void Gallery::panel_menus(Context& ctx) {
 }
 
 void Gallery::panel_theme(Context& ctx) {
-    if (!theme_init_) {
-        theme_ = ctx.theme();
-        theme_init_ = true;
-    }
     separator_text(ctx, "Preset");
     static const char* const presets[] = {"Wavestorm dark", "Light", "Midnight (blue)"};
     row2(ctx, "Theme");
@@ -468,12 +469,257 @@ void Gallery::dashboard(Context& ctx, const Input& in, int w, int h) {
     }
 }
 
+void Gallery::panel_inputs2(Context& ctx) {
+    separator_text(ctx, "More text input");
+    row2(ctx, "Password");
+    password_box(ctx, "##pw", pw_buf_, "At least 8 characters");
+    row2(ctx, "Search box");
+    search_box(ctx, "##find", find_buf_, "Search...");
+    layout_row(ctx, 1, nullptr, 0, 0);
+    text_area(ctx, "##notes", notes_buf_, 96, "Notes");
+}
+
+void Gallery::panel_choices(Context& ctx) {
+    separator_text(ctx, "Choices");
+    static const char* const spans[] = {"Day", "Week", "Month"};
+    layout_row(ctx, 1, nullptr, 0, 0);
+    segmented(ctx, "##seg", seg_, spans, 3);
+    row2(ctx, "Range");
+    range_slider(ctx, "##range", range_lo_, range_hi_, 0, 100);
+    layout_row(ctx, 1, nullptr, 0, 0);
+    char b[48];
+    std::snprintf(b, sizeof b, "%.0f to %.0f", (double)range_lo_, (double)range_hi_);
+    label_colored(ctx, b, ctx.theme().text_muted);
+    static const char* const tags[] = {"Design", "Code", "Docs", "Tests"};
+    layout_row(ctx, 4, nullptr, 0, 0);
+    for (int i = 0; i < 4; i++)
+        if (chip(ctx, tags[i], chips_[i]).clicked) chips_[i] = !chips_[i];
+    row2(ctx, "Rating");
+    rating(ctx, "##stars", stars_);
+    row2(ctx, "Date");
+    date_picker(ctx, "##date", year_, month_, day_);
+}
+
+void Gallery::panel_table(Context& ctx) {
+    separator_text(ctx, "Sortable table");
+    struct Row {
+        const char* name;
+        const char* kind;
+        int kb;
+    };
+    static const Row rows[] = {{"brushes.cfg", "Config", 4},
+                               {"cat.png", "Image", 812},
+                               {"city.psd", "Artwork", 48210},
+                               {"notes.txt", "Text", 2},
+                               {"palette.gpl", "Palette", 1},
+                               {"readme.md", "Text", 6},
+                               {"sky.png", "Image", 1930},
+                               {"sketch-01.kra", "Artwork", 9120},
+                               {"sketch-02.kra", "Artwork", 7714},
+                               {"swatches.ase", "Palette", 3},
+                               {"theme.json", "Config", 2},
+                               {"thumb.jpg", "Image", 96},
+                               {"todo.txt", "Text", 1},
+                               {"wave.svg", "Vector", 14}};
+    constexpr int n = (int)(sizeof rows / sizeof rows[0]), per = 5;
+    int order[n];
+    for (int i = 0; i < n; i++) order[i] = i;
+    std::sort(order, order + n, [&](int a, int b) {
+        int c = sort_col_ == 2   ? rows[a].kb - rows[b].kb
+                : sort_col_ == 1 ? std::strcmp(rows[a].kind, rows[b].kind)
+                                 : std::strcmp(rows[a].name, rows[b].name);
+        if (c == 0) c = a - b;
+        return sort_asc_ ? c < 0 : c > 0;
+    });
+    static const char* const cols[] = {"Name", "Type", "Size"};
+    static const float widths[] = {-170, 80, -1};
+    if (table_header(ctx, "tbl", cols, 3, widths, &sort_col_, &sort_asc_)) table_page_ = 0;
+    for (int i = table_page_ * per; i < n && i < (table_page_ + 1) * per; i++) {
+        const Row& r = rows[order[i]];
+        if (table_row(ctx, i, table_sel_ == order[i]).clicked) table_sel_ = order[i];
+        label(ctx, r.name);
+        label_colored(ctx, r.kind, ctx.theme().text_muted);
+        char sz[24];
+        std::snprintf(sz, sizeof sz, "%d KB", r.kb);
+        label(ctx, sz);
+    }
+    layout_row(ctx, 1, nullptr, 0, 0);
+    pagination(ctx, "##pages", table_page_, (n + per - 1) / per);
+}
+
+void Gallery::panel_clipper(Context& ctx) {
+    separator_text(ctx, "100,000 rows with list_clipper");
+    if (begin_child(ctx, "big", 190)) {
+        int first = 0, last = 0;
+        list_clipper_begin(ctx, 100000, 0, first, last);
+        for (int i = first; i < last; i++) {
+            char b[32];
+            std::snprintf(b, sizeof b, "Row %d", i + 1);
+            layout_row(ctx, 1, nullptr, 0, 0);
+            if (list_item(ctx, b, big_sel_ == i).clicked) big_sel_ = i;
+        }
+        list_clipper_end(ctx);
+        end_child(ctx);
+    }
+}
+
+void Gallery::panel_calendar(Context& ctx) {
+    separator_text(ctx, "Calendar");
+    calendar(ctx, "##cal", year_, month_, day_);
+    separator_text(ctx, "Card");
+    if (begin_card(ctx, "profile")) {
+        const float cols[] = {40, -1};
+        layout_row(ctx, 2, cols, 2, 40);
+        avatar(ctx, "Ada Lovelace", ctx.theme().accent);
+        heading(ctx, "Ada Lovelace");
+        layout_row(ctx, 1, nullptr, 0, 0);
+        label_wrapped(ctx, "Cards group related content and grow to fit whatever you put inside them.");
+        layout_row(ctx, 2, nullptr, 0, 0);
+        if (button(ctx, "Message").clicked) toast(ctx, "Message sent", Tone::Success);
+        button(ctx, "Follow", ButtonStyle::Primary);
+        end_card(ctx);
+    }
+}
+
+void Gallery::panel_alerts(Context& ctx) {
+    separator_text(ctx, "Alerts");
+    layout_row(ctx, 1, nullptr, 0, 0);
+    alert(ctx, Tone::Info, "A new version is available.");
+    alert(ctx, Tone::Success, "Your changes were saved.");
+    alert(ctx, Tone::Warning, "Storage is almost full. Remove some files to keep syncing.");
+    alert(ctx, Tone::Error, "Could not reach the server.");
+    separator_text(ctx, "Toasts");
+    layout_row(ctx, 4, nullptr, 0, 0);
+    if (button(ctx, "Info").clicked) toast(ctx, "Heads up", Tone::Info);
+    if (button(ctx, "Success").clicked) toast(ctx, "Saved", Tone::Success);
+    if (button(ctx, "Warning").clicked) toast(ctx, "Battery low", Tone::Warning);
+    if (button(ctx, "Error").clicked) toast(ctx, "Upload failed", Tone::Error);
+    separator_text(ctx, "Loading");
+    row2(ctx, "Progress ring");
+    progress_ring(ctx, slider_f_);
+    row2(ctx, "Skeleton");
+    skeleton(ctx, 0.9f);
+    layout_row(ctx, 1, nullptr, 0, 0);
+    skeleton(ctx, 1.0f);
+    skeleton(ctx, 0.6f);
+}
+
+void Gallery::panel_overlays(Context& ctx) {
+    separator_text(ctx, "Drawers and sheets");
+    layout_row(ctx, 2, nullptr, 0, 0);
+    if (button(ctx, "Bottom sheet").clicked) want_sheet_ = true;
+    if (button(ctx, "Side drawer").clicked) want_side_ = true;
+    separator_text(ctx, "Context menu");
+    layout_row(ctx, 1, nullptr, 0, 52);
+    button(ctx, "Right-click or long-press here", ButtonStyle::Ghost);
+    if (context_menu_begin(ctx, "ctx")) {
+        if (menu_item(ctx, "Copy", "Ctrl+C")) toast(ctx, "Copied");
+        if (menu_item(ctx, "Duplicate")) toast(ctx, "Duplicated");
+        if (menu_item(ctx, "Delete")) toast(ctx, "Deleted", Tone::Error);
+        popup_end(ctx);
+    }
+    separator_text(ctx, "Disabled sections");
+    layout_row(ctx, 1, nullptr, 0, 0);
+    toggle(ctx, "Enable the form", form_on_);
+    begin_disabled(ctx, !form_on_);
+    row2(ctx, "Name");
+    textbox(ctx, "##dn", name_buf_);
+    layout_row(ctx, 2, nullptr, 0, 0);
+    checkbox(ctx, "Subscribe", check_b_);
+    button(ctx, "Send", ButtonStyle::Primary);
+    end_disabled(ctx);
+    separator_text(ctx, "Transitions");
+    static const char* const steps[] = {"One", "Two", "Three"};
+    static const char* const texts[] = {
+        "transition_begin fades and slides its content in whenever the key changes.",
+        "Popups, dialogs, drawers, toasts and tooltips animate on their own.",
+        "Config::animations or Context::set_animations(false) turns all motion off."};
+    layout_row(ctx, 1, nullptr, 0, 0);
+    segmented(ctx, "##steps", tr_page_, steps, 3);
+    transition_begin(ctx, "steps", tr_page_);
+    layout_row(ctx, 1, nullptr, 0, 0);
+    label_wrapped(ctx, texts[tr_page_]);
+    transition_end(ctx);
+}
+
+void Gallery::panel_native(Context& ctx) {
+    separator_text(ctx, "Native integration");
+    layout_row(ctx, 1, nullptr, 0, 0);
+    if (link(ctx, "Open libsdl.org in the browser").clicked && runner_)
+        runner_->open_url("https://libsdl.org");
+    layout_row(ctx, 2, nullptr, 0, 0);
+    if (button(ctx, "Open file...").clicked && runner_) runner_->show_open_dialog();
+    if (button(ctx, "Light / dark").clicked) {
+        const bool to_dark = theme_.background.r > 128;
+        theme_ = make_theme(fonts_, to_dark);
+        apply_theme(ctx);
+    }
+    std::string path;
+    if (runner_ && runner_->poll_dialog(path))
+        std::snprintf(picked_, sizeof picked_, "%s", path.empty() ? "Cancelled" : path.c_str());
+    layout_row(ctx, 1, nullptr, 0, 0);
+    label_colored(ctx, picked_, ctx.theme().text_muted);
+    bullet_text(ctx, "The theme follows the system light/dark setting");
+    bullet_text(ctx, "The cursor changes over text and resize handles");
+    bullet_text(ctx, "Touch: flick to scroll, long-press for menus");
+    bullet_text(ctx, "Android back closes popups, then the app");
+    bullet_text(ctx, "The app sleeps while nothing is moving");
+}
+
+// Drawers live at the top level (outside any window), so they are opened through flags.
+void Gallery::overlays(Context& ctx) {
+    if (want_sheet_) open_modal(ctx, "sheet");
+    if (want_side_) open_modal(ctx, "side");
+    if (want_pages_) open_modal(ctx, "pages");
+    want_sheet_ = want_side_ = want_pages_ = false;
+    if (drawer_begin(ctx, "sheet", Side::Bottom, 250)) {
+        layout_row(ctx, 1, nullptr, 0, 0);
+        heading(ctx, "Share drawing");
+        if (list_item(ctx, "Copy link", false, Icon::Copy).clicked)
+            toast(ctx, "Link copied"), close_modal(ctx);
+        if (list_item(ctx, "Save to device", false, Icon::Download).clicked) close_modal(ctx);
+        if (list_item(ctx, "Send to...", false, Icon::Share).clicked) close_modal(ctx);
+        if (button(ctx, "Cancel").clicked) close_modal(ctx);
+        drawer_end(ctx);
+    }
+    if (drawer_begin(ctx, "side", Side::Left, 250)) {
+        layout_row(ctx, 1, nullptr, 0, 0);
+        heading(ctx, "Radon");
+        const Icon icons[] = {Icon::Home, Icon::User, Icon::Bell, Icon::Settings};
+        const char* names[] = {"Home", "Profile", "Notifications", "Settings"};
+        for (int i = 0; i < 4; i++)
+            if (list_item(ctx, names[i], i == 0, icons[i]).clicked) close_modal(ctx);
+        drawer_end(ctx);
+    }
+    if (drawer_begin(ctx, "pages", Side::Bottom, 380)) {
+        layout_row(ctx, 1, nullptr, 0, 0);
+        heading(ctx, "Pages");
+        for (int i = 0; i < kPageCount; i++) {
+            if (i == kDashboard) continue;  // desktop only
+            if (list_item(ctx, kPages[i], page_ == i, kPageIcons[i]).clicked) {
+                page_ = i;
+                close_modal(ctx);
+            }
+        }
+        drawer_end(ctx);
+    }
+}
+
 void Gallery::frame(Context& ctx, const Input& in, int w, int h) {
     const bool compact = w < 760;
+    const bool want_touch = compact || (runner_ && runner_->options().touch);
+    if (!theme_init_ || want_touch != touch_) {  // phones get finger-sized rows
+        if (!theme_init_) theme_ = make_theme(fonts_, runner_ ? runner_->dark() : true);
+        theme_init_ = true;
+        touch_ = want_touch;
+        apply_theme(ctx);
+    }
     const float sw = compact ? 0.0f : 210.0f;
-    const float top = compact ? 58.0f : 0.0f;
+    const Rect safe = in.safe_rect();
+    const float bar = compact ? 64.0f : 0.0f;
+    set_toast_offset(ctx, bar);
 
-    if (page_ == 5 && !compact) {  // dashboard takes the whole window, with a small page switcher
+    if (page_ == kDashboard && !compact) {  // dashboard takes the whole window, with a small page switcher
         dashboard(ctx, in, w, h);
         Rect sw_r{(float)w - 190, 4, 180, 34};
         if (begin_window(ctx, "page-switch", sw_r, WindowNone)) {
@@ -483,73 +729,85 @@ void Gallery::frame(Context& ctx, const Input& in, int w, int h) {
         }
         return;
     }
-    if (page_ == 5) page_ = 0;
+    if (page_ == kDashboard) page_ = 0;
 
-    Rect nav = compact ? Rect{in.safe_area.x + 6, in.safe_area.y + 6,
-                              (float)w - in.safe_area.x - in.safe_area.w - 12, 48}
-                       : Rect{8, 8, sw - 8, (float)h - 16};
-    if (begin_window(ctx, "Radon", nav, compact ? WindowBorder : (WindowBorder | WindowTitleBar))) {
-        if (compact) {
-            layout_row(ctx, 1, nullptr, 0, 0);
-            combo(ctx, "##page", page_, kPages, kPageCount);
-        } else {
+    if (compact) {  // bottom navigation, extended under the home indicator
+        Rect nav{0, safe.y + safe.h - bar, (float)w, bar + in.safe_area.h};
+        if (begin_window(ctx, "nav", nav, WindowNone)) {
+            static const int pages[] = {0, 1, 6, 7};
+            static const Icon icons[] = {Icon::Star, Icon::Pencil, Icon::Calendar, Icon::Play, Icon::Menu};
+            static const char* const names[] = {"Widgets", "Inputs", "Data", "Motion", "More"};
+            int sel = 4;
+            for (int i = 0; i < 4; i++)
+                if (pages[i] == page_) sel = i;
+            layout_row(ctx, 1, nullptr, 0, bar - 2 * ctx.theme().padding);
+            if (nav_bar(ctx, "##nav", sel, icons, names, 5)) {
+                if (sel == 4)
+                    want_pages_ = true;
+                else
+                    page_ = pages[sel];
+            }
+            end_window(ctx);
+        }
+    } else {
+        Rect nav{8, 8, sw - 8, (float)h - 16};
+        if (begin_window(ctx, "Radon", nav, WindowBorder | WindowTitleBar)) {
             for (int i = 0; i < kPageCount; i++) {
                 layout_row(ctx, 1, nullptr, 0, 0);
                 if (list_item(ctx, kPages[i], page_ == i, kPageIcons[i]).clicked) page_ = i;
             }
             spacing(ctx, 12);
             layout_row(ctx, 1, nullptr, 0, 0);
-            label_colored(ctx, "Radon 0.1.0", ctx.theme().text_muted);
+            label_colored(ctx, "Radon 0.2.0", ctx.theme().text_muted);
             label_colored(ctx, "Tab: move focus", ctx.theme().text_muted);
             label_colored(ctx, "Enter/Space: activate", ctx.theme().text_muted);
+            end_window(ctx);
         }
-        end_window(ctx);
     }
 
     using Panel = void (Gallery::*)(Context&);
-    std::vector<Panel> panels;
-    switch (page_) {
-        case 0:
-            panels = {&Gallery::panel_buttons, &Gallery::panel_toggles, &Gallery::panel_sliders,
-                      &Gallery::panel_feedback};
-            break;
-        case 1:
-            panels = {&Gallery::panel_text, &Gallery::panel_colors, &Gallery::panel_tabs};
-            break;
-        case 2:
-            panels = {&Gallery::panel_rows, &Gallery::panel_columns, &Gallery::panel_regions};
-            break;
-        case 3:
-            panels = {&Gallery::panel_menus, &Gallery::panel_lists, &Gallery::panel_tree};
-            break;
-        default:
-            panels = {&Gallery::panel_theme, &Gallery::panel_theme_preview};
-            break;
-    }
-    const float ax = sw + (compact ? in.safe_area.x + 6 : 8), ay = top + (compact ? in.safe_area.y + 6 : 8);
-    const float aw = (float)w - ax - (compact ? in.safe_area.w + 6 : 8),
-                ah = (float)h - ay - (compact ? in.safe_area.h + 6 : 8);
+    static const Panel p0[] = {&Gallery::panel_buttons, &Gallery::panel_toggles, &Gallery::panel_sliders,
+                               &Gallery::panel_feedback};
+    static const Panel p1[] = {&Gallery::panel_text, &Gallery::panel_choices, &Gallery::panel_colors,
+                               &Gallery::panel_inputs2, &Gallery::panel_tabs};
+    static const Panel p2[] = {&Gallery::panel_rows, &Gallery::panel_columns, &Gallery::panel_regions};
+    static const Panel p3[] = {&Gallery::panel_menus, &Gallery::panel_lists, &Gallery::panel_tree};
+    static const Panel p4[] = {&Gallery::panel_theme, &Gallery::panel_theme_preview};
+    static const Panel p6[] = {&Gallery::panel_table, &Gallery::panel_calendar, &Gallery::panel_clipper};
+    static const Panel p7[] = {&Gallery::panel_alerts, &Gallery::panel_overlays, &Gallery::panel_native};
+    static const Panel* const all[] = {p0, p1, p2, p3, p4, p4, p6, p7};
+    static const int counts[] = {4, 5, 3, 3, 2, 2, 3, 3};
+    const Panel* panels = all[page_];
+    const int count = counts[page_];
+
+    const float m = compact ? 6.0f : 8.0f;
+    const float ax = compact ? safe.x + m : sw + m, ay = (compact ? safe.y : 0) + m;
+    const float aw = (compact ? safe.x + safe.w : (float)w) - ax - m;
+    const float ah = (compact ? safe.y + safe.h - bar : (float)h) - ay - m;
     int ncols = (int)(aw / 440);
     ncols = ncols < 1 ? 1 : (ncols > 3 ? 3 : ncols);
-    if ((int)panels.size() < ncols) ncols = (int)panels.size();
+    if (count < ncols) ncols = count;
     const float gap = 8, cw = (aw - gap * (float)(ncols - 1)) / (float)ncols;
     for (int c = 0; c < ncols; c++) {
         cols_[c] = {ax + (float)c * (cw + gap), ay, cw, ah};
         char title[32];
         std::snprintf(title, sizeof title, "p%d-c%d", page_, c);
         if (begin_window(ctx, title, cols_[c], WindowBorder | WindowScrollable)) {
-            for (size_t i = (size_t)c; i < panels.size(); i += (size_t)ncols) {
+            transition_begin(ctx, "page", page_);
+            for (int i = c; i < count; i += ncols) {
                 char pid[32];
-                std::snprintf(pid, sizeof pid, "panel%zu", i);
+                std::snprintf(pid, sizeof pid, "panel%d", i);
                 push_id(ctx, pid);
                 (this->*panels[i])(ctx);
                 pop_id(ctx);
                 layout_row(ctx, 1, nullptr, 0, 0);
                 spacing(ctx, 10);
             }
+            transition_end(ctx);
             end_window(ctx);
         }
     }
+    overlays(ctx);
 }
 
 }  // namespace demo

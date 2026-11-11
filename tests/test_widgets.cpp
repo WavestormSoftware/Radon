@@ -264,6 +264,7 @@ TEST_CASE("touch drag scrolls the window") {
         }
     };
     u.h.in.touch = true;
+    u.h.ctx.set_animations(false);  // no flick glide: the scroll is exactly the drag distance
     u.frame();
     u.frame();
     u.h.move(20, 60);

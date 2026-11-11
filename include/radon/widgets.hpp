@@ -69,7 +69,27 @@ enum class Icon {
     Star,
     Pencil,
     Undo,
-    Redo
+    Redo,
+    ArrowLeft,
+    ArrowRight,
+    ArrowUp,
+    ArrowDown,
+    Home,
+    User,
+    Bell,
+    Heart,
+    Info,
+    Warning,
+    Calendar,
+    Clock,
+    Sun,
+    Moon,
+    Play,
+    Pause,
+    Refresh,
+    Copy,
+    Download,
+    Share
 };
 
 enum class ButtonStyle { Default, Primary, Ghost, Danger };
@@ -161,5 +181,123 @@ void modal_end(Context& ctx);
 /// Replaces the theme until the matching pop_theme (up to 8 deep). Use it to style a section.
 void push_theme(Context& ctx, const Theme& theme);
 void pop_theme(Context& ctx);
+
+// ---------------------------------------------------------------------------------------------
+// Text input variants
+// ---------------------------------------------------------------------------------------------
+
+/// A text box that shows stars instead of the text. Copy and cut are disabled.
+Response password_box(Context& ctx, std::string_view label, TextBuffer& buffer, const char* hint = nullptr);
+/// A text box with a search icon and a clear button. `changed` also reports the clear.
+Response search_box(Context& ctx, std::string_view label, TextBuffer& buffer, const char* hint = nullptr);
+/// A multi-line editor of `height` px. Enter inserts a line break; lines break only at '\n'.
+Response text_area(Context& ctx, std::string_view label, TextBuffer& buffer, float height,
+                   const char* hint = nullptr);
+
+// ---------------------------------------------------------------------------------------------
+// More controls
+// ---------------------------------------------------------------------------------------------
+
+/// A slider with two thumbs selecting [low, high]. Arrow keys move `high`, Shift+arrows move `low`.
+Response range_slider(Context& ctx, std::string_view label, float& low, float& high, float min, float max);
+/// Equal-width options in one rounded track with a sliding highlight. Returns true on change.
+bool segmented(Context& ctx, std::string_view label, int& selected, const char* const* items, int count);
+/// A pill sized to its text, drawn filled while `selected` (filters, tags). `clicked` toggles.
+Response chip(Context& ctx, std::string_view label, bool selected);
+/// A row of `max` stars. Clicking star n sets `value` to n; clicking the current value clears it.
+Response rating(Context& ctx, std::string_view label, int& value, int max = 5);
+/// Accent-colored text that underlines on hover. Open the URL yourself when `clicked`.
+Response link(Context& ctx, std::string_view text);
+/// A thin drag handle that takes one cell: dragging adds the horizontal movement to `size`
+/// (clamped to [min, max]). Use `size` as the width of the cell before it.
+Response splitter(Context& ctx, std::string_view label, float& size, float min, float max);
+/// A month grid. The arrows change `month`/`year`; clicking a day sets `day`. Returns true on change.
+bool calendar(Context& ctx, std::string_view label, int& year, int& month, int& day);
+/// A field showing YYYY-MM-DD that opens a calendar popup. Returns true on change.
+bool date_picker(Context& ctx, std::string_view label, int& year, int& month, int& day);
+/// Previous / page numbers / next in one cell. `page` is zero-based. Returns true on change.
+bool pagination(Context& ctx, std::string_view label, int& page, int page_count);
+/// A bottom navigation bar (phones): icons over small labels in one cell; give the row ~56 px.
+bool nav_bar(Context& ctx, std::string_view label, int& selected, const Icon* icons,
+             const char* const* labels, int count);
+/// A clickable path ("Home > Docs > File"). Returns the clicked index or -1.
+int breadcrumbs(Context& ctx, std::string_view label, const char* const* items, int count);
+
+// ---------------------------------------------------------------------------------------------
+// More display widgets
+// ---------------------------------------------------------------------------------------------
+
+/// Large text using Theme::font_large (falls back to font_heading).
+void heading(Context& ctx, std::string_view text);
+/// A colored circle with up to two initials taken from `name`.
+void avatar(Context& ctx, std::string_view name, Color color);
+/// A tinted message box with an icon; the text wraps and the row grows to fit.
+void alert(Context& ctx, Tone tone, std::string_view text);
+/// A circular progress indicator for a fraction in [0, 1].
+void progress_ring(Context& ctx, float fraction);
+/// A shimmering placeholder bar for content that is still loading. `width` in (0, 1] of the cell.
+void skeleton(Context& ctx, float width = 1.0f);
+/// Shows a short message at the bottom of the screen for `seconds`, with a fade in and out.
+/// Call it once when something happens (not every frame). Up to 4 are stacked.
+void toast(Context& ctx, std::string_view text, Tone tone = Tone::Info, float seconds = 3.0f);
+/// Keeps `bottom_px` free under the toasts, e.g. the height of a bottom navigation bar.
+void set_toast_offset(Context& ctx, float bottom_px);
+
+// ---------------------------------------------------------------------------------------------
+// Tables and long lists
+// ---------------------------------------------------------------------------------------------
+
+/// A header row; also sets the layout to these columns so the following cells line up. `widths` is as
+/// in layout_row. With `sort_column`/`ascending`, clicking a column sorts by it (returns true).
+bool table_header(Context& ctx, std::string_view label, const char* const* columns, int count,
+                  const float* widths, int* sort_column = nullptr, bool* ascending = nullptr);
+/// Starts body row `index`: zebra stripe, hover and selection highlight across the full width.
+/// Follow it with one widget per column. `clicked` selects.
+/// The row takes the click, so put buttons in rows only when you ignore the row's Response.
+Response table_row(Context& ctx, int index, bool selected = false);
+
+/// For lists with thousands of uniform rows inside a scrolling window or child: computes the visible
+/// range [first, last) and reserves the space of the hidden rows. Emit rows first..last-1 with
+/// layout_row(ctx, n, widths, n, row_height), then call list_clipper_end. `row_height` 0 = theme.
+void list_clipper_begin(Context& ctx, int count, float row_height, int& first, int& last);
+void list_clipper_end(Context& ctx);
+
+// ---------------------------------------------------------------------------------------------
+// More containers
+// ---------------------------------------------------------------------------------------------
+
+/// A bordered, padded group that grows to fit its content (one frame behind when the content
+/// changes). Call end_card only when this returned true.
+bool begin_card(Context& ctx, std::string_view label);
+void end_card(Context& ctx);
+
+enum class Side { Left, Right, Bottom };
+/// A panel that slides in from a screen edge over a dimmed background (navigation drawer, bottom
+/// sheet). Open it with open_modal(id), close with close_modal, Escape, the Android back button or
+/// a tap outside. `size` is its width (Left/Right) or height (Bottom); safe-area insets are added.
+/// Call drawer_end only when drawer_begin returned true.
+bool drawer_begin(Context& ctx, std::string_view id, Side side, float size);
+void drawer_end(Context& ctx);
+
+/// True if the last widget was right-clicked (mouse) or long-pressed (touch).
+bool secondary_clicked(Context& ctx);
+/// Opens popup `id` at the pointer when the last widget is right-clicked or long-pressed, and begins
+/// it. Fill it with menu_item calls and call popup_end when this returned true.
+bool context_menu_begin(Context& ctx, std::string_view id);
+
+// ---------------------------------------------------------------------------------------------
+// State and transitions
+// ---------------------------------------------------------------------------------------------
+
+/// Widgets until end_disabled are drawn faded and ignore all input. Nests up to 8 deep.
+void begin_disabled(Context& ctx, bool disabled = true);
+void end_disabled(Context& ctx);
+
+/// Eases a value stored under `id` toward `target` and returns it; call every frame. The first
+/// frame (and any frame after a pause) starts at `from`. Use it to animate your own drawing.
+float animate(Context& ctx, std::string_view id, float target, float duration = 0.15f, float from = 0.0f);
+/// Everything until transition_end fades and slides in whenever `key` changes (page switches, tabs).
+void transition_begin(Context& ctx, std::string_view id, int key);
+void transition_end(Context& ctx);
 
 }  // namespace rd

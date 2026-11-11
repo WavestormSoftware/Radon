@@ -66,17 +66,29 @@ using TextEvents = FixedQueue<char, 256>;  ///< raw UTF-8 bytes
 
 /// Filled by the platform backend once per frame.
 struct Input {
-    Vec2 pointer{};                 ///< logical pixels, top-left origin
-    bool pointer_down = false;      ///< held this frame
-    bool pointer_pressed = false;   ///< went down this frame
-    bool pointer_released = false;  ///< went up this frame
-    bool touch = false;             ///< pointer comes from a finger (no hover, scroll by drag)
-    float wheel = 0;                ///< vertical scroll, logical lines (positive = content moves down)
+    Vec2 pointer{};                  ///< logical pixels, top-left origin
+    bool pointer_down = false;       ///< held this frame
+    bool pointer_pressed = false;    ///< went down this frame
+    bool pointer_released = false;   ///< went up this frame
+    bool secondary_pressed = false;  ///< right mouse button went down this frame (context menus)
+    bool touch = false;              ///< pointer comes from a finger (no hover, scroll by drag)
+    float wheel = 0;                 ///< vertical scroll, logical lines (positive = content moves down)
     KeyEvents keys;
     TextEvents text;
     Vec2 screen_size{};  ///< window size in logical px (used to center modals)
     Rect safe_area{};    ///< mobile insets in logical px: x=left, y=top, w=right, h=bottom; zero on desktop
+    /// The screen minus the safe-area insets: where UI can be placed without hitting notches or bars.
+    Rect safe_rect() const {
+        return {safe_area.x, safe_area.y, screen_size.x - safe_area.x - safe_area.w,
+                screen_size.y - safe_area.y - safe_area.h};
+    }
 };
+
+/// Mouse cursor the UI asks for this frame (see Context::cursor). Backends map it to a system cursor.
+enum class Cursor { Arrow, Text, Hand, ResizeEW, ResizeNS, ResizeNWSE };
+
+/// Semantic color of alerts and toasts.
+enum class Tone { Info, Success, Warning, Error };
 
 struct Response {
     bool hovered = false;

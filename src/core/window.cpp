@@ -50,6 +50,8 @@ static void unwind(State& s, const WindowFrame& f) {
     s.layout_n = f.layout_index;
     if (s.id_n > 0) s.id_n--;
     s.cur_window = f.prev_window;
+    s.alpha = f.prev_alpha;
+    s.dl.set_alpha(s.alpha);
     s.cur_layer = f.prev_layer;
     s.dl.set_layer(s.cur_layer);
     s.dl.break_command();
@@ -84,6 +86,9 @@ bool begin_window_impl(Context& ctx, ID id, std::string_view title, Rect& rect, 
     f.prev_layer = s.cur_layer;
     f.clip_base = s.clip_n;
     f.layout_index = s.layout_n;
+    f.prev_alpha = s.alpha;
+    if (overlay) s.alpha = anim_to(s, hash_u32(id, 90), 1, 0.14f, 0);  // popups and dialogs fade in
+    s.dl.set_alpha(s.alpha);
     s.id_stack[s.id_n++] = id;
     s.cur_window = id;
     s.cur_layer = overlay ? kOverlayLayer + 1 : (uint32_t)w->z;
@@ -115,7 +120,9 @@ bool begin_window_impl(Context& ctx, ID id, std::string_view title, Rect& rect, 
     }
     if (flags & WindowResizable) {
         ID gid = hash_u32(id, 3);
-        update_control(ctx, gid, {rect.x + rect.w - 16, rect.y + rect.h - 16, 16, 16}, false, true);
+        const float g = std::fmax(16.0f, t.cell_height * 0.5f);  // finger-sized with touch themes
+        update_control(ctx, gid, {rect.x + rect.w - g, rect.y + rect.h - g, g, g}, false, true);
+        if (s.hover == gid || s.active == gid) s.cursor = Cursor::ResizeNWSE;
         if (s.active == gid && s.in.pointer_down) {
             rect.w = std::fmax(80.0f, rect.w + s.pointer_delta.x);
             rect.h = std::fmax(60.0f, rect.h + s.pointer_delta.y);
@@ -198,8 +205,10 @@ void end_window(Context& ctx) {
         update_control(ctx, hash_u32(f.id, 4), f.content, false, false);
         if (s.hover_window == f.id && s.in.wheel != 0 && !s.wheel_used)
             w.scroll -= s.in.wheel * t.cell_height;
-        if (s.in.touch && s.in.pointer_down && s.touch_moved && !s.active_captures && s.press_window == f.id)
-            w.scroll -= s.pointer_delta.y;
+        kinetic(s, w.scroll, w.vel,
+                s.in.touch && s.in.pointer_down && s.touch_moved && !s.active_captures && !s.drag_used &&
+                    s.press_window == f.id,
+                maxs);
         if (maxs > 0) {
             const float sbw = t.scrollbar_width;
             Rect track{f.content.x + f.content.w - sbw - 2, f.content.y + 2, sbw, f.content.h - 4};

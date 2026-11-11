@@ -2,6 +2,9 @@
 #include "runner.hpp"
 
 #include <SDL3/SDL.h>
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
 
 #include <cmath>
 #include <cstdio>
@@ -28,6 +31,15 @@ std::vector<uint8_t> find_font(const char* explicit_path) {
     if (const char* e = std::getenv("RD_FONT")) tried.push_back(e);
     for (const char* p : {"examples/assets/font.ttf", "assets/font.ttf", "font.ttf", "/font.ttf"})
         tried.push_back(p);
+    // then a system UI font, so the demos run out of the box
+    for (const char* p :
+         {"/usr/share/fonts/noto/NotoSans-Regular.ttf", "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+          "/usr/share/fonts/TTF/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+          "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
+          "/usr/share/fonts/liberation/LiberationSans-Regular.ttf", "C:/Windows/Fonts/segoeui.ttf",
+          "C:/Windows/Fonts/arial.ttf", "/System/Library/Fonts/Supplemental/Arial.ttf",
+          "/Library/Fonts/Arial.ttf", "/system/fonts/Roboto-Regular.ttf", "/system/fonts/DroidSans.ttf"})
+        tried.push_back(p);
     if (const char* base = SDL_GetBasePath()) {
         tried.push_back(std::string(base) + "assets/font.ttf");
         tried.push_back(std::string(base) + "font.ttf");
@@ -51,6 +63,7 @@ rd::Theme make_theme(const Fonts& f, bool dark) {
     t.font_body = f.body;
     t.font_heading = f.heading;
     t.font_small = f.small;
+    t.font_large = f.large;
     return t;
 }
 
@@ -80,6 +93,20 @@ const Options& Runner::options() const {
 const Fonts& Runner::fonts() const {
     return m_->fonts;
 }
+bool Runner::dark() const {
+    if (m_->opt.light) return false;
+    if (m_->opt.dark) return true;
+    return m_->plat ? rd::sdl3::system_dark(m_->plat) : true;
+}
+void Runner::open_url(const char* url) {
+    rd::sdl3::open_url(url);
+}
+void Runner::show_open_dialog() {
+    rd::sdl3::show_file_dialog(m_->plat, rd::sdl3::FileDialog::Open);
+}
+bool Runner::poll_dialog(std::string& path) {
+    return rd::sdl3::poll_file_dialog(m_->plat, path);
+}
 rd::TextureId Runner::create_texture(int w, int h, const uint8_t* rgba) {
     return rd::gl::create_texture(m_->rend, w, h, rgba);
 }
@@ -101,14 +128,21 @@ bool Runner::start(int argc, char** argv, const AppConfig& cfg) {
             o.page = std::atoi(argv[++i]);
         else if (!std::strcmp(a, "--light"))
             o.light = true;
+        else if (!std::strcmp(a, "--dark"))
+            o.dark = true;
+        else if (!std::strcmp(a, "--touch"))
+            o.touch = true;
         else if (!std::strcmp(a, "--size") && more)
             std::sscanf(argv[++i], "%dx%d", &o.width, &o.height);
         else if (!std::strcmp(a, "--pointer") && more)
             std::sscanf(argv[++i], "%f,%f", &o.pointer_x, &o.pointer_y);
+        else if (!std::strcmp(a, "--click") && more)
+            std::sscanf(argv[++i], "%f,%f", &o.click_x, &o.click_y);
         else if (!std::strcmp(a, "--help")) {
             std::printf(
-                "options: --font <ttf> --screenshot <png> --frames <n> --page <n> --light --size WxH "
-                "--pointer x,y\n");
+                "options: --font <ttf> --screenshot <png> --frames <n> --page <n> --light --dark --touch "
+                "--size WxH "
+                "--pointer x,y --click x,y\n");
             return false;
         }
     }
@@ -119,6 +153,7 @@ bool Runner::start(int argc, char** argv, const AppConfig& cfg) {
     pc.title = cfg.title;
     pc.width = o.width > 0 ? o.width : cfg.width;
     pc.height = o.height > 0 ? o.height : cfg.height;
+    pc.wait_events = !o.screenshot;  // sleep while idle; screenshots need a fixed number of frames
     m.plat = rd::sdl3::create_platform(pc);
     if (!m.plat) {
         std::fprintf(stderr, "radon demo: cannot create window/GL context: %s\n", SDL_GetError());
@@ -137,9 +172,14 @@ bool Runner::start(int argc, char** argv, const AppConfig& cfg) {
         m.fonts.body = m.ctx->load_font(m.font.data(), m.font.size(), 16);
         m.fonts.heading = m.ctx->load_font(m.font.data(), m.font.size(), 16);
         m.fonts.small = m.ctx->load_font(m.font.data(), m.font.size(), 13);
+        m.fonts.large = m.ctx->load_font(m.font.data(), m.font.size(), 22);
         m.ctx->set_default_font(m.fonts.body);
     }
-    m.ctx->set_theme(make_theme(m.fonts, !o.light));
+#if defined(__ANDROID__) || (defined(__APPLE__) && TARGET_OS_IPHONE)
+    o.touch = true;
+#endif
+    rd::Theme theme = make_theme(m.fonts, dark());
+    m.ctx->set_theme(o.touch ? rd::Theme::touch(theme) : theme);
     if (cfg.init) cfg.init(*m.ctx, m.fonts, m.opt);
     return true;
 }
@@ -148,15 +188,27 @@ bool Runner::step() {
     Impl& m = *m_;
     float dt = 0;
     if (!rd::sdl3::poll(m.plat, m.input, dt)) return false;
+    if (rd::sdl3::system_theme_changed(m.plat) && !m.opt.light && !m.opt.dark) {
+        if (m.cfg.system_theme)
+            m.cfg.system_theme(*m.ctx, dark());
+        else
+            m.ctx->set_theme(make_theme(m.fonts, dark()));
+    }
     int fw, fh;
     rd::sdl3::framebuffer_size(m.plat, fw, fh);
     const float dpi = rd::sdl3::dpi_scale(m.plat);
     m.ctx->set_dpi_scale(dpi);
     const int lw = (int)((float)fw / dpi), lh = (int)((float)fh / dpi);
     m.input.screen_size = {(float)lw, (float)lh};
-    if (m.opt.screenshot) {  // scripted pointer for reproducible screenshots
+    if (m.opt.screenshot) {  // scripted pointer and a fixed time step for reproducible screenshots
+        dt = 1.0f / 60;
         m.input.pointer = {m.opt.pointer_x, m.opt.pointer_y};
-        m.input.pointer_down = false;
+        m.input.pointer_down = m.input.pointer_pressed = m.input.pointer_released = false;
+        if (m.opt.click_x >= 0 && m.frame_no >= 3 && m.frame_no <= 6) {
+            m.input.pointer = {m.opt.click_x, m.opt.click_y};
+            m.input.pointer_down = m.input.pointer_pressed = m.frame_no == 5;
+            m.input.pointer_released = m.frame_no == 6;
+        }
     }
     m.ctx->begin_frame(m.input, dt);
     m.cfg.frame(*m.ctx, m.input, lw, lh);

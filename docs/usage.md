@@ -20,6 +20,11 @@ thread-safe. For tutorials see [getting-started.md](getting-started.md) and [wid
 | `atlas_pixels()` `atlas_size()` `atlas_version()` | 8-bit glyph atlas for backends; re-upload when the version changes. |
 | `wants_text_input()` | True while a text box has focus (show the soft keyboard). |
 | `pointer_over_ui()` | True if the pointer is over a window or popup (do not also use the click). |
+| `text_input_rect()` | The focused text box in logical px, for the IME / soft keyboard. |
+| `cursor()` | `Cursor::{Arrow,Text,Hand,ResizeEW,ResizeNS,ResizeNWSE}` the last frame asked for. |
+| `animating()` | True while a transition or input is in progress; when false the host may sleep. |
+| `can_dismiss()` | True when Escape / Android back would close a popup, dialog, drawer or text focus. |
+| `set_animations(on)` | Turn transitions and scroll momentum on or off at runtime. |
 
 `hash_id(seed, string)` is the 32-bit FNV-1a hash used for IDs.
 
@@ -35,12 +40,13 @@ A full pool skips the work, sets `error()` and keeps running.
 | Field | |
 |---|---|
 | `pointer`, `pointer_down`, `pointer_pressed`, `pointer_released` | Logical pixels, top-left origin. |
-| `touch` | The pointer is a finger: no hover, drag scrolls, 8 px tap slop. |
+| `secondary_pressed` | Right mouse button went down this frame (context menus). |
+| `touch` | The pointer is a finger: no hover, drag scrolls with momentum, 8 px tap slop, long-press = secondary click. |
 | `wheel` | Lines; positive scrolls up. |
 | `keys` | `KeyEvent{key, shift, ctrl, alt}`, 16 per frame. Keys: Enter, Backspace, Delete, Left, Right, Up, Down, Home, End, Tab, Escape, Space, A, C, V, X. |
 | `text` | UTF-8 bytes typed this frame (256 max). |
 | `screen_size` | Window size in logical px; used to center modals. |
-| `safe_area` | Mobile insets: x=left, y=top, w=right, h=bottom. Zero on desktop. |
+| `safe_area` | Mobile insets: x=left, y=top, w=right, h=bottom. Zero on desktop. `safe_rect()` is the screen minus the insets. |
 
 `Response`: `hovered`, `focused`, `pressed` (became active), `clicked` (released over it), `changed`.
 
@@ -80,6 +86,18 @@ Display: `label`, `label_colored`, `label_wrapped`, `bullet_text`, `progress_bar
 Overlays: `popup_begin`/`popup_end`/`open_popup`/`close_popup`, `begin_menu_bar`/`end_menu_bar`,
 `begin_menu`/`end_menu`/`menu_item`, `open_modal`/`close_modal`/`modal_begin`/`modal_end`.
 
+More input: `password_box`, `search_box`, `text_area`, `range_slider`, `segmented`, `chip`, `rating`,
+`link`, `splitter`, `calendar`, `date_picker`, `pagination`, `nav_bar`, `breadcrumbs`.
+
+More display: `heading`, `avatar`, `alert`, `progress_ring`, `skeleton`, `toast` / `set_toast_offset`.
+
+Tables and lists: `table_header`, `table_row`, `list_clipper_begin` / `list_clipper_end`.
+
+More containers: `begin_card` / `end_card`, `drawer_begin` / `drawer_end` (opened with `open_modal`),
+`context_menu_begin`, `secondary_clicked`.
+
+State and motion: `begin_disabled` / `end_disabled`, `transition_begin` / `transition_end`, `animate`.
+
 Signatures are in `include/radon/widgets.hpp` with doc comments; usage for each is in
 [widgets.md](widgets.md).
 
@@ -94,14 +112,14 @@ U+FFFD and always advances.
 
 ## Theme
 
-See [theming.md](theming.md): `Theme::dark()`, `light()`, `midnight()`, `with_accent()`, `push_theme` /
-`pop_theme`.
+See [theming.md](theming.md): `Theme::dark()`, `light()`, `midnight()`, `with_accent()`, `touch()`,
+`scaled()`, `push_theme` / `pop_theme`.
 
 ## DrawList
 
 For backends: `vertices()`, `indices()`, `commands()` (with counts), `overflow()`. Emitters used by widgets
 and available for new ones: `rect`, `shadow`, `glyph`, `image`, `line`, `triangle`, `gradient_rect`,
-`set_clip`, `set_layer`. See [backends.md](backends.md).
+`set_clip`, `set_layer`, `set_alpha` (fades everything drawn afterwards). See [backends.md](backends.md).
 
 ## Memory
 

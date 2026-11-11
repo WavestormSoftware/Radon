@@ -14,6 +14,13 @@ public:
         page_ = first_page;
     }
     void set_checker(rd::TextureId t) { checker_ = t; }
+    /// Gives the gallery the native helpers (URLs, file dialog, system theme). Optional.
+    void set_runner(Runner* r) { runner_ = r; }
+    /// The OS switched between light and dark.
+    void set_dark(rd::Context& ctx, bool dark) {
+        theme_ = make_theme(fonts_, dark);
+        apply_theme(ctx);
+    }
     void frame(rd::Context& ctx, const rd::Input& in, int w, int h);
     int page() const { return page_; }
 
@@ -31,6 +38,15 @@ private:
     void panel_lists(rd::Context&);
     void panel_tree(rd::Context&);
     void panel_menus(rd::Context&);
+    void panel_inputs2(rd::Context&);
+    void panel_choices(rd::Context&);
+    void panel_table(rd::Context&);
+    void panel_clipper(rd::Context&);
+    void panel_calendar(rd::Context&);
+    void panel_alerts(rd::Context&);
+    void panel_overlays(rd::Context&);
+    void panel_native(rd::Context&);
+    void overlays(rd::Context&);
     void panel_theme(rd::Context&);
     void panel_theme_preview(rd::Context&);
     void dashboard(rd::Context&, const rd::Input&, int w, int h);
@@ -70,6 +86,23 @@ private:
     int tool_ = 2, dash_tab_ = 0, brush_ = 2, layer_sel_ = 4, brush_tab_ = 0, layers_tab_ = 0;
     bool vis_[7]{true, true, true, true, true, true, true}, lock_[7]{};
     float size_ = 24, opacity_ = 100, zoom_ = 0.56f;
+
+    // inputs page, second half
+    char pw_[32] = "hunter2", find_[32] = "",
+         notes_[256] = "Text areas keep line breaks.\nPress Enter for more.";
+    rd::TextBuffer pw_buf_{pw_, sizeof pw_, 7}, find_buf_{find_, sizeof find_, 0},
+        notes_buf_{notes_, sizeof notes_, 51};
+    int seg_ = 1, stars_ = 4, year_ = 2026, month_ = 11, day_ = 10;
+    float range_lo_ = 25, range_hi_ = 70;
+    bool chips_[4]{true, false, true, false};
+    // data page
+    int sort_col_ = 0, table_sel_ = -1, table_page_ = 0, big_sel_ = 3;
+    bool sort_asc_ = true;
+    // motion page
+    bool want_sheet_ = false, want_side_ = false, want_pages_ = false, form_on_ = true, touch_ = false;
+    int tr_page_ = 0;
+    char picked_[160] = "No file chosen";
+    Runner* runner_ = nullptr;
 
     rd::Color brush_color_{0, 0, 0, 255};
     char brush_search_[32] = "";

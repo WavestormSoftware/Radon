@@ -64,11 +64,21 @@ Unbalanced pushes are undone at `end_frame` and set `ctx.error()`.
 - `label_colored(ctx, text, color)` and `badge(ctx, text, color)` take explicit colors.
 - `color_button` and `color_picker` edit any color you own.
 
+## Touch and scaled metrics
+
+```cpp
+rd::Theme phone = rd::Theme::touch(rd::Theme::dark());    // 44 px rows, 12 px padding, slim scrollbars
+rd::Theme big   = rd::Theme::scaled(rd::Theme::dark(), 1.25f);   // every metric x 1.25
+```
+`touch` is for fingers; `scaled` is for a user "UI size" setting. Neither changes fonts: load a larger
+font for larger text. Display density is handled separately by `set_dpi_scale`, so do not scale the
+theme for HiDPI screens. `Theme::font_large` is the font `heading()` uses.
+
 ## Changing the theme at runtime
 
 `set_theme` takes effect for the next widget call, so you can change it in the middle of a frame (the
-theme editor example does). Animations are cosmetic: `Config::animations = false` disables hover and press
-blending without changing any interaction result.
+theme editor example does). `Config::animations = false` (or `ctx.set_animations(false)`) disables all
+transitions and scroll momentum without changing what any widget returns.
 
 ## Making your own
 

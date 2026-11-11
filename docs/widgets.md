@@ -53,6 +53,14 @@ select, Ctrl+A, Ctrl+C/X/V through the clipboard callbacks, mouse selection, car
 Text never overflows the buffer and never splits a UTF-8 sequence. Focusing a text box sets
 `ctx.wants_text_input()`, which the SDL backend turns into the soft keyboard on mobile.
 
+```cpp
+password_box(ui, "##pw", buf, "Password");       // shows stars; copy and cut are disabled
+search_box(ui, "##q", buf, "Search...");         // search icon + clear button; `changed` on clear too
+text_area(ui, "##notes", buf, 96, "Notes");      // multi-line, 96 px tall; Enter adds a line
+```
+The text area scrolls with the wheel and the caret, and moves by line with Up/Down/Home/End. Lines break
+only at `\n` (there is no soft wrapping yet).
+
 ## Choosing
 
 ```cpp
@@ -60,6 +68,18 @@ combo(ui, "##c", selected, items, count);                    // true when change
 tab_bar(ui, "##tabs", tab, tab_names, 3);                    // underlined tabs, one row
 listbox(ui, "##l", sel, items, count, 150);                  // scrolling list in a 150 px region
 list_item(ui, "Row", selected);                              // a selectable row (also with an Icon)
+```
+
+```cpp
+segmented(ui, "##span", span, names, 3);                     // one track, sliding highlight
+if (chip(ui, "Design", on).clicked) on = !on;                // a pill sized to its text
+range_slider(ui, "##price", low, high, 0, 100);              // two thumbs; they never cross
+rating(ui, "##stars", stars);                                // 0..5; click the current value to clear
+date_picker(ui, "##date", year, month, day);                 // field + calendar popup
+calendar(ui, "##cal", year, month, day);                     // the month grid on its own
+pagination(ui, "##pages", page, page_count);                 // zero-based; ‹ 1 2 3 … 20 ›
+int i = breadcrumbs(ui, "##path", parts, n);                 // clicked index or -1
+if (link(ui, "Read the docs").clicked) open(url);            // accent text, hand cursor
 ```
 
 ![Inputs](screenshots/gallery-inputs.png)
@@ -86,7 +106,50 @@ image(ui, texture_id, {96, 96});             // texture ids come from the backen
 draw_icon(ui, Icon::Check, rect, color);     // any rect, e.g. from layout_next
 ```
 Icons: Plus, Minus, Close, Check, ChevronDown/Up/Left/Right, Search, Eye, EyeOff, Lock, Unlock, Trash,
-Folder, Menu, Dots, Settings, Star, Pencil, Undo, Redo.
+Folder, Menu, Dots, Settings, Star, Pencil, Undo, Redo, ArrowLeft/Right/Up/Down, Home, User, Bell, Heart,
+Info, Warning, Calendar, Clock, Sun, Moon, Play, Pause, Refresh, Copy, Download, Share.
+
+```cpp
+heading(ui, "Title");                        // Theme::font_large
+avatar(ui, "Ada Lovelace", t.accent);        // a circle with "AL"
+alert(ui, Tone::Warning, "Storage is almost full.");   // Info, Success, Warning, Error; wraps
+progress_ring(ui, 0.6f);                     skeleton(ui, 0.7f);    // loading placeholder
+toast(ui, "Saved", Tone::Success);           // call once, not every frame; fades out after 3 s
+```
+
+## Tables and long lists
+
+```cpp
+static const char* const cols[] = {"Name", "Type", "Size"};
+static const float widths[] = {-170, 80, -1};                // as in layout_row
+if (table_header(ui, "files", cols, 3, widths, &sort_column, &ascending)) resort();
+for (int i = 0; i < count; i++) {
+    if (table_row(ui, i, selected == i).clicked) selected = i;   // stripe, hover, selection
+    label(ui, rows[i].name);                                     // then one widget per column
+    label(ui, rows[i].type);
+    label(ui, rows[i].size);
+}
+```
+Radon does not sort your data: the header only reports which column was clicked. Pass null for the last
+two arguments for a header that cannot be clicked.
+
+For thousands of rows, build only the visible ones:
+
+```cpp
+if (begin_child(ui, "log", 300)) {
+    int first, last;
+    list_clipper_begin(ui, 100000, 0, first, last);          // 0 = theme row height
+    for (int i = first; i < last; i++) {
+        layout_row(ui, 1, nullptr, 0, 0);
+        list_item(ui, name_of(i), selected == i);
+    }
+    list_clipper_end(ui);
+    end_child(ui);
+}
+```
+Every row must have the same height. It works inside any scrolling window or child.
+
+![Data](screenshots/gallery-data.png)
 
 ## Containers
 
@@ -104,6 +167,19 @@ if (begin_child(ui, "region", 120)) {                            // scrolling ar
     end_child(ui);
 }
 ```
+
+
+if (begin_card(ui, "profile")) {                                 // bordered group, grows to fit
+    /* widgets */
+    end_card(ui);
+}
+
+const float cols[] = {sidebar_w, 8, -1};                         // a draggable divider
+layout_row(ui, 3, cols, 3, -1);
+/* left */  splitter(ui, "##split", sidebar_w, 120, 400);  /* right */
+```
+A card's height is its content height from the previous frame, so it settles one frame after its content
+changes.
 
 ![Lists and menus](screenshots/gallery-lists.png)
 
@@ -143,9 +219,44 @@ if (modal_begin(ui, "quit", "Quit?", 320)) {                       // dims and b
     modal_end(ui);
 }
 ```
-One popup and one modal can be open at a time. `modal_begin` centers on `Input::screen_size`, so set that
+```cpp
+button(ui, "Item");
+if (context_menu_begin(ui, "item-menu")) {         // right-click or long-press on the last widget
+    if (menu_item(ui, "Copy")) copy();
+    popup_end(ui);
+}
+
+if (button(ui, "Share").clicked) open_modal(ui, "sheet");
+if (drawer_begin(ui, "sheet", Side::Bottom, 260)) {   // Side::Left / Right for navigation drawers
+    /* widgets */
+    drawer_end(ui);
+}
+```
+A drawer is a modal that slides in from a screen edge: it dims the UI, closes with `close_modal`, Escape,
+the Android back button or a tap outside, scrolls when its content is taller, and keeps clear of the safe
+area. Popups flip above their anchor and shift sideways to stay on screen.
+
+One popup and one modal (or drawer) can be open at a time. `modal_begin` centers on `Input::screen_size`, so set that
 field (the SDL backend runners do). `open_popup` / `open_modal` must run in the same ID scope as the matching
 `_begin`.
+
+## Disabled sections and transitions
+
+```cpp
+begin_disabled(ui, !logged_in);        // faded, ignores all input
+/* widgets */
+end_disabled(ui);
+
+transition_begin(ui, "page", page);    // fades and slides in whenever `page` changes
+/* the page */
+transition_end(ui);
+
+float w = animate(ui, "sidebar", open ? 240.0f : 56.0f, 0.2f, 56.0f);   // ease your own values
+```
+Popups, dialogs, drawers, toasts and tooltips fade in on their own; checkboxes, radios, switches, tab
+underlines and segmented controls animate between states. `ui.set_animations(false)` turns it all off.
+
+![Motion](screenshots/gallery-motion.png)
 
 ## Keyboard and touch
 
@@ -153,7 +264,9 @@ field (the SDL backend runners do). `open_popup` / `open_modal` must run in the 
   activates buttons, tabs, list rows and menu items; **Space** toggles checkboxes, switches and radios;
   **Left/Right** adjust sliders and steppers.
 - **Touch**: a finger is the pointer. There is no hover; a tap within 8 px of the press is a click; dragging
-  scrolls windows and child regions (but not sliders, which capture drags).
+  scrolls windows and child regions with momentum (but not sliders, which capture drags); holding still
+  for half a second is a secondary click. Use `Theme::touch()` for finger-sized rows. More in
+  [platforms.md](platforms.md).
 
 ## Custom widgets
 

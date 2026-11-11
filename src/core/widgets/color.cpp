@@ -6,9 +6,6 @@ using namespace detail;
 
 namespace {
 
-float clamp01(float v) {
-    return v < 0 ? 0 : (v > 1 ? 1 : v);
-}
 uint32_t pack(Color c) {
     return (uint32_t)c.r << 24 | (uint32_t)c.g << 16 | (uint32_t)c.b << 8;
 }  // alpha excluded

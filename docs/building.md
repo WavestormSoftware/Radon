@@ -27,6 +27,18 @@ ctest --preset windows-msvc-release
 Executables land in `build\windows-msvc-release\examples\...\Release`. (The CI job exists; this repo's
 author has not run it on Windows.)
 
+## macOS
+
+Needs Xcode command line tools and CMake. SDL3 is fetched and built if it is not installed
+(`brew install sdl3` is faster).
+
+```sh
+cmake --preset macos-release
+cmake --build --preset macos-release
+ctest --preset macos-release
+```
+(The CI job exists; this has not been built on a Mac yet.)
+
 ## Web (WebGL2)
 
 You need [Emscripten](https://emscripten.org/docs/getting_started/downloads.html) (tested target: 3.1.74+).
@@ -95,6 +107,7 @@ Device builds need your Apple developer team in the generated Xcode project.
 | `RD_BUILD_TESTS` | ON on desktop | doctest suite + allocation test |
 | `RD_BACKEND_SDL3_GL` | ON | the SDL3/GL backend |
 | `RD_WARNINGS_AS_ERRORS` | OFF (ON in presets) | `-Werror` / `/WX` |
+| `RD_INSTALL` | ON when top-level on desktop | install rules for the core and `find_package(Radon)` |
 
 ## Using Radon from your project
 
@@ -102,10 +115,25 @@ Device builds need your Apple developer team in the generated Xcode project.
 add_subdirectory(Radon)                                    # or FetchContent_Declare(...)
 target_link_libraries(app PRIVATE radon::radon radon::sdl3_gl)
 ```
+As a subproject Radon builds only the libraries (no demos, tests or install rules).
+
+The dependency-free core can also be installed:
+
+```sh
+cmake --install build/linux-clang-release --prefix /usr/local
+```
+```cmake
+find_package(Radon 0.2 REQUIRED)
+target_link_libraries(app PRIVATE radon::radon)            # bring your own backend
+```
+The SDL3 backend is not installed; use `add_subdirectory` / FetchContent when you want it.
 
 ## Troubleshooting
 
-- **"no font found"**: provide a TTF (see above). The UI runs without text.
+- **"no font found"**: the demos look for `examples/assets/font.ttf`, then common system fonts. Provide
+  a TTF with `--font` or `RD_FONT`. The UI runs without text.
+- **The UI is tiny or huge on a phone**: lay out in logical pixels (`rd::sdl3::logical_size`), keep
+  `ctx.set_dpi_scale(rd::sdl3::dpi_scale(plat))` updated, and use `rd::Theme::touch()`.
 - **Nothing is clickable on the first frame**: expected; hover uses the previous frame's windows.
 - **`ctx.error()` is true**: a pool is full. Raise the matching `rd::Config` limit.
 - **Text looks blurry on high-DPI screens**: call `ctx.set_dpi_scale(rd::sdl3::dpi_scale(plat))` (the

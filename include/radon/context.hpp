@@ -53,6 +53,19 @@ public:
     bool wants_text_input() const;
     /// True if the pointer is over a window or popup (the host should not use the click).
     bool pointer_over_ui() const;
+    /// Where the focused text box is, in logical px (zero when none). Backends pass it to the IME /
+    /// soft keyboard so the field stays visible.
+    Rect text_input_rect() const;
+    /// The mouse cursor the last frame asked for (text beam over text boxes, resize arrows, ...).
+    Cursor cursor() const;
+    /// True if the last frame was still animating or handling input. When false the host may sleep
+    /// until the next input event instead of redrawing (saves battery).
+    bool animating() const;
+    /// True when Escape (or the Android back button) would close something: a popup, a dialog or
+    /// drawer, or the focused text box. When false, a back press should leave the app.
+    bool can_dismiss() const;
+    /// Turns transitions on or off at runtime (for "reduce motion" settings).
+    void set_animations(bool enabled);
 
 private:
     friend detail::State& detail::state(Context&);

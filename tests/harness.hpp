@@ -40,6 +40,18 @@ inline const std::vector<uint8_t>& font_bytes() {
     return bytes;
 }
 
+inline rd::detail::State& state(rd::Context& c) {
+    return rd::detail::state(c);
+}
+/// Scroll offset of the root-level window called `title`.
+inline float window_scroll(rd::Context& c, const char* title) {
+    auto& s = state(c);
+    const rd::ID id = rd::hash_id(0, title);
+    for (int i = 0; i < s.cfg.max_windows; i++)
+        if (s.wins[i].used && s.wins[i].id == id) return s.wins[i].scroll;
+    return 0;
+}
+
 struct Harness {
     rd::Context ctx;
     rd::Input in;
