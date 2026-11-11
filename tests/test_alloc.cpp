@@ -93,7 +93,7 @@ TEST_CASE("zero heap allocations per frame after warm-up") {
         if (begin_window(h.ctx, "Main", win, WindowDefault | WindowClosable | WindowScrollable)) {
             const float cols[] = {80, -1};
             layout_row(h.ctx, 2, cols, 2, 0);
-            label(h.ctx, "Name");
+            rd::label(h.ctx, "Name");
             textbox(h.ctx, "##name", tb);
             layout_row(h.ctx, 1, nullptr, 0, 0);
             button(h.ctx, "Apply");
@@ -156,21 +156,21 @@ TEST_CASE("zero heap allocations per frame after warm-up") {
             table_header(h.ctx, "tbl", items, 3, nullptr, &sort, &asc);
             for (int i = 0; i < 3; i++) {
                 table_row(h.ctx, i, i == 1);
-                for (int c = 0; c < 3; c++) label(h.ctx, items[c]);
+                for (int c = 0; c < 3; c++) rd::label(h.ctx, items[c]);
             }
             if (begin_child(h.ctx, "long", 80)) {
                 int first = 0, last = 0;
                 list_clipper_begin(h.ctx, 5000, 0, first, last);
                 for (int i = first; i < last; i++) {
                     layout_row(h.ctx, 1, nullptr, 0, 0);
-                    label(h.ctx, "row");
+                    rd::label(h.ctx, "row");
                 }
                 list_clipper_end(h.ctx);
                 end_child(h.ctx);
             }
             layout_row(h.ctx, 1, nullptr, 0, 0);
             if (begin_card(h.ctx, "card")) {
-                label(h.ctx, "in a card");
+                rd::label(h.ctx, "in a card");
                 end_card(h.ctx);
             }
             begin_disabled(h.ctx);
@@ -205,7 +205,7 @@ TEST_CASE("zero heap allocations per frame after warm-up") {
             end_window(h.ctx);
         }
         if (begin_window(h.ctx, "Second", win2)) {
-            label(h.ctx, "Hello");
+            rd::label(h.ctx, "Hello");
             end_window(h.ctx);
         }
     };

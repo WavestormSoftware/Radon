@@ -22,7 +22,7 @@
     },
     {
       "name": "windows-msvc-release",
-      "generator": "Visual Studio 17 2022", "architecture": "x64",
+      "architecture": "x64",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": { "RD_WARNINGS_AS_ERRORS": "ON" }
     },

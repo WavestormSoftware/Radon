@@ -114,7 +114,7 @@ TEST_CASE("font: rasterized glyphs land inside the atlas") {
     Rect r{0, 0, 300, 100};
     h.frame([&] {
         if (begin_window(h.ctx, "w", r, WindowNone)) {
-            label(h.ctx, "Hi");
+            rd::label(h.ctx, "Hi");
             end_window(h.ctx);
         }
     });
@@ -155,7 +155,7 @@ TEST_CASE("atlas overflow: never crashes, warns, recovers next frame") {
     Rect r{0, 0, 500, 100};
     auto ui = [&] {
         if (begin_window(h.ctx, "w", r, WindowNone)) {
-            label(h.ctx, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
+            rd::label(h.ctx, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
             end_window(h.ctx);
         }
     };

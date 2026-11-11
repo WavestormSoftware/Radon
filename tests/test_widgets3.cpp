@@ -270,8 +270,8 @@ TEST_CASE("table header sorts and rows select") {
         table_header(u.h.ctx, "t", cols, 2, nullptr, &sort, &asc);
         for (int i = 0; i < 3; i++) {
             if (table_row(u.h.ctx, i, selected == i).clicked) selected = i;
-            label(u.h.ctx, "file");
-            label(u.h.ctx, "1 KB");
+            rd::label(u.h.ctx, "file");
+            rd::label(u.h.ctx, "1 KB");
         }
     };
     u.frame();
@@ -294,7 +294,7 @@ TEST_CASE("list clipper emits only the visible rows of a long list") {
         list_clipper_begin(u.h.ctx, 100000, 0, first, last);
         for (int i = first; i < last; i++) {
             layout_row(u.h.ctx, 1, nullptr, 0, 0);
-            label(u.h.ctx, "row");
+            rd::label(u.h.ctx, "row");
             emitted++;
         }
         list_clipper_end(u.h.ctx);
@@ -394,7 +394,7 @@ TEST_CASE("popups fade in, and the context goes idle when nothing moves") {
     u.rect = {0, 0, 0, 0};
     u.body = [&] {
         if (popup_begin(u.h.ctx, "p")) {
-            label(u.h.ctx, "x");
+            rd::label(u.h.ctx, "x");
             popup_end(u.h.ctx);
         }
     };
@@ -428,7 +428,7 @@ TEST_CASE("animate eases toward the target and transition restarts on a new key"
         v = animate(h.ctx, "v", 1.0f, 0.2f);
         if (begin_window(h.ctx, "w", r, WindowNone)) {
             transition_begin(h.ctx, "page", key);
-            label(h.ctx, "content");
+            rd::label(h.ctx, "content");
             transition_end(h.ctx);
             end_window(h.ctx);
         }
@@ -510,7 +510,7 @@ TEST_CASE("card grows to fit its content") {
     int rows = 1;
     u.body = [&] {
         if (begin_card(u.h.ctx, "card")) {
-            for (int i = 0; i < rows; i++) label(u.h.ctx, "line");
+            for (int i = 0; i < rows; i++) rd::label(u.h.ctx, "line");
             end_card(u.h.ctx);
         }
         button(u.h.ctx, "below");
@@ -534,9 +534,9 @@ TEST_CASE("nav bar, splitter and display widgets run without errors") {
         nav_bar(u.h.ctx, "nav", tab, icons, labels, 3);
         const float cols[] = {split, 8, -1};
         layout_row(u.h.ctx, 3, cols, 3, 0);
-        label(u.h.ctx, "left");
+        rd::label(u.h.ctx, "left");
         splitter(u.h.ctx, "sp", split, 50, 200);
-        label(u.h.ctx, "right");
+        rd::label(u.h.ctx, "right");
         layout_row(u.h.ctx, 1, nullptr, 0, 0);
         heading(u.h.ctx, "Heading");
         avatar(u.h.ctx, "Ada Lovelace", {200, 60, 120, 255});

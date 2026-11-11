@@ -160,7 +160,7 @@ TEST_CASE("popup_begin / open_popup") {
         inside = false;
         if (popup_begin(u.h.ctx, "p")) {
             inside = true;
-            label(u.h.ctx, "hello");
+            rd::label(u.h.ctx, "hello");
             popup_end(u.h.ctx);
         }
     };
@@ -200,7 +200,7 @@ TEST_CASE("label, wrapped label, progress, image allocate layout cells") {
     Ui u;
     Rect cells[4];
     u.body = [&] {
-        label(u.h.ctx, "l");
+        rd::label(u.h.ctx, "l");
         label_wrapped(u.h.ctx, "some words that should wrap");
         progress_bar(u.h.ctx, 0.5f);
         image(u.h.ctx, 5, {40, 60});
@@ -209,8 +209,8 @@ TEST_CASE("label, wrapped label, progress, image allocate layout cells") {
         cells[1] = after;
     };
     u.frame();
-    // label(34) + wrapped(34, no font => one line, height >= cell) + progress(34) + image(60+6) => next >=
-    // 8+34*3+66
+    // rd::label(34) + wrapped(34, no font => one line, height >= cell) + progress(34) + image(60+6) => next
+    // >= 8+34*3+66
     CHECK(cells[1].y >= 8 + 34 * 3 + 66 - 0.01f);
     bool has_image = false;
     for (int i = 0; i < u.h.ctx.draw_list().command_count(); i++)
