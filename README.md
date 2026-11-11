@@ -1,4 +1,6 @@
-# Radon
+<p align="center">
+  <img src="docs/images/radon-logo.png" alt="Radon, a UI library" width="560">
+</p>
 
 [![ci](https://github.com/WavestormSoftware/Radon/actions/workflows/ci.yml/badge.svg)](https://github.com/WavestormSoftware/Radon/actions/workflows/ci.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
