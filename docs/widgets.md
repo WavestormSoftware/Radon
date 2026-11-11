@@ -268,6 +268,10 @@ underlines and segmented controls animate between states. `ui.set_animations(fal
   for half a second is a secondary click. Use `Theme::touch()` for finger-sized rows. More in
   [platforms.md](platforms.md).
 
+## Game views and canvas
+
+`viewport(ctx, texture, size, flip_y)` shows an engine texture and returns the pointer and key input that belong to it; `canvas_begin` / `canvas_end` give a clipped 2D drawing area (`fill_rect`, `circle`, `line`, `sprite`, ...). See [game-integration.md](game-integration.md).
+
 ## Custom widgets
 
 Build on `layout_next(ui)` to get a rect, then draw. The context exposes the draw list for the

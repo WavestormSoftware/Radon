@@ -9,7 +9,12 @@ static_assert(sizeof(rd_draw_command) == sizeof(rd::DrawCommand), "rd_draw_comma
 
 struct rd_context {
     rd::Context ctx;
+    rd::Canvas canvas;  // the canvas between rd_canvas_begin and rd_canvas_end
 };
+
+static rd::Color col(uint32_t rgba) {
+    return {(uint8_t)(rgba >> 24), (uint8_t)(rgba >> 16), (uint8_t)(rgba >> 8), (uint8_t)rgba};
+}
 
 static rd::Context& C(rd_context* c) {
     return c->ctx;
@@ -29,11 +34,15 @@ int rd_load_font(rd_context* c, const uint8_t* ttf, size_t size, float px) {
 void rd_set_default_font(rd_context* c, int f) {
     C(c).set_default_font(f);
 }
+int rd_version(void) {
+    return RD_C_API_VERSION;
+}
 void rd_set_dpi_scale(rd_context* c, float s) {
     C(c).set_dpi_scale(s);
 }
 
 void rd_begin_frame(rd_context* c, const rd_input* in, float dt) {
+    if (!c || !in) return;
     rd::Input i;
     i.pointer = {in->pointer_x, in->pointer_y};
     i.pointer_down = in->pointer_down != 0;
@@ -83,10 +92,7 @@ int rd_cursor(const rd_context* c) {
 }
 
 int rd_begin_window(rd_context* c, const char* title, rd_rect* r) {
-    rd::Rect rect{r->x, r->y, r->w, r->h};
-    const bool open = rd::begin_window(C(c), title, rect);
-    *r = {rect.x, rect.y, rect.w, rect.h};
-    return open;
+    return rd_begin_window_ex(c, title, r, rd::WindowDefault);
 }
 void rd_end_window(rd_context* c) {
     rd::end_window(C(c));
@@ -158,6 +164,37 @@ int rd_combo(rd_context* c, const char* l, int* sel, const char* const* items, i
 }
 void rd_image(rd_context* c, uint32_t tex, float w, float h) {
     rd::image(C(c), tex, {w, h});
+}
+
+int rd_canvas_begin(rd_context* c, float w, float h, uint32_t background, float* local_xy) {
+    c->canvas = rd::canvas_begin(C(c), {w, h}, col(background));
+    if (local_xy) local_xy[0] = c->canvas.local.x, local_xy[1] = c->canvas.local.y;
+    const rd::Response& r = c->canvas.response;
+    return (r.hovered ? 1 : 0) | (r.focused ? 2 : 0) | (r.pressed ? 4 : 0) | (r.clicked ? 8 : 0);
+}
+void rd_canvas_end(rd_context* c) {
+    rd::canvas_end(C(c));
+}
+void rd_canvas_fill_rect(rd_context* c, float x, float y, float w, float h, uint32_t color, float radius) {
+    c->canvas.fill_rect({x, y, w, h}, col(color), radius);
+}
+void rd_canvas_stroke_rect(rd_context* c, float x, float y, float w, float h, uint32_t color,
+                           float thickness) {
+    c->canvas.stroke_rect({x, y, w, h}, col(color), thickness);
+}
+void rd_canvas_circle(rd_context* c, float cx, float cy, float radius, uint32_t color) {
+    c->canvas.circle({cx, cy}, radius, col(color));
+}
+void rd_canvas_line(rd_context* c, float x0, float y0, float x1, float y1, uint32_t color, float thickness) {
+    c->canvas.line({x0, y0}, {x1, y1}, col(color), thickness);
+}
+void rd_canvas_triangle(rd_context* c, float x0, float y0, float x1, float y1, float x2, float y2,
+                        uint32_t color) {
+    c->canvas.triangle({x0, y0}, {x1, y1}, {x2, y2}, col(color));
+}
+void rd_canvas_sprite(rd_context* c, uint32_t texture, float x, float y, float w, float h, float u0, float v0,
+                      float u1, float v1, uint32_t tint) {
+    c->canvas.sprite(texture, {x, y, w, h}, {u0, v0, u1 - u0, v1 - v0}, col(tint));
 }
 
 }  // extern "C"

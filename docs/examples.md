@@ -27,6 +27,9 @@ Every program accepts `--font <ttf>`, `--light` / `--dark` (default: the system 
 | `09_calculator` | A button grid with `layout_row` and primary-styled operators | ![](screenshots/ex-09-calculator.png) |
 | `10_dashboard` | A docked creative-app layout: menu, toolbar, canvas, color/brush/layer panels | ![](screenshots/ex-10-dashboard.png) |
 | `11_mobile_app` | A phone app: `Theme::touch`, safe area, bottom `nav_bar`, bottom sheet, toasts, a clipped 2,000-row list | ![](screenshots/ex-11-mobile-app.png) |
+| `game_viewport` | A render-target view inside a panel with `rd::viewport` (pointer, focus) | |
+| `game_canvas` | `rd::Canvas` sprite, gamepad state and a sound effect | |
+| `examples/raylib` | Radon drawn by raylib with a raylib 3D scene in a panel (`-DRD_BACKEND_RAYLIB=ON`) | |
 
 ## The gallery
 

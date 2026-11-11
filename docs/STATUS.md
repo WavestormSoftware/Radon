@@ -29,6 +29,12 @@ desktop session, Android SDK 34 / NDK 27 / Gradle. No emsdk, no Xcode, no MSVC, 
 | `gradle assembleRelease -Psdl3Dir=... -PfontFile=...` | BUILD SUCCESSFUL, `app-release-unsigned.apk` |
 | Live gallery left idle for 4 s with `wait_events` | about 1% CPU |
 
+## Game integration (viewport, render targets, canvas, C API, raylib, gamepad, audio)
+
+- Linux: unit tests cover the viewport and canvas widgets and the C API; the viewport, canvas and raylib demos were rendered and checked by eye. Audio was checked with SDL's dummy driver (WAV load, 8-voice cap).
+- CI builds and runs the headless tests on every platform. Nothing game-related was run on a GPU outside Linux.
+- Never run: gamepads (no controller here), the render-target code on GLES3/WebGL2, audio on a real device.
+
 ## Not verified
 
 - **Windows, macOS, Web, iOS**: never built. Every CI job except Linux has never run.

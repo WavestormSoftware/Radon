@@ -25,7 +25,9 @@
 extern "C" {
 #endif
 
+#define RD_C_API_VERSION 1 /* bumped when a function changes incompatibly */
 typedef struct rd_context rd_context;
+/* Colors are 0xRRGGBBAA. Every function taking an rd_context needs a non-NULL one. */
 
 typedef struct { float x, y, w, h; } rd_rect;
 
@@ -59,6 +61,7 @@ typedef struct {
     uint32_t index_offset, index_count, layer;
 } rd_draw_command;
 
+RD_API int rd_version(void);
 RD_API rd_context* rd_create(void);
 RD_API void rd_destroy(rd_context* c);
 /* Font data must outlive the context. Returns the font handle or -1. Call before the first frame. */
@@ -103,6 +106,17 @@ RD_API int rd_collapsing_header(rd_context* c, const char* label, int* open);
 RD_API int rd_combo(rd_context* c, const char* label, int* selected, const char* const* items, int count);
 /* Draws your texture (uv = full image). */
 RD_API void rd_image(rd_context* c, uint32_t texture, float w, float h);
+/* 2D canvas: begin, draw (coordinates relative to the canvas, clipped to it), end. Result flags as
+ * rd_viewport plus 8 clicked. `uv` rectangles are corners (u0,v0)-(u1,v1). */
+RD_API int rd_canvas_begin(rd_context* c, float w, float h, uint32_t background, float* local_xy);
+RD_API void rd_canvas_end(rd_context* c);
+RD_API void rd_canvas_fill_rect(rd_context* c, float x, float y, float w, float h, uint32_t color, float radius);
+RD_API void rd_canvas_stroke_rect(rd_context* c, float x, float y, float w, float h, uint32_t color, float thickness);
+RD_API void rd_canvas_circle(rd_context* c, float cx, float cy, float radius, uint32_t color);
+RD_API void rd_canvas_line(rd_context* c, float x0, float y0, float x1, float y1, uint32_t color, float thickness);
+RD_API void rd_canvas_triangle(rd_context* c, float x0, float y0, float x1, float y1, float x2, float y2, uint32_t color);
+RD_API void rd_canvas_sprite(rd_context* c, uint32_t texture, float x, float y, float w, float h, float u0, float v0,
+                             float u1, float v1, uint32_t tint);
 /* Shows your texture; result flags are bits: 1 hovered, 2 focused, 4 pressed, 8 down, 16 released.
  * local_xy receives the pointer relative to the view. */
 RD_API int rd_viewport(rd_context* c, uint32_t texture, float w, float h, int flip_y, float* local_xy);

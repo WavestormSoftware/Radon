@@ -3,6 +3,7 @@
 // through SDL so no GL headers or loader library are needed.
 #include <SDL3/SDL.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -204,6 +205,20 @@ void set_tex_params(Renderer* r) {
     r->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 }
 
+// Registers a GL texture under the lowest free TextureId (destroyed ids are reused, so creating and
+// destroying views at runtime does not grow the table).
+TextureId alloc_slot(Renderer* r, GLuint gl, bool owned) {
+    for (size_t i = 0; i < r->textures.size(); i++)
+        if (r->textures[i] == 0) {
+            r->textures[i] = gl;
+            r->owned[i] = owned;
+            return (TextureId)(i + 1);
+        }
+    r->textures.push_back(gl);
+    r->owned.push_back(owned);
+    return (TextureId)r->textures.size();
+}
+
 void delete_target_gl(Renderer* r, Renderer::Target& t) {
     if (t.fbo) r->DeleteFramebuffers(1, &t.fbo);
     if (t.depth) r->DeleteRenderbuffers(1, &t.depth);
@@ -285,16 +300,12 @@ TextureId create_texture(Renderer* r, int w, int h, const uint8_t* rgba) {
     r->PixelStorei(GL_UNPACK_ALIGNMENT, 1);
     r->TexImage2D(GL_TEXTURE_2D, 0, (GLint)GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
     set_tex_params(r);
-    r->textures.push_back(t);
-    r->owned.push_back(1);
-    return (TextureId)r->textures.size();
+    return alloc_slot(r, t, true);
 }
 
 TextureId adopt_texture(Renderer* r, unsigned gl_texture) {
     if (!r || !gl_texture) return 0;
-    r->textures.push_back(gl_texture);
-    r->owned.push_back(0);
-    return (TextureId)r->textures.size();
+    return alloc_slot(r, gl_texture, false);
 }
 
 bool update_texture(Renderer* r, TextureId id, int w, int h, const uint8_t* rgba) {
@@ -314,7 +325,10 @@ void destroy_texture(Renderer* r, TextureId id) {
     if (!r || id == 0 || id > r->textures.size()) return;
     GLuint& t = r->textures[id - 1];
     for (auto& tg : r->targets)
-        if (tg.tex == id) delete_target_gl(r, tg), tg.tex = 0;
+        if (tg.tex == id) delete_target_gl(r, tg);
+    r->targets.erase(std::remove_if(r->targets.begin(), r->targets.end(),
+                                    [id](const Renderer::Target& tg) { return tg.tex == id; }),
+                     r->targets.end());
     if (t && r->owned[id - 1]) r->DeleteTextures(1, &t);
     t = 0;
 }
@@ -350,14 +364,12 @@ TextureId create_render_target(Renderer* r, int w, int h, bool depth) {
     if (!r || w <= 0 || h <= 0) return 0;
     GLuint t = 0;
     r->GenTextures(1, &t);
-    r->textures.push_back(t);
-    r->owned.push_back(1);
     Renderer::Target tg;
-    tg.tex = (TextureId)r->textures.size();
+    tg.tex = alloc_slot(r, t, true);
     if (!alloc_target(r, tg, w, h, depth)) {
         delete_target_gl(r, tg);
         r->DeleteTextures(1, &t);
-        r->textures.back() = 0;
+        r->textures[tg.tex - 1] = 0;
         return 0;
     }
     r->targets.push_back(tg);
@@ -443,9 +455,10 @@ void render(Renderer* r, const Context& ctx, int fb_w, int fb_h) {
         if (x1 <= x0 || y1 <= y0) continue;
         r->Scissor((GLint)x0, (GLint)((float)fb_h - y1), (GLsizei)(x1 - x0 + 0.5f),
                    (GLsizei)(y1 - y0 + 0.5f));
-        GLuint want = c.texture == 0
-                          ? r->atlas_tex
-                          : (c.texture <= r->textures.size() ? r->textures[c.texture - 1] : r->atlas_tex);
+        GLuint want = c.texture == 0 ? r->atlas_tex
+                                     : (c.texture <= r->textures.size() && r->textures[c.texture - 1]
+                                            ? r->textures[c.texture - 1]
+                                            : r->atlas_tex);
         if (want != bound) {
             r->BindTexture(GL_TEXTURE_2D, want);
             bound = want;

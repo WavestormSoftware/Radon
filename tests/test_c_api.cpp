@@ -5,6 +5,7 @@
 #include <radon/radon_c.h>
 
 TEST_CASE("C API: frame, button click, draw list") {
+    CHECK(rd_version() == RD_C_API_VERSION);
     rd_context* c = rd_create();
     rd_rect win{0, 0, 200, 120};
     rd_input in{};
@@ -19,6 +20,11 @@ TEST_CASE("C API: frame, button click, draw list") {
             static const char* const items[] = {"a", "b"};
             static int sel = 0, open = 1;
             static float f = 0.5f, d = 1;
+            float local[2];
+            rd_canvas_begin(c, 50, 40, 0x000000ff, local);
+            rd_canvas_fill_rect(c, 1, 1, 10, 10, 0xff0000ff, 2);
+            rd_canvas_circle(c, 20, 20, 5, 0x00ff00ff);
+            rd_canvas_end(c);
             rd_label_wrapped(c, "wrapped text");
             rd_progress_bar(c, f);
             rd_drag_float(c, "d", &d, 0.1f);

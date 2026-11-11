@@ -49,6 +49,8 @@ void show_file_dialog(Platform* p, FileDialog kind, const char* default_location
 bool poll_file_dialog(Platform* p, std::string& path);
 bool is_gles(const Platform* p);
 
+/// Number of connected gamepads.
+int gamepad_count(const Platform* p);
 /// Gamepad bits for GamepadState::buttons.
 enum GamepadButton : uint32_t {
     PadSouth = 1u << 0,
@@ -72,9 +74,10 @@ struct GamepadState {
     float left_trigger = 0, right_trigger = 0;  ///< 0..1
     uint32_t buttons = 0;                       ///< GamepadButton bits
 };
-/// State of the index-th connected gamepad for your game. Returns false when there is none.
-/// Gamepads also drive the UI: D-pad = arrows, A = Space, B = Escape, Start = Enter, bumpers = Tab.
-bool gamepad_state(const Platform* p, int index, GamepadState& out);
+/// State of the index-th connected gamepad for your game. Stick values inside `deadzone` read as 0. Returns
+/// false when there is none. Gamepads also drive the UI: D-pad = arrows, A = Space, B = Escape, Start =
+/// Enter, bumpers = Tab.
+bool gamepad_state(const Platform* p, int index, GamepadState& out, float deadzone = 0.15f);
 
 /// Audio: short WAV sound effects mixed on the default output device. Needs no Platform.
 /// Every call returns false/null when no audio device exists (headless CI), so it is safe to leave in.
@@ -84,6 +87,8 @@ Sound* load_sound_memory(const uint8_t* wav, size_t size);
 /// Starts playback on a free voice (8 at once; extra plays are dropped). volume 0..1.
 bool play_sound(Sound* s, float volume = 1.0f);
 void destroy_sound(Sound* s);
+/// Stops every playing sound.
+void stop_all_sounds();
 void audio_shutdown();  ///< Called by destroy_platform; call it yourself if you use audio without a Platform.
 void request_quit(Platform* p);
 
@@ -108,7 +113,8 @@ TextureId create_texture(Renderer* r, int width, int height, const uint8_t* rgba
 TextureId adopt_texture(Renderer* r, unsigned gl_texture);
 /// Re-uploads pixels of a texture made by create_texture (same or new size).
 bool update_texture(Renderer* r, TextureId id, int width, int height, const uint8_t* rgba);
-/// Frees a texture (owned ones are deleted; adopted ones are only forgotten). The id is not reused.
+/// Frees a texture (owned ones are deleted; adopted ones are only forgotten). The id may be reused by the
+/// next texture you create, so drop every use of it first.
 void destroy_texture(Renderer* r, TextureId id);
 /// Offscreen target for rendering a game/3D view into a texture. Draw into it between begin_target and
 /// end_target with your own GL, then show it with rd::viewport(ctx, id, size, /*flip_y=*/true).

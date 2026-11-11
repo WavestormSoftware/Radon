@@ -67,6 +67,11 @@ void destroy_sound(Sound* s) {
     delete s;
 }
 
+void stop_all_sounds() {
+    for (SDL_AudioStream* v : g_voice)
+        if (v) SDL_ClearAudioStream(v);
+}
+
 void audio_shutdown() {
     for (SDL_AudioStream*& v : g_voice) {
         if (v) SDL_DestroyAudioStream(v);

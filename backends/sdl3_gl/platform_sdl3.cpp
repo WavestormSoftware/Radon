@@ -4,6 +4,7 @@
 #include <TargetConditionals.h>
 #endif
 
+#include <cmath>
 #include <cstring>
 #include <memory>
 #include <vector>
@@ -275,13 +276,18 @@ void handle_event(Platform* p, Input& in, const SDL_Event& e, float k, int ww, i
 
 }  // namespace
 
-bool gamepad_state(const Platform* p, int index, GamepadState& out) {
+int gamepad_count(const Platform* p) {
+    return p ? (int)p->pads.size() : 0;
+}
+
+bool gamepad_state(const Platform* p, int index, GamepadState& out, float deadzone) {
     out = GamepadState{};
     if (!p || index < 0 || index >= (int)p->pads.size()) return false;
     SDL_Gamepad* g = p->pads[(size_t)index];
     auto axis = [&](SDL_GamepadAxis a) {
-        const float v = (float)SDL_GetGamepadAxis(g, a) / 32767.0f;
-        return v < -1 ? -1.0f : v;
+        float v = (float)SDL_GetGamepadAxis(g, a) / 32767.0f;
+        v = v < -1 ? -1.0f : v;
+        return std::fabs(v) < deadzone ? 0.0f : v;
     };
     out.connected = true;
     out.left = {axis(SDL_GAMEPAD_AXIS_LEFTX), axis(SDL_GAMEPAD_AXIS_LEFTY)};

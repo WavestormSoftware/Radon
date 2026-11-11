@@ -31,6 +31,9 @@ no dependencies in the core.
   idle instead of redrawing. See [platforms](docs/platforms.md).
 - **Portable**: Windows, Linux, macOS, Web (WebGL2), Android and iOS through one SDL3 + OpenGL ES 3
   backend. The core includes no platform headers; write your own backend in a few hundred lines.
+- **Made for games**: show a game or 3D view in a panel (`rd::viewport`, render targets), draw 2D shapes and
+  sprites (`rd::Canvas`), use gamepads and sound effects, or drive Radon from any engine through a C API.
+  See [game integration](docs/game-integration.md).
 - **Predictable**: all memory is allocated up front from a `Config`. A full pool never crashes: the work
   is skipped and `ctx.error()` turns true. An allocation test checks zero heap allocations per frame.
 
