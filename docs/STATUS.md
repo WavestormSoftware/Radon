@@ -1,6 +1,6 @@
 # Status
 
-Environment: Linux (Artix), GCC 16.2.1, Clang, CMake 4.4.5, Ninja, system SDL 3.4.18, a live Wayland
+Environment: Linux, GCC 16.2.1, Clang, CMake 4.4.5, Ninja, system SDL 3.4.18, a live Wayland
 desktop session, Android SDK 34 / NDK 27 / Gradle. No emsdk, no Xcode, no MSVC, no Android device.
 
 | Target | Built | Ran | Tested | Notes |

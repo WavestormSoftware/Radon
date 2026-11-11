@@ -3,7 +3,7 @@
 [![ci](https://github.com/WavestormSoftware/Radon/actions/workflows/ci.yml/badge.svg)](https://github.com/WavestormSoftware/Radon/actions/workflows/ci.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A small, fast, **immediate-mode UI library for C++17**. Call widgets every frame, get results back, and
+A small, fast, immediate-mode UI library for C++17. Call widgets every frame, get results back, and
 render the draw list it produces with any renderer. No retained widget tree, no heap allocation per frame,
 no dependencies in the core.
 
@@ -32,8 +32,8 @@ no dependencies in the core.
 - **Predictable**: all memory is allocated up front from a `Config`. A full pool never crashes: the work
   is skipped and `ctx.error()` turns true. An allocation test checks zero heap allocations per frame.
 
-Radon is young (0.2). What has been built and run on each platform is listed honestly in
-[docs/STATUS.md](docs/STATUS.md).
+Radon is young (0.2). Only Linux has been built and run so far; [docs/STATUS.md](docs/STATUS.md) lists what
+has been verified on each platform.
 
 ## Quick start
 
@@ -109,5 +109,5 @@ report security problems privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 
-MIT. See [LICENSE](LICENSE). Vendored: stb_truetype and stb_rect_pack (public domain / MIT), doctest
-(MIT) in `src/third_party/`.
+MIT. See [LICENSE](LICENSE). Vendored code (stb_truetype, stb_rect_pack, doctest) and the SDL3 backend
+dependency are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
