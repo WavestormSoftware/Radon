@@ -95,6 +95,7 @@ Useful flags: `--page 0..7`, `--light` / `--dark`, `--touch`, `--size 400x800`, 
 | | |
 |---|---|
 | [Getting started](docs/getting-started.md) | Embed Radon in your app, step by step |
+| [Game integration](docs/game-integration.md) | Show an engine view in a panel; Radon inside an engine |
 | [Widget guide](docs/widgets.md) | Every widget with code and pictures |
 | [Layout](docs/layout.md) | Rows, columns, regions, indentation |
 | [Theming](docs/theming.md) | Colors, metrics, presets, touch metrics, scoped overrides |

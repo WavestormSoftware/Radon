@@ -70,6 +70,14 @@ enum : GLenum {
     GL_UNPACK_ALIGNMENT = 0x0CF5,
     GL_PACK_ALIGNMENT = 0x0D05,
     GL_FALSE_ = 0,
+    GL_FRAMEBUFFER = 0x8D40,
+    GL_RENDERBUFFER = 0x8D41,
+    GL_COLOR_ATTACHMENT0 = 0x8CE0,
+    GL_DEPTH_ATTACHMENT = 0x8D00,
+    GL_DEPTH_COMPONENT24 = 0x81A6,
+    GL_FRAMEBUFFER_COMPLETE = 0x8CD5,
+    GL_FRAMEBUFFER_BINDING = 0x8CA6,
+    GL_VIEWPORT = 0x0BA2,
 };
 
 // clang-format off
@@ -122,17 +130,36 @@ enum : GLenum {
                                                                           (GLint, GLint, GLsizei, GLsizei,   \
                                                                            GLenum, GLenum, void*))
 // clang-format on
+#define RD_GL_FBO_FUNCS(X)                                                                        \
+    X(void, GenFramebuffers, (GLsizei, GLuint*)) X(void, BindFramebuffer, (GLenum, GLuint))      \
+    X(void, DeleteFramebuffers, (GLsizei, const GLuint*))                                        \
+    X(void, FramebufferTexture2D, (GLenum, GLenum, GLenum, GLuint, GLint))                       \
+    X(GLenum, CheckFramebufferStatus, (GLenum)) X(void, GenRenderbuffers, (GLsizei, GLuint*))    \
+    X(void, BindRenderbuffer, (GLenum, GLuint)) X(void, DeleteRenderbuffers, (GLsizei, const GLuint*)) \
+    X(void, RenderbufferStorage, (GLenum, GLenum, GLsizei, GLsizei))                             \
+    X(void, FramebufferRenderbuffer, (GLenum, GLenum, GLenum, GLuint))                           \
+    X(void, GetIntegerv, (GLenum, GLint*))
 
 #define RD_DECL(ret, name, args) ret(RD_GLCALL* name) args = nullptr;
 }  // namespace
 
 struct Renderer {
     RD_GL_FUNCS(RD_DECL)
+    RD_GL_FBO_FUNCS(RD_DECL)
     GLuint program = 0, vao = 0, vbo = 0, ebo = 0, atlas_tex = 0;
     GLint u_scale = -1, u_tex = -1;
     uint32_t atlas_version = 0;
     int atlas_size = 0;
-    std::vector<GLuint> textures;  // TextureId n (>= 1) is textures[n - 1]
+    std::vector<GLuint> textures;  // TextureId n (>= 1) is textures[n - 1]; 0 = destroyed
+    std::vector<uint8_t> owned;    // 1 if Radon created (and must delete) the GL texture
+    struct Target {
+        TextureId tex = 0;
+        GLuint fbo = 0, depth = 0;
+        int w = 0, h = 0;
+    };
+    std::vector<Target> targets;
+    GLint saved_fbo = 0, saved_vp[4] = {};
+    bool in_target = false;
 };
 
 namespace {
@@ -145,6 +172,7 @@ bool load_functions(Renderer* r) {
         return false;                                                                    \
     }
     RD_GL_FUNCS(RD_LOAD)
+    RD_GL_FBO_FUNCS(RD_LOAD)
 #undef RD_LOAD
     return true;
 }
@@ -171,6 +199,12 @@ void set_tex_params(Renderer* r) {
     r->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     r->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     r->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+}
+
+void delete_target_gl(Renderer* r, Renderer::Target& t) {
+    if (t.fbo) r->DeleteFramebuffers(1, &t.fbo);
+    if (t.depth) r->DeleteRenderbuffers(1, &t.depth);
+    t.fbo = t.depth = 0;
 }
 
 }  // namespace
@@ -234,7 +268,9 @@ void destroy_renderer(Renderer* r) {
     r->DeleteBuffers(1, &r->vbo);
     r->DeleteBuffers(1, &r->ebo);
     r->DeleteTextures(1, &r->atlas_tex);
-    if (!r->textures.empty()) r->DeleteTextures((GLsizei)r->textures.size(), r->textures.data());
+    for (auto& t : r->targets) delete_target_gl(r, t);
+    for (size_t i = 0; i < r->textures.size(); i++)
+        if (r->owned[i] && r->textures[i]) r->DeleteTextures(1, &r->textures[i]);
     delete r;
 }
 
@@ -247,7 +283,113 @@ TextureId create_texture(Renderer* r, int w, int h, const uint8_t* rgba) {
     r->TexImage2D(GL_TEXTURE_2D, 0, (GLint)GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
     set_tex_params(r);
     r->textures.push_back(t);
+    r->owned.push_back(1);
     return (TextureId)r->textures.size();
+}
+
+TextureId adopt_texture(Renderer* r, unsigned gl_texture) {
+    if (!r || !gl_texture) return 0;
+    r->textures.push_back(gl_texture);
+    r->owned.push_back(0);
+    return (TextureId)r->textures.size();
+}
+
+bool update_texture(Renderer* r, TextureId id, int w, int h, const uint8_t* rgba) {
+    if (!r || id == 0 || id > r->textures.size() || !r->textures[id - 1] || !r->owned[id - 1] || w <= 0 ||
+        h <= 0 || !rgba)
+        return false;
+    GLint prev = 0;
+    r->GetIntegerv(0x8069 /*GL_TEXTURE_BINDING_2D*/, &prev);
+    r->BindTexture(GL_TEXTURE_2D, r->textures[id - 1]);
+    r->PixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    r->TexImage2D(GL_TEXTURE_2D, 0, (GLint)GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+    r->BindTexture(GL_TEXTURE_2D, (GLuint)prev);
+    return true;
+}
+
+void destroy_texture(Renderer* r, TextureId id) {
+    if (!r || id == 0 || id > r->textures.size()) return;
+    GLuint& t = r->textures[id - 1];
+    for (auto& tg : r->targets)
+        if (tg.tex == id) delete_target_gl(r, tg), tg.tex = 0;
+    if (t && r->owned[id - 1]) r->DeleteTextures(1, &t);
+    t = 0;
+}
+
+namespace {
+// (Re)allocates the color texture and depth buffer of a target at w x h and attaches them.
+bool alloc_target(Renderer* r, Renderer::Target& tg, int w, int h, bool depth) {
+    GLint prev_tex = 0, prev_fbo = 0;
+    r->GetIntegerv(0x8069, &prev_tex);
+    r->GetIntegerv(GL_FRAMEBUFFER_BINDING, &prev_fbo);
+    r->BindTexture(GL_TEXTURE_2D, r->textures[tg.tex - 1]);
+    r->TexImage2D(GL_TEXTURE_2D, 0, (GLint)GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    set_tex_params(r);
+    if (!tg.fbo) r->GenFramebuffers(1, &tg.fbo);
+    r->BindFramebuffer(GL_FRAMEBUFFER, tg.fbo);
+    r->FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, r->textures[tg.tex - 1], 0);
+    if (depth) {
+        if (!tg.depth) r->GenRenderbuffers(1, &tg.depth);
+        r->BindRenderbuffer(GL_RENDERBUFFER, tg.depth);
+        r->RenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, w, h);
+        r->FramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, tg.depth);
+    }
+    const bool ok = r->CheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+    r->BindFramebuffer(GL_FRAMEBUFFER, (GLuint)prev_fbo);
+    r->BindTexture(GL_TEXTURE_2D, (GLuint)prev_tex);
+    tg.w = w;
+    tg.h = h;
+    return ok;
+}
+}  // namespace
+
+TextureId create_render_target(Renderer* r, int w, int h, bool depth) {
+    if (!r || w <= 0 || h <= 0) return 0;
+    GLuint t = 0;
+    r->GenTextures(1, &t);
+    r->textures.push_back(t);
+    r->owned.push_back(1);
+    Renderer::Target tg;
+    tg.tex = (TextureId)r->textures.size();
+    if (!alloc_target(r, tg, w, h, depth)) {
+        delete_target_gl(r, tg);
+        r->DeleteTextures(1, &t);
+        r->textures.back() = 0;
+        return 0;
+    }
+    r->targets.push_back(tg);
+    return tg.tex;
+}
+
+bool resize_render_target(Renderer* r, TextureId id, int w, int h) {
+    if (!r || w <= 0 || h <= 0 || r->in_target) return false;
+    for (auto& tg : r->targets)
+        if (tg.tex == id) return tg.w == w && tg.h == h ? true : alloc_target(r, tg, w, h, tg.depth != 0);
+    return false;
+}
+
+bool begin_target(Renderer* r, TextureId id, Color clear_color) {
+    if (!r || r->in_target) return false;
+    for (auto& tg : r->targets) {
+        if (tg.tex != id || !tg.fbo) continue;
+        r->GetIntegerv(GL_FRAMEBUFFER_BINDING, &r->saved_fbo);
+        r->GetIntegerv(GL_VIEWPORT, r->saved_vp);
+        r->BindFramebuffer(GL_FRAMEBUFFER, tg.fbo);
+        r->Viewport(0, 0, tg.w, tg.h);
+        r->ClearColor(clear_color.r / 255.0f, clear_color.g / 255.0f, clear_color.b / 255.0f,
+                      clear_color.a / 255.0f);
+        r->Clear(GL_COLOR_BUFFER_BIT | (tg.depth ? 0x100u /*GL_DEPTH_BUFFER_BIT*/ : 0u));
+        r->in_target = true;
+        return true;
+    }
+    return false;
+}
+
+void end_target(Renderer* r) {
+    if (!r || !r->in_target) return;
+    r->BindFramebuffer(GL_FRAMEBUFFER, (GLuint)r->saved_fbo);
+    r->Viewport(r->saved_vp[0], r->saved_vp[1], r->saved_vp[2], r->saved_vp[3]);
+    r->in_target = false;
 }
 
 void render(Renderer* r, const Context& ctx, int fb_w, int fb_h) {

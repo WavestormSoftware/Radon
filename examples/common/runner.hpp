@@ -8,6 +8,10 @@
 #include <string>
 #include <vector>
 
+namespace rd::gl {
+struct Renderer;
+}
+
 namespace demo {
 
 /// Reads a whole file (also Android assets and iOS bundle resources); empty on failure.
@@ -70,6 +74,8 @@ public:
     bool poll_dialog(std::string& path);
     /// Registers an RGBA texture usable with rd::image. Valid after start().
     rd::TextureId create_texture(int w, int h, const uint8_t* rgba);
+    /// The GL renderer, for render targets (rd::gl::create_render_target). Valid after start().
+    rd::gl::Renderer* renderer();
 
 private:
     struct Impl;

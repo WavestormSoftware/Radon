@@ -66,6 +66,23 @@ void render(Renderer* r, const Context& ctx, int fb_width, int fb_height);
 void destroy_renderer(Renderer* r);
 /// Creates an RGBA8 texture for rd::image. Returns 0 on failure; ids are usable as TextureId.
 TextureId create_texture(Renderer* r, int width, int height, const uint8_t* rgba);
+/// Wraps a GL texture you created (RGBA, GL_TEXTURE_2D) for rd::image / rd::viewport. No copy; you keep
+/// ownership and must keep it alive while used. Returns 0 on failure.
+TextureId adopt_texture(Renderer* r, unsigned gl_texture);
+/// Re-uploads pixels of a texture made by create_texture (same or new size).
+bool update_texture(Renderer* r, TextureId id, int width, int height, const uint8_t* rgba);
+/// Frees a texture (owned ones are deleted; adopted ones are only forgotten). The id is not reused.
+void destroy_texture(Renderer* r, TextureId id);
+/// Offscreen target for rendering a game/3D view into a texture. Draw into it between begin_target and
+/// end_target with your own GL, then show it with rd::viewport(ctx, id, size, /*flip_y=*/true).
+TextureId create_render_target(Renderer* r, int width, int height, bool depth = false);
+/// Reallocates the target (contents are lost). No-op when the size is unchanged.
+bool resize_render_target(Renderer* r, TextureId id, int width, int height);
+/// Binds the target, sets the viewport and clears it. Saves the previous framebuffer and viewport.
+/// Other GL state (program, depth test, blend) is yours to set and restore.
+bool begin_target(Renderer* r, TextureId id, Color clear_color);
+/// Restores the framebuffer and viewport that begin_target saved.
+void end_target(Renderer* r);
 /// Clears the framebuffer. Call before render().
 void clear(Renderer* r, Color c);
 /// Reads the framebuffer as top-down RGBA (for screenshots). `out` has width*height*4 bytes.

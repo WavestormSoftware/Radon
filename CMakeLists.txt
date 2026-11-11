@@ -23,6 +23,8 @@ endif()
 option(RD_BUILD_EXAMPLES "Build the demos" ${_rd_desktop})
 option(RD_BUILD_TESTS "Build the tests" ${_rd_desktop})
 option(RD_BACKEND_SDL3_GL "Build the SDL3 + OpenGL ES 3 backend (fetches SDL3)" ${_rd_top_level})
+option(RD_BUILD_C_API "Build the C API (radon_c.h) into the core library" ${_rd_top_level})
+option(RD_BACKEND_RAYLIB "Build the raylib backend and demo (fetches raylib)" OFF)
 option(RD_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 option(RD_INSTALL "Install the core library and a CMake package (find_package(Radon))" ${_rd_desktop})
 
@@ -35,6 +37,9 @@ add_library(radon
     src/core/widgets/container.cpp src/core/widgets/color.cpp
     src/core/widgets/more.cpp src/core/widgets/overlay.cpp)
 add_library(radon::radon ALIAS radon)
+if(RD_BUILD_C_API)
+    target_sources(radon PRIVATE src/core/radon_c.cpp)
+endif()
 target_include_directories(radon PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
 target_include_directories(radon SYSTEM PRIVATE src/third_party)
@@ -72,6 +77,24 @@ if(RD_BACKEND_SDL3_GL)
     target_include_directories(radon_sdl3_gl PUBLIC backends/sdl3_gl)
     target_link_libraries(radon_sdl3_gl PUBLIC radon SDL3::SDL3)
     rd_warnings(radon_sdl3_gl)
+endif()
+
+if(RD_BACKEND_RAYLIB)
+    include(FetchContent)
+    set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(raylib GIT_REPOSITORY https://github.com/raysan5/raylib.git GIT_TAG 5.5
+        GIT_SHALLOW TRUE FIND_PACKAGE_ARGS 5.5 CONFIG)
+    FetchContent_MakeAvailable(raylib)
+    add_library(radon_raylib backends/raylib/radon_raylib.cpp)
+    add_library(radon::raylib ALIAS radon_raylib)
+    target_include_directories(radon_raylib PUBLIC backends/raylib)
+    target_link_libraries(radon_raylib PUBLIC radon raylib)
+    if(RD_BUILD_EXAMPLES)
+        add_executable(radon_raylib_demo examples/raylib/raylib_demo.cpp)
+        target_link_libraries(radon_raylib_demo PRIVATE radon_raylib)
+        target_compile_definitions(radon_raylib_demo PRIVATE
+            RD_FONT_PATH="${CMAKE_SOURCE_DIR}/examples/assets/font.ttf")
+    endif()
 endif()
 
 if(RD_BUILD_EXAMPLES AND RD_BACKEND_SDL3_GL)

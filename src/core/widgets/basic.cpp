@@ -83,6 +83,26 @@ Response image(Context& ctx, TextureId tex, Vec2 size, Rect uv) {
     return rs;
 }
 
+ViewportResponse viewport(Context& ctx, TextureId tex, Vec2 size, bool flip_y) {
+    State& s = state(ctx);
+    Rect r = layout_next(ctx);
+    extend_height(s, r, size.y);
+    r.w = std::fmin(r.w, size.x);
+    r.h = size.y;
+    const ID id = get_id(s, "##viewport") ^ (ID)tex;
+    const bool was_active = s.active == id;
+    ViewportResponse vr;
+    static_cast<Response&>(vr) = update_control(ctx, id, r, true, true);
+    vr.rect = r;
+    vr.local = {s.in.pointer.x - r.x, s.in.pointer.y - r.y};
+    vr.down = (vr.pressed || was_active) && s.in.pointer_down;
+    vr.released = (vr.pressed || was_active) && s.in.pointer_released;
+    if (vr.hovered) vr.wheel = s.in.wheel;
+    if (vr.focused) vr.keys = &s.in.keys;
+    s.dl.image(tex, r, flip_y ? Rect{0, 1, 1, -1} : Rect{0, 0, 1, 1}, {255, 255, 255, 255});
+    return vr;
+}
+
 bool collapsing_header(Context& ctx, std::string_view label, bool& open) {
     State& s = state(ctx);
     const Theme& t = s.cfg.theme;

@@ -8,10 +8,10 @@
 static void* rd_arena_alloc(void* user, size_t n);
 #define STBTT_malloc(x, u) rd_arena_alloc((u), (x))
 #define STBTT_free(x, u) ((void)(x), (void)(u))
+#define STB_RECT_PACK_IMPLEMENTATION  // before truetype, or it defines its own public stbrp_* copies
+#include <stb_rect_pack.h>
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb_truetype.h>
-#define STB_RECT_PACK_IMPLEMENTATION
-#include <stb_rect_pack.h>
 
 static void* rd_arena_alloc(void* user, size_t n) {
     auto* a = static_cast<rd::detail::Arena*>(user);

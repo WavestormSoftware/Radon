@@ -107,6 +107,9 @@ void Runner::show_open_dialog() {
 bool Runner::poll_dialog(std::string& path) {
     return rd::sdl3::poll_file_dialog(m_->plat, path);
 }
+rd::gl::Renderer* Runner::renderer() {
+    return m_->rend;
+}
 rd::TextureId Runner::create_texture(int w, int h, const uint8_t* rgba) {
     return rd::gl::create_texture(m_->rend, w, h, rgba);
 }

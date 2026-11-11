@@ -6,6 +6,9 @@ target_compile_definitions(rd_test_common INTERFACE RD_SOURCE_DIR="${CMAKE_SOURC
 
 add_executable(radon_tests main.cpp test_ids.cpp test_input.cpp test_layout.cpp test_draw_list.cpp
     test_text.cpp test_widgets.cpp test_widgets2.cpp test_widgets3.cpp test_textbox.cpp)
+if(RD_BUILD_C_API)
+    target_sources(radon_tests PRIVATE test_c_api.cpp)
+endif()
 target_link_libraries(radon_tests PRIVATE rd_test_common)
 rd_warnings(radon_tests)
 add_test(NAME radon_tests COMMAND radon_tests)

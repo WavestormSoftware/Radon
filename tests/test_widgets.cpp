@@ -316,3 +316,31 @@ TEST_CASE("pool overflow never crashes") {
     });
     CHECK(h.ctx.error());
 }
+
+TEST_CASE("viewport: click focuses, drag outside keeps reporting, keys only when focused") {
+    Ui u;
+    ViewportResponse v;
+    u.body = [&] { v = viewport(u.h.ctx, 7, {100, 60}); };
+    u.frame();
+    CHECK(v.keys == nullptr);
+    CHECK(v.rect.w == 100);
+    u.h.move(20, 20);
+    u.frame();
+    u.h.in.pointer_down = u.h.in.pointer_pressed = true;
+    u.frame();
+    CHECK(v.pressed);
+    CHECK(v.down);
+    CHECK(v.focused);
+    CHECK(v.keys != nullptr);
+    u.h.in.pointer_pressed = false;
+    u.h.move(250, 250);  // drag far outside the viewport
+    u.frame();
+    CHECK(v.down);
+    CHECK(v.local.x == doctest::Approx(250 - v.rect.x));
+    u.h.in.pointer_down = false;
+    u.h.in.pointer_released = true;
+    u.frame();
+    CHECK(v.released);
+    u.click(280, 280);  // click elsewhere drops focus
+    CHECK(v.keys == nullptr);
+}

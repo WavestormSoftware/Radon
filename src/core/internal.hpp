@@ -5,6 +5,8 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+// static: raylib exports its own stbrp_*; keep Radon's copy private so both link
+#define STBRP_STATIC
 #include <stb_rect_pack.h>
 #include <stb_truetype.h>
 

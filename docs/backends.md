@@ -88,6 +88,8 @@ Fill `rd::Input` each frame (see [getting-started.md](getting-started.md#5-handl
 provide clipboard callbacks with `ctx.set_clipboard_callbacks(get, set, user)`, and set
 `ctx.set_dpi_scale(scale)` when the display scale is not 1.
 
+The raylib backend (`backends/raylib`, `-DRD_BACKEND_RAYLIB=ON`) is a second, working example. See [game-integration.md](game-integration.md).
+
 ## Using the core without any backend
 
 The tests drive the core headlessly with synthetic `Input` (see `tests/harness.hpp`). That is also a good
