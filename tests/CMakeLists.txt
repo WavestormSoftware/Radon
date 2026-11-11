@@ -5,7 +5,7 @@ target_include_directories(rd_test_common SYSTEM INTERFACE ${CMAKE_SOURCE_DIR}/s
 target_compile_definitions(rd_test_common INTERFACE RD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
 add_executable(radon_tests main.cpp test_ids.cpp test_input.cpp test_layout.cpp test_draw_list.cpp
-    test_text.cpp test_widgets.cpp test_widgets2.cpp test_widgets3.cpp test_textbox.cpp)
+    test_text.cpp test_widgets.cpp test_widgets2.cpp test_widgets3.cpp test_textbox.cpp test_v03.cpp)
 if(RD_BUILD_C_API)
     target_sources(radon_tests PRIVATE test_c_api.cpp)
 endif()

@@ -2,6 +2,57 @@
 
 Radon follows [semantic versioning](https://semver.org); before 1.0, minor versions may break the API.
 
+## 0.3.0 (unreleased)
+
+### Added
+
+- **Mobile**: multi-touch (`Input::touches`) and `Context::gesture()` (pinch, rotate, two-finger pan, swipe,
+  velocity); `pull_to_refresh`, `edge_swipe`, `swipe_item`; drawers and bottom sheets follow the finger and
+  close on a swipe, bottom sheets have a grab handle; `Input::keyboard_inset` scrolls the focused field
+  above the soft keyboard; `TextInputType` and a `textbox` overload pick the soft keyboard; haptic feedback
+  (`Context::haptic()`, played by the SDL backend on Android and iOS); `ViewportResponse` and `Canvas`
+  report `pinch` and `pan2`.
+- **Text editing**: undo/redo (Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z), word-wise movement and deletion, double-click
+  word and triple-click line selection, PageUp/PageDown, and on touch a long-press word selection with a
+  Cut / Copy / Paste / Select all bar and selection handles. `selectable_text`. Keys Z, Y, PageUp, PageDown.
+- **Pickers**: `wheel_picker`, `time_picker`, `combo_search`, `multi_combo`, `autocomplete`, `number_pad`.
+- **Charts and data**: `chart` (line, area, bar, stacked bar, scatter) with axes, legend and a value
+  readout; `pie_chart` (pie and donut); `sparkline`; `table_begin` / `table_end` with a fixed header,
+  resizable and sortable columns, and `table_tree_row`. `Theme::chart` palette.
+- **Layout**: `flow_begin` / `flow_end` (wrapping rows of sized widgets), `layout_grid`, `carousel_begin`,
+  `accordion_begin`.
+- **Docking**: `dock_space`, `begin_dock_panel` / `end_dock_panel` with splits, tabs, floating panels, drop
+  zones and close buttons.
+- **Rich text**: `rich_text` (bold, italic, code, links, colors, inline icons) and `markdown`;
+  `Theme::font_bold`, `font_italic`, `font_mono`.
+- **Drag and drop**: `drag_source`, `drop_target`, `dragging`, `reorder_list`.
+- **Accessibility**: `Config::a11y` records an accessibility tree (`Context::a11y_nodes`), and
+  `Input::a11y_action` lets a screen reader activate, focus and adjust widgets. See `docs/accessibility.md`.
+- **Fonts**: `Context::set_font_fallback` chains fonts for missing glyphs (emoji, CJK, symbols).
+- 14 icons (Filter, Grid, List, Image, Mail, Phone, Link, Upload, Send, Archive, Bookmark, Pin, Backspace,
+  Code) and `Icon::Count`.
+- C API v2: touches and keyboard inset in `rd_input`, the new keys, `rd_text_input_type`, `rd_haptic`,
+  `rd_pinch`, `rd_swipe`.
+- Gallery pages "Charts", "Pickers", "Rich text", "Gestures" and "Docking"; the phone layout opens its menu
+  with an edge swipe and refreshes with a pull. `11_mobile_app` uses the new mobile widgets.
+
+### Changed (breaking)
+
+- `Input` has new fields (`touches`, `touch_count`, `keyboard_inset`, `a11y_action`, `a11y_target`) before
+  `screen_size`: code that brace-initializes `Input` by position must name the fields instead.
+- `rd_input` (C API) grew; zero-initialize it. `RD_C_API_VERSION` is 2.
+- Buttons, labels, badges, chips, links and icon buttons place themselves through the new sized-cell path
+  (same result outside flow layouts).
+- Bottom sheet content starts 12 px lower, under the new grab handle.
+- On iOS the SDL backend compiles an Objective-C file (haptics) and links UIKit.
+
+### Fixed
+
+- Several tall cells in one row (two wheel pickers, images or wrapped labels side by side) grew the row by
+  the sum of their heights instead of the tallest.
+- A tooltip or toast given a default-constructed (null) `std::string_view` passed a null pointer to
+  `memcpy` (undefined behaviour; UBSan found the same pattern in new code).
+
 ## 0.2.0 (unreleased)
 
 ### Added

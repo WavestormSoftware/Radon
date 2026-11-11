@@ -75,7 +75,7 @@ int nv, ni, nc;
 const rd_vertex* v = rd_vertices(ui, &nv);   // then rd_indices, rd_commands, rd_atlas
 ```
 
-Wrapped in C: windows (with flags), layout row, label, wrapped label, buttons (with styles), checkbox, slider, drag float, textbox, progress bar, collapsing header, combo, image, viewport and the 2D canvas. Other widgets need a wrapper in `src/core/radon_c.cpp` (a few lines each). For a shared library define `RD_C_BUILD_SHARED` when building and `RD_C_SHARED` when consuming on Windows; `RD_API` handles the export. `rd_version()` returns `RD_C_API_VERSION`.
+Wrapped in C: windows (with flags), layout row, label, wrapped label, buttons (with styles), checkbox, slider, drag float, textbox, progress bar, collapsing header, combo, image, viewport and the 2D canvas. Other widgets need a wrapper in `src/core/radon_c.cpp` (a few lines each). For a shared library define `RD_C_BUILD_SHARED` when building and `RD_C_SHARED` when consuming on Windows; `RD_API` handles the export. `rd_version()` returns `RD_C_API_VERSION` (2 since 0.3: `rd_input` gained `touches_xy`, `touch_count` and `keyboard_inset`, so zero-initialize it; `rd_text_input_type`, `rd_haptic`, `rd_pinch` and `rd_swipe` were added).
 
 `rd_vertex` and `rd_draw_command` have the same layout as the C++ structs. The vertex layout and shader contract are in [backends.md](backends.md); `backends/sdl3_gl/shaders.cpp` is the reference shader. Textures other than the glyph atlas (id 0) use your own ids: pass them to `rd_viewport`, `rd_image` or `rd_canvas_sprite`, and bind them yourself when a command's `texture` is non-zero.
 

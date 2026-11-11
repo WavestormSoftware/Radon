@@ -11,12 +11,14 @@ shot() { # name binary size [extra args...]
   "$BUILD/$bin" --size "$size" --dark --screenshot "$OUT/$name.png" --frames 40 "$@" >/dev/null
   echo "wrote $OUT/$name.png"
 }
-pages=(widgets inputs layout lists theming dashboard data motion)
-for i in 0 1 2 3 4 5 6 7; do
+pages=(widgets inputs layout lists theming dashboard data motion charts pickers richtext gestures docking)
+for i in 0 1 2 3 4 5 6 7 8 9 10 11 12; do
   shot "gallery-${pages[$i]}" examples/desktop_demo/radon_desktop_demo 1280x760 --page "$i" --pointer 640,700
 done
 shot gallery-light examples/desktop_demo/radon_desktop_demo 1280x760 --page 0 --light --pointer 640,700
 shot gallery-phone examples/desktop_demo/radon_desktop_demo 420x860 --page 0 --pointer 10,10
+shot gallery-phone-gestures examples/desktop_demo/radon_desktop_demo 420x860 --page 11 --pointer 10,10
+shot gallery-phone-charts examples/desktop_demo/radon_desktop_demo 420x860 --page 8 --pointer 10,10
 shot gallery-phone-sheet examples/desktop_demo/radon_desktop_demo 420x860 --page 7 --pointer 10,10 --click 110,726 --frames 60
 shot ex-11-mobile-app examples/radon_ex_11_mobile_app 400x800 --pointer 10,10
 shot ex-01-hello examples/radon_ex_01_hello 480x280 --pointer 120,110

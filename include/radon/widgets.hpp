@@ -27,7 +27,12 @@ Response slider(Context& ctx, std::string_view label, float& value, float min, f
                 const char* format = "%.2f");
 Response drag_float(Context& ctx, std::string_view label, float& value, float speed = 1.0f);
 /// Enter reports `clicked` (submit). Escape drops focus. `hint` is placeholder text shown while empty.
+/// Ctrl+Z / Ctrl+Y undo and redo; Ctrl+arrows and Ctrl+Backspace work by word; double-click selects a
+/// word. On touch screens a long press selects a word and shows Cut / Copy / Paste.
 Response textbox(Context& ctx, std::string_view label, TextBuffer& buffer, const char* hint = nullptr);
+/// A text box that asks the platform for a specific soft keyboard (number pad, email, URL).
+Response textbox(Context& ctx, std::string_view label, TextBuffer& buffer, const char* hint,
+                 TextInputType type);
 Response label(Context& ctx, std::string_view text);
 Response label_wrapped(Context& ctx, std::string_view text);
 Response progress_bar(Context& ctx, float fraction);
@@ -40,6 +45,8 @@ struct ViewportResponse : Response {
     bool released = false;            ///< pointer went up this frame after a press that started inside
     float wheel = 0;                  ///< scroll, only while hovered
     const KeyEvents* keys = nullptr;  ///< key events this frame, only while focused (else null)
+    float pinch = 1;                  ///< two-finger zoom factor this frame, while the fingers are over it
+    Vec2 pan2;                        ///< two-finger pan this frame
 };
 /// Shows an engine/game texture in a cell and forwards input to it. Click focuses it; a drag that
 /// started inside keeps reporting `local` and `down` after the pointer leaves. `flip_y` for GL render
@@ -52,6 +59,8 @@ public:
     Rect rect;          ///< where the canvas is, logical px
     Response response;  ///< hover/press/focus of the canvas as a whole
     Vec2 local;         ///< pointer relative to the canvas top-left
+    float pinch = 1;    ///< two-finger zoom factor this frame, while the fingers are over the canvas
+    Vec2 pan2;          ///< two-finger pan this frame
     void fill_rect(Rect r, Color c, float radius = 0);
     void stroke_rect(Rect r, Color c, float thickness = 1, float radius = 0);
     void circle(Vec2 center, float radius, Color c);
@@ -125,7 +134,22 @@ enum class Icon {
     Refresh,
     Copy,
     Download,
-    Share
+    Share,
+    Filter,
+    Grid,
+    List,
+    Image,
+    Mail,
+    Phone,
+    Link,
+    Upload,
+    Send,
+    Archive,
+    Bookmark,
+    Pin,
+    Backspace,
+    Code,
+    Count  ///< number of icons, not an icon
 };
 
 enum class ButtonStyle { Default, Primary, Ghost, Danger };
@@ -335,5 +359,160 @@ float animate(Context& ctx, std::string_view id, float target, float duration = 
 /// Everything until transition_end fades and slides in whenever `key` changes (page switches, tabs).
 void transition_begin(Context& ctx, std::string_view id, int key);
 void transition_end(Context& ctx);
+
+// ---------------------------------------------------------------------------------------------
+// Gestures and mobile patterns
+// ---------------------------------------------------------------------------------------------
+
+/// Call right after begin_window / begin_child (or inside a scrolling region): pulling down past the
+/// top shows a spinner and, past the threshold, sets `refreshing`. Clear it when the work is done.
+/// Returns true on the frame the refresh starts.
+bool pull_to_refresh(Context& ctx, std::string_view id, bool& refreshing);
+/// True on the frame a finger that went down near the `side` edge of the screen (Left or Right) is
+/// dragged inward: open a navigation drawer.
+bool edge_swipe(Context& ctx, Side side);
+/// An action revealed behind a swipe_item row.
+struct SwipeAction {
+    const char* label;
+    Icon icon;
+    Color color;
+};
+/// A list row that slides left to reveal `actions` (delete, archive...). `triggered` receives the index
+/// of the tapped action, else -1. A tap on the row reports `clicked`.
+Response swipe_item(Context& ctx, std::string_view label, const SwipeAction* actions, int count,
+                    int& triggered, bool selected = false);
+
+// ---------------------------------------------------------------------------------------------
+// Pickers
+// ---------------------------------------------------------------------------------------------
+
+/// An iOS-style scrolling wheel of `count` items, `visible` rows tall (odd numbers look best).
+/// Flick it; it snaps to an item. Returns true on change.
+bool wheel_picker(Context& ctx, std::string_view label, int& selected, const char* const* items, int count,
+                  int visible = 5);
+/// A field showing HH:MM that opens hour and minute wheels. `hour` is 0-23 either way; `h24` false shows
+/// 12-hour with AM/PM. Returns true on change.
+bool time_picker(Context& ctx, std::string_view label, int& hour, int& minute, bool h24 = true);
+/// A combo with a filter box at the top of the list. Returns true on change.
+bool combo_search(Context& ctx, std::string_view label, int& selected, const char* const* items, int count);
+/// A combo whose list has a checkbox per item; `selected` has `count` entries. Returns true on change.
+bool multi_combo(Context& ctx, std::string_view label, bool* selected, const char* const* items, int count);
+/// A text box that offers matching `suggestions` (case-insensitive substring) in a popup while typing.
+/// Choosing one replaces the text and reports `changed` and `clicked`.
+Response autocomplete(Context& ctx, std::string_view label, TextBuffer& buffer,
+                      const char* const* suggestions, int count, const char* hint = nullptr);
+/// A 4x3 keypad (digits, decimal point, backspace) that edits `buffer`. Takes four rows.
+Response number_pad(Context& ctx, std::string_view label, TextBuffer& buffer, bool decimal = true);
+
+// ---------------------------------------------------------------------------------------------
+// Charts
+// ---------------------------------------------------------------------------------------------
+
+enum class ChartType { Line, Area, Bar, StackedBar, Scatter };
+struct ChartSeries {
+    const char* name = nullptr;
+    const float* values = nullptr;
+    int count = 0;
+    Color color{0, 0, 0, 0};  ///< alpha 0 = take the next Theme::chart color
+};
+/// A chart with axes, grid lines, a legend (for more than one series) and a hover/touch readout of the
+/// values at the pointer. `x_labels` may be null. Returns the response of the plot area.
+Response chart(Context& ctx, std::string_view label, ChartType type, const ChartSeries* series, int count,
+               const char* const* x_labels, float height);
+/// A pie (or donut) of `count` values with a legend. Hovering a slice shows its share.
+Response pie_chart(Context& ctx, std::string_view label, const float* values, const char* const* labels,
+                   int count, float height, bool donut = false);
+/// A small line without axes for the inside of a table cell or a card. color alpha 0 = accent.
+void sparkline(Context& ctx, const float* values, int count, Color color = {0, 0, 0, 0});
+
+// ---------------------------------------------------------------------------------------------
+// Data tables
+// ---------------------------------------------------------------------------------------------
+
+struct TableColumn {
+    const char* name;
+    float width;  ///< px, changed when the user drags the header edge; <= 0 fills the rest
+    float min_width = 40;
+};
+struct TableSort {
+    int column = -1;
+    bool ascending = true;
+    bool changed = false;  ///< set on the frame a header was clicked: re-sort your rows
+};
+/// A table with a fixed header, resizable columns and a scrolling body of `height` px (negative = fill).
+/// With `sort`, clicking a header sorts. Emit rows with table_row / table_tree_row, one widget per
+/// column. Call table_end only when this returned true.
+bool table_begin(Context& ctx, std::string_view id, TableColumn* columns, int count, float height,
+                 TableSort* sort = nullptr);
+void table_end(Context& ctx);
+/// A table_row whose first cell shows `label` indented by `depth`, with an expand arrow when `open` is
+/// not null (clicking it toggles). Emit the remaining columns after it.
+Response table_tree_row(Context& ctx, int index, std::string_view label, int depth, bool* open,
+                        bool selected = false);
+
+// ---------------------------------------------------------------------------------------------
+// Layout containers
+// ---------------------------------------------------------------------------------------------
+
+/// A horizontally scrolling strip of `item_width` px cells, `height` px tall, that snaps to items and
+/// shows page dots. Swipe or use the wheel. Each layout_next (or layout_begin_column) is one item.
+/// Call carousel_end only when this returned true.
+bool carousel_begin(Context& ctx, std::string_view id, float height, float item_width);
+void carousel_end(Context& ctx);
+/// One section of an accordion: only the section whose `index` equals `open` is expanded (clicking a
+/// header opens it, clicking it again closes all). Content animates open. Call accordion_end only when
+/// this returned true.
+bool accordion_begin(Context& ctx, std::string_view label, int& open, int index);
+void accordion_end(Context& ctx);
+
+// ---------------------------------------------------------------------------------------------
+// Docking
+// ---------------------------------------------------------------------------------------------
+
+/// Where begin_dock_panel puts a panel the first time it is seen.
+enum class DockPlace { Center, Left, Right, Top, Bottom, Floating };
+/// Starts a dock area covering `rect` (usually the screen below a menu bar). Call it outside any window,
+/// before the panels. Panels docked in it show as tabs; drag a tab out to float it, drag a floating
+/// panel's title onto a drop zone to dock it again, drag the gaps to resize.
+void dock_space(Context& ctx, std::string_view id, Rect rect);
+/// A dockable panel. Returns true when it is visible (its tab is selected, or it floats); call
+/// end_dock_panel only then. With `open`, the panel gets a close button that sets it false; skip the
+/// call while it is false. `place` and `ratio` (share of the area) apply on first appearance.
+bool begin_dock_panel(Context& ctx, std::string_view title, bool* open = nullptr,
+                      DockPlace place = DockPlace::Center, float ratio = 0.25f);
+void end_dock_panel(Context& ctx);
+
+// ---------------------------------------------------------------------------------------------
+// Rich text
+// ---------------------------------------------------------------------------------------------
+
+struct RichTextResponse : Response {
+    std::string_view link;  ///< URL of the link clicked this frame (a view into the markup), else empty
+};
+/// Wrapped text with inline markup: **bold**, *italic*, `code`, [text](url), {#rrggbb}color{/},
+/// :icon: (home, star, heart, check, info, warning, user, bell, ...). Backslash escapes a character.
+RichTextResponse rich_text(Context& ctx, std::string_view markup);
+/// Markdown blocks: # headings, - and 1. lists, > quotes, ``` code blocks, --- rules and blank-line
+/// paragraphs, each paragraph with rich_text markup.
+RichTextResponse markdown(Context& ctx, std::string_view text);
+/// Read-only text that can be selected and copied. Lines break at '\n'.
+Response selectable_text(Context& ctx, std::string_view label, std::string_view text);
+
+// ---------------------------------------------------------------------------------------------
+// Drag and drop
+// ---------------------------------------------------------------------------------------------
+
+/// Call after a widget to make it draggable (mouse: press and move; touch: long press, then move).
+/// `data` (up to 256 bytes) is copied when the drag starts; `preview` is drawn at the pointer.
+/// Returns true while this source is being dragged.
+bool drag_source(Context& ctx, const char* type, const void* data, int size, std::string_view preview);
+/// Call after a widget: it highlights while a payload of `type` hovers it and returns the payload on
+/// the frame it is dropped (else null). `size` receives the byte count.
+const void* drop_target(Context& ctx, const char* type, int* size = nullptr);
+/// True while any drag-and-drop is in progress.
+bool dragging(Context& ctx);
+/// A list whose rows can be dragged into a new order. `order` holds `count` indices into `labels`
+/// and is permuted in place. Returns true on change.
+bool reorder_list(Context& ctx, std::string_view id, int* order, const char* const* labels, int count);
 
 }  // namespace rd

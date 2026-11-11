@@ -58,8 +58,20 @@ password_box(ui, "##pw", buf, "Password");       // shows stars; copy and cut ar
 search_box(ui, "##q", buf, "Search...");         // search icon + clear button; `changed` on clear too
 text_area(ui, "##notes", buf, 96, "Notes");      // multi-line, 96 px tall; Enter adds a line
 ```
-The text area scrolls with the wheel and the caret, and moves by line with Up/Down/Home/End. Lines break
-only at `\n` (there is no soft wrapping yet).
+The text area scrolls with the wheel and the caret, and moves by line with Up/Down/Home/End and by page
+with PageUp/PageDown. Lines break only at `\n` (there is no soft wrapping yet).
+
+Every text box has **undo and redo** (Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z; a run of typing is one step, the
+history belongs to the focused box and holds `Config::undo_bytes`), **word-wise editing** (Ctrl+Left/Right,
+Ctrl+Backspace/Delete, Ctrl+Home/End), **double-click** to select a word and **triple-click** for the line;
+dragging after a double-click extends by whole words. On touch screens a **long press** selects a word and
+shows a Cut / Copy / Paste / Select all bar, and two handles drag the ends of the selection.
+
+```cpp
+textbox(ui, "##age", buf, "Age", TextInputType::Number);   // asks for the number keyboard
+textbox(ui, "##mail", buf, "Email", TextInputType::Email);
+selectable_text(ui, "##log", log_text);                    // read-only, selectable and copyable
+```
 
 ## Choosing
 
@@ -150,6 +162,24 @@ if (begin_child(ui, "log", 300)) {
 Every row must have the same height. It works inside any scrolling window or child.
 
 ![Data](screenshots/gallery-data.png)
+
+## Data tables
+
+```cpp
+static TableColumn cols[] = {{"Name", 160}, {"Size", 80}, {"Kind", 0}};   // width 0: fills the rest
+static TableSort sort;
+if (table_begin(ui, "files", cols, 3, 200, &sort)) {   // fixed header, 200 px scrolling body
+    if (sort.changed) resort(sort.column, sort.ascending);
+    table_tree_row(ui, 0, "assets", 0, &assets_open);  // indented first cell with an expand arrow
+    label(ui, "");
+    label(ui, "Folder");
+    table_row(ui, 1);                                   // a plain row: one widget per column
+    label(ui, "readme.md"); label(ui, "6 KB"); label(ui, "Text");
+    table_end(ui);
+}
+```
+
+Drag a header edge to resize a column (the width is written back to `cols`), click a header to sort.
 
 ## Containers
 
@@ -267,6 +297,83 @@ underlines and segmented controls animate between states. `ui.set_animations(fal
   scrolls windows and child regions with momentum (but not sliders, which capture drags); holding still
   for half a second is a secondary click. Use `Theme::touch()` for finger-sized rows. More in
   [platforms.md](platforms.md).
+
+## Pickers
+
+```cpp
+static const char* const sizes[] = {"S", "M", "L", "XL"};
+wheel_picker(ui, "##size", size, sizes, 4, 5);          // iOS-style wheel: flick, it snaps; wheel/arrows too
+time_picker(ui, "##alarm", hour, minute, /*h24=*/false); // a field that opens hour/minute/AM-PM wheels
+combo_search(ui, "##country", country, countries, n);   // a combo with a filter box; Enter takes the first match
+multi_combo(ui, "##tags", checked, tags, n);            // checkbox list; the field shows "A, B" or "3 selected"
+autocomplete(ui, "##fruit", buf, fruits, n, "Fruit");   // suggestions while typing; Up/Down + Enter, or tap
+number_pad(ui, "##pad", buf);                           // a 4x3 keypad that edits a TextBuffer
+```
+
+## Charts
+
+```cpp
+const float revenue[] = {12, 19, 15, 24}, costs[] = {10, 12, 14, 15};
+const ChartSeries series[] = {{"Revenue", revenue, 4}, {"Costs", costs, 4}};
+const char* const months[] = {"Jan", "Feb", "Mar", "Apr"};
+chart(ui, "##sales", ChartType::Line, series, 2, months, 180);   // also Area, Bar, StackedBar, Scatter
+pie_chart(ui, "##share", values, names, 5, 150, /*donut=*/true);
+sparkline(ui, values, n);                                       // axis-free, for table cells and cards
+```
+
+Axes use "nice" steps (1, 2 or 5 times a power of ten) and short labels (`2.5k`, `1.2M`); x labels are
+thinned to fit. Hovering (or touching) shows the values under the pointer. A series with alpha-0 `color`
+takes the next `Theme::chart` color.
+
+![Charts](screenshots/gallery-charts.png)
+
+## Rich text and Markdown
+
+```cpp
+rich_text(ui, "**Bold**, *italic*, `code`, {#3dd68c}green{/}, :star: and [a link](https://example.com)");
+RichTextResponse r = markdown(ui, "# Title\n\nA paragraph.\n\n- item\n1. step\n> quote\n```\ncode\n```");
+if (!r.link.empty()) open_url(r.link);   // the URL of the clicked link, a view into your text
+```
+
+Text wraps at the cell width. `**bold**` uses `Theme::font_bold` (or draws the text twice when there is
+none), `*italic*` uses `font_italic`, code uses `font_mono`. Icons are named after `Icon` (`:home:`,
+`:heart:`, `:check:`, `:warning:`, ...). A backslash escapes the next character.
+
+## Drag and drop
+
+```cpp
+list_item(ui, file.name, false);
+drag_source(ui, "file", &file.id, sizeof file.id, file.name);   // after the widget it makes draggable
+button(ui, "Trash");
+if (const void* p = drop_target(ui, "file")) remove(*(const int*)p);
+reorder_list(ui, "##steps", order, labels, n);                  // rows dragged into a new order
+```
+
+With a mouse a drag starts after 8 px; on touch after a long press, so a plain swipe still scrolls. The
+payload (up to 256 bytes) is copied when the drag starts, the preview follows the pointer and targets of
+the same type light up under it.
+
+## Mobile patterns
+
+```cpp
+if (begin_window(ui, "feed", rect, WindowScrollable)) {
+    if (pull_to_refresh(ui, "refresh", loading)) fetch();   // drag down past the top
+    int act = -1;
+    const SwipeAction actions[] = {{"Archive", Icon::Archive, ui.theme().warning},
+                                   {"Delete", Icon::Trash, ui.theme().error}};
+    swipe_item(ui, "Message 1", actions, 2, act);           // slides left to reveal the actions
+    end_window(ui);
+}
+if (edge_swipe(ui, Side::Left)) open_modal(ui, "menu");     // swipe in from the screen edge
+```
+
+Bottom sheets and drawers follow the finger and close on a long or fast swipe toward their edge; bottom
+sheets have a grab handle that also works with the mouse. Two-finger pinch, rotate and pan come from
+`ctx.gesture()` and, while over them, `ViewportResponse::pinch`/`pan2` and `Canvas::pinch`/`pan2`.
+Toggles, segmented controls, wheel pickers, long presses and drops ask for haptic feedback through
+`ctx.haptic()`.
+
+![Phone](screenshots/gallery-phone-gestures.png)
 
 ## Game views and canvas
 

@@ -63,7 +63,9 @@ using namespace rd;
 TEST_CASE("zero heap allocations per frame after warm-up") {
     MESSAGE("malloc interposition: " << RD_INTERPOSE_MALLOC);
     const auto& font = th::font_bytes();
-    th::Harness h;
+    Config cfg;
+    cfg.a11y = true;  // the accessibility tree must not allocate either
+    th::Harness h(cfg);
     Theme t = Theme::dark();
     if (!font.empty()) {
         FontHandle f = h.ctx.load_font(font.data(), font.size(), 16);
@@ -89,10 +91,23 @@ TEST_CASE("zero heap allocations per frame after warm-up") {
     float lo = 0.2f, hi = 0.7f;
     int year = 2026, month = 11, day = 10, page = 3, sort = 0;
     const Icon nav_icons[] = {Icon::Home, Icon::Search, Icon::User};
+    // 0.3 widgets
+    bool refreshing = false, multi[] = {true, false, true}, tree_open = true;
+    int wheel = 2, hour = 9, minute = 30, csel = 1, acc = 0, order[] = {0, 1, 2}, triggered = -1;
+    char ac_text[32] = "a", pad_text[16] = "1";
+    TextBuffer ac{ac_text, sizeof ac_text, 1}, padb{pad_text, sizeof pad_text, 1};
+    const float series_a[] = {1, 4, 2, 6, 3}, series_b[] = {2, 1, 3, 2, 5};
+    const ChartSeries series[] = {{"A", series_a, 5}, {"B", series_b, 5}};
+    const char* days[] = {"Mon", "Tue", "Wed", "Thu", "Fri"};
+    TableColumn cols[] = {{"Name", 80}, {"Kind", 0}};
+    TableSort tsort;
+    const SwipeAction swipe_acts[] = {{"Delete", Icon::Trash, {220, 40, 60, 255}}};
+    const std::string sel_text = "selectable\ntext";
     auto ui = [&] {
         if (begin_window(h.ctx, "Main", win, WindowDefault | WindowClosable | WindowScrollable)) {
-            const float cols[] = {80, -1};
-            layout_row(h.ctx, 2, cols, 2, 0);
+            pull_to_refresh(h.ctx, "ptr", refreshing);
+            const float lcols[] = {80, -1};
+            layout_row(h.ctx, 2, lcols, 2, 0);
             rd::label(h.ctx, "Name");
             textbox(h.ctx, "##name", tb);
             layout_row(h.ctx, 1, nullptr, 0, 0);
@@ -196,6 +211,51 @@ TEST_CASE("zero heap allocations per frame after warm-up") {
                 }
                 end_menu_bar(h.ctx);
             }
+            // 0.3 widgets
+            layout_row(h.ctx, 1, nullptr, 0, 0);
+            textbox(h.ctx, "##num", tb, "0", TextInputType::Decimal);
+            wheel_picker(h.ctx, "##wheel", wheel, items, 3, 3);
+            time_picker(h.ctx, "##time", hour, minute, false);
+            combo_search(h.ctx, "##cs", csel, items, 3);
+            multi_combo(h.ctx, "##mc", multi, items, 3);
+            autocomplete(h.ctx, "##ac", ac, items, 3);
+            number_pad(h.ctx, "##pad", padb);
+            chart(h.ctx, "##line", ChartType::Area, series, 2, days, 100);
+            chart(h.ctx, "##bars", ChartType::StackedBar, series, 2, nullptr, 100);
+            pie_chart(h.ctx, "##pie", series_a, items, 3, 80, true);
+            sparkline(h.ctx, series_a, 5);
+            if (table_begin(h.ctx, "##table", cols, 2, 80, &tsort)) {
+                table_tree_row(h.ctx, 0, "root", 0, &tree_open);
+                rd::label(h.ctx, "dir");
+                table_tree_row(h.ctx, 1, "leaf", 1, nullptr);
+                rd::label(h.ctx, "file");
+                table_end(h.ctx);
+            }
+            flow_begin(h.ctx);
+            for (int i = 0; i < 3; i++) chip(h.ctx, items[i], i == 1);
+            flow_end(h.ctx);
+            layout_grid(h.ctx, 60);
+            button(h.ctx, "g1");
+            button(h.ctx, "g2");
+            if (carousel_begin(h.ctx, "##car", 80, 120)) {
+                button(h.ctx, "c1");
+                button(h.ctx, "c2");
+                carousel_end(h.ctx);
+            }
+            if (accordion_begin(h.ctx, "Section", acc, 0)) {
+                rd::label(h.ctx, "inside");
+                accordion_end(h.ctx);
+            }
+            layout_row(h.ctx, 1, nullptr, 0, 0);
+            rich_text(h.ctx, "**bold** *it* `code` [link](u) {#ff0000}red{/} :star:");
+            markdown(h.ctx, "# Title\nA *paragraph*.\n\n- item\n1. one\n> quote\n```\ncode\n```\n---");
+            selectable_text(h.ctx, "##seltext", sel_text);
+            reorder_list(h.ctx, "##reorder", order, items, 3);
+            layout_row(h.ctx, 1, nullptr, 0, 0);
+            swipe_item(h.ctx, "swipe", swipe_acts, 1, triggered);
+            button(h.ctx, "drag me");
+            drag_source(h.ctx, "t", &wheel, sizeof wheel, "dragging");
+            drop_target(h.ctx, "t");
             if (modal_requested) open_modal(h.ctx, "m");
             modal_requested = false;
             if (modal_begin(h.ctx, "m", "Modal", 200)) {
@@ -208,6 +268,20 @@ TEST_CASE("zero heap allocations per frame after warm-up") {
             rd::label(h.ctx, "Hello");
             end_window(h.ctx);
         }
+        dock_space(h.ctx, "dock", {420, 300, 360, 280});
+        if (begin_dock_panel(h.ctx, "Panel one")) {
+            rd::label(h.ctx, "docked");
+            end_dock_panel(h.ctx);
+        }
+        if (begin_dock_panel(h.ctx, "Panel two", nullptr, DockPlace::Left)) {
+            rd::label(h.ctx, "left");
+            end_dock_panel(h.ctx);
+        }
+        if (begin_dock_panel(h.ctx, "Panel three", nullptr, DockPlace::Floating)) {
+            rd::label(h.ctx, "floating");
+            end_dock_panel(h.ctx);
+        }
+        edge_swipe(h.ctx, Side::Left);
     };
 
     const std::function<void()> fn = ui;  // built once: std::function construction may allocate
@@ -235,6 +309,11 @@ TEST_CASE("zero heap allocations per frame after warm-up") {
         if (i % 10 == 0) h.key(KeyA, false, true);
         if (i % 13 == 0) h.type("x");
         if (i % 17 == 0) h.key(KeyTab);
+        if (i % 19 == 0) h.key(KeyZ, false, true);
+        h.in.touch = i % 50 > 40;
+        h.in.touch_count = h.in.touch ? 2 : 0;
+        h.in.touches[0] = {1, h.in.pointer};
+        h.in.touches[1] = {2, {h.in.pointer.x + 40.0f + (float)(i % 5), h.in.pointer.y}};
         h.frame(fn);
     }
     g_counting = false;

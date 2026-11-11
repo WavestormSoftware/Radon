@@ -28,14 +28,15 @@ Response slider(Context& ctx, std::string_view label, float& value, float lo, fl
             rs.changed = true;
         }
     }
+    char buf[64];
+    std::snprintf(buf, sizeof buf, format ? format : "%.2f", (double)value);
+    a11y_node(s, A11yRole::Slider, label, buf);
     float f = hi > lo ? (value - lo) / (hi - lo) : 0;
     f = f < 0 ? 0 : (f > 1 ? 1 : f);
     s.dl.rect(r, t.background, t.corner_radius);
     s.dl.rect({r.x, r.y, r.w * f, r.h}, with_alpha(t.accent, rs.hovered || s.active == id ? 1.0f : 0.85f),
               t.corner_radius);
     draw_frame(s, r, Color{0, 0, 0, 0}, rs.focused);
-    char buf[64];
-    std::snprintf(buf, sizeof buf, format ? format : "%.2f", (double)value);
     draw_text_fit(s, r, buf, f > 0.5f ? t.accent_text : t.text, true);
     return rs;
 }

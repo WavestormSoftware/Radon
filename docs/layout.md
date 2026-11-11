@@ -55,6 +55,62 @@ The row below continues after the taller column.
 | `layout_next(ctx)` | The next cell as a `Rect`, for custom drawing or measuring. |
 | `begin_child(ctx, id, height)` | A scrolling region that takes a full row; `-1` height fills the rest. |
 
+## Flow and grid
+
+```cpp
+flow_begin(ctx);                       // sized widgets sit side by side and wrap
+for (int i = 0; i < n; i++) chip(ctx, tags[i], on[i]);
+button(ctx, "Add tag");
+flow_end(ctx);                         // layout_row also ends it
+
+int cols = layout_grid(ctx, 120, 90);  // as many >= 120 px columns as fit, 90 px rows
+for (int i = 0; i < n; i++) image(ctx, thumbs[i], {120, 90});
+```
+
+Buttons, chips, badges, links, icon buttons and labels know their size; other widgets get `item_width`.
+
+## Carousel and accordion
+
+```cpp
+if (carousel_begin(ctx, "cards", 150, 180)) {   // 150 px tall strip of 180 px items
+    for (auto& c : cards) {
+        layout_begin_column(ctx);                // one item, laid out vertically inside
+        heading(ctx, c.title);
+        layout_end_column(ctx);
+    }
+    carousel_end(ctx);                           // page dots; tap one to jump
+}
+for (int i = 0; i < 3; i++) {
+    push_id(ctx, questions[i]);
+    if (accordion_begin(ctx, questions[i], open, i)) {   // only section `open` is expanded
+        label_wrapped(ctx, answers[i]);
+        accordion_end(ctx);
+    }
+    pop_id(ctx);
+}
+```
+
+A carousel scrolls by swiping, the wheel or its dots, and snaps to an item; a flick moves one further.
+
+## Docking
+
+```cpp
+dock_space(ctx, "main", {0, menu_h, w, h - menu_h});   // outside any window, before the panels
+if (begin_dock_panel(ctx, "Scene")) { /* ... */ end_dock_panel(ctx); }                 // the center
+if (begin_dock_panel(ctx, "Assets", &assets_open, DockPlace::Left, 0.2f)) { /* ... */ end_dock_panel(ctx); }
+if (begin_dock_panel(ctx, "Console", &console_open, DockPlace::Bottom)) { /* ... */ end_dock_panel(ctx); }
+```
+
+`DockPlace` and the ratio only apply the first time a panel appears: `Left`/`Right`/`Top`/`Bottom` add a
+strip along that side of the whole dock, `Center` adds a tab to the central area, `Floating` starts as a
+window. After that the user arranges things: drag the gaps to resize, click tabs to switch, drag a tab out
+to float the panel, and drag a floating panel's title over a leaf to dock it (the middle of a leaf adds a
+tab, its edges split it). With `open`, tabs and windows get a close button that sets it false. Empty
+leaves fold away; the central area stays. Up to `Config::max_dock_nodes` nodes and `max_dock_panels`
+panels. The layout lives in the context; it is not saved to disk.
+
+![Docking](screenshots/gallery-docking.png)
+
 ## Wrapped text and images
 
 `label_wrapped` and `image` grow their row to fit (up to 32 wrapped lines). `plot_lines` takes a height.

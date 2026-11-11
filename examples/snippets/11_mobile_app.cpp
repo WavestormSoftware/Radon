@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Wavestorm Software
-// A phone-style app: touch theme, safe area, bottom navigation, a bottom sheet, toasts and a long list.
-// Run it at phone size:  radon_ex_11_mobile_app --size 400x800
+// A phone-style app: touch theme, safe area, bottom navigation, pull to refresh, swipeable rows, an
+// edge-swipe drawer, a bottom sheet you can swipe away, wheel and time pickers, and toasts. Run it at phone
+// size:  radon_ex_11_mobile_app --size 400x800
 #include <SDL3/SDL_main.h>
 
 #include <cstdio>
@@ -17,28 +18,40 @@ int main(int argc, char** argv) {
         ui.set_theme(Theme::touch(demo::make_theme(f, !o.light)));  // 44 px rows for fingers
     };
     cfg.frame = [](Context& ui, const Input& in, int, int) {
-        static int tab = 0, selected = -1;
-        static bool wifi = true, sync = false, open_sheet = false;
-        static float volume = 0.6f;
+        static int tab = 0, selected = -1, deleted = 0, size = 2, hour = 7, minute = 30;
+        static bool wifi = true, sync = false, open_sheet = false, refreshing = false;
+        static float volume = 0.6f, loading = 0;
         const Rect safe = in.safe_rect();  // the screen minus notches and system bars
         const float bar = 64;
         set_toast_offset(ui, bar);
 
         Rect body{safe.x, safe.y, safe.w, safe.h - bar};
         if (begin_window(ui, "body", body, WindowScrollable)) {
+            if (tab == 0 && pull_to_refresh(ui, "refresh", refreshing)) loading = 1.0f;
+            if (refreshing && (loading -= 1.0f / 60) <= 0) {  // pretend to fetch mail
+                refreshing = false;
+                toast(ui, "Inbox is up to date", Tone::Success);
+            }
             transition_begin(ui, "tab", tab);
             layout_row(ui, 1, nullptr, 0, 0);
             if (tab == 0) {
                 heading(ui, "Inbox");
+                const SwipeAction actions[] = {{"Delete", Icon::Trash, ui.theme().error}};
                 int first = 0, last = 0;
                 list_clipper_begin(ui, 2000, 0, first, last);  // only the visible rows are built
                 for (int i = first; i < last; i++) {
                     char row[32];
-                    std::snprintf(row, sizeof row, "Message %d", i + 1);
+                    std::snprintf(row, sizeof row, "Message %d", i + 1 + deleted);
                     layout_row(ui, 1, nullptr, 0, 0);
-                    if (list_item(ui, row, selected == i, Icon::User).clicked) {
+                    int act = -1;
+                    if (swipe_item(ui, row, actions, 1, act, selected == i)
+                            .clicked) {  // swipe left to delete
                         selected = i;
                         open_sheet = true;
+                    }
+                    if (act == 0) {
+                        deleted++;
+                        toast(ui, "Message deleted", Tone::Error);
                     }
                 }
                 list_clipper_end(ui);
@@ -47,13 +60,19 @@ int main(int argc, char** argv) {
                 toggle(ui, "Wi-Fi", wifi);
                 toggle(ui, "Background sync", sync);
                 slider(ui, "##volume", volume, 0, 1, "Volume %.2f");
+                label(ui, "Wake up at");
+                time_picker(ui, "##alarm", hour, minute, false);
+                static const char* const sizes[] = {"Small", "Medium", "Large", "Huge"};
+                label(ui, "Text size");
+                wheel_picker(ui, "##size", size, sizes, 4, 3);
                 if (button(ui, "Save", ButtonStyle::Primary).clicked)
                     toast(ui, "Settings saved", Tone::Success);
             } else {
                 heading(ui, "About");
-                label_wrapped(ui,
-                              "Flick to scroll, long-press for context menus, and use the system back "
-                              "button or a tap outside to close sheets.");
+                markdown(ui,
+                         "Flick to scroll and **pull down** to refresh the inbox. Swipe a message *left* to "
+                         "delete it, swipe in from the left edge for the menu, and swipe sheets down to "
+                         "close them.");
             }
             transition_end(ui);
             end_window(ui);
@@ -68,6 +87,19 @@ int main(int argc, char** argv) {
             end_window(ui);
         }
 
+        if (edge_swipe(ui, Side::Left)) open_modal(ui, "menu");
+        if (drawer_begin(ui, "menu", Side::Left, 260)) {
+            layout_row(ui, 1, nullptr, 0, 0);
+            heading(ui, "Mail");
+            static const char* const names[] = {"Inbox", "Settings", "About"};
+            static const Icon icons[] = {Icon::Mail, Icon::Settings, Icon::Info};
+            for (int i = 0; i < 3; i++)
+                if (list_item(ui, names[i], tab == i, icons[i]).clicked) {
+                    tab = i;
+                    close_modal(ui);
+                }
+            drawer_end(ui);
+        }
         if (open_sheet) open_modal(ui, "actions");
         open_sheet = false;
         if (drawer_begin(ui, "actions", Side::Bottom, 230)) {

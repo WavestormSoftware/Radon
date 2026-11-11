@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(Radon VERSION 0.2.0 LANGUAGES CXX)
+project(Radon VERSION 0.3.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -35,7 +35,9 @@ add_library(radon
     src/core/widgets/basic.cpp src/core/widgets/value.cpp src/core/widgets/popup.cpp
     src/core/widgets/textbox.cpp src/core/widgets/extra.cpp src/core/widgets/icons.cpp
     src/core/widgets/container.cpp src/core/widgets/color.cpp
-    src/core/widgets/more.cpp src/core/widgets/overlay.cpp)
+    src/core/widgets/more.cpp src/core/widgets/overlay.cpp
+    src/core/a11y.cpp src/core/dnd.cpp src/core/dock.cpp src/core/widgets/mobile.cpp
+    src/core/widgets/picker.cpp src/core/widgets/chart.cpp src/core/widgets/richtext.cpp)
 add_library(radon::radon ALIAS radon)
 if(RD_BUILD_C_API)
     target_sources(radon PRIVATE src/core/radon_c.cpp)
@@ -78,6 +80,11 @@ if(RD_BACKEND_SDL3_GL)
         backends/sdl3_gl/platform_sdl3.cpp backends/sdl3_gl/renderer_gl.cpp
         backends/sdl3_gl/shaders.cpp backends/sdl3_gl/audio_sdl3.cpp)
     add_library(radon::sdl3_gl ALIAS radon_sdl3_gl)
+    if(IOS)
+        enable_language(OBJC)
+        target_sources(radon_sdl3_gl PRIVATE backends/sdl3_gl/haptics_ios.m)
+        target_link_libraries(radon_sdl3_gl PUBLIC "-framework UIKit")
+    endif()
     target_include_directories(radon_sdl3_gl PUBLIC backends/sdl3_gl)
     target_link_libraries(radon_sdl3_gl PUBLIC radon SDL3::SDL3)
     rd_warnings(radon_sdl3_gl)

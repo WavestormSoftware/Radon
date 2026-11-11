@@ -103,17 +103,34 @@ void fill_input(Input& in) {
     in.secondary_pressed = IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
     in.wheel = GetMouseWheelMove();
     in.screen_size = {(float)GetScreenWidth(), (float)GetScreenHeight()};
+    in.touch_count = GetTouchPointCount() < kMaxTouches ? GetTouchPointCount() : kMaxTouches;
+    for (int i = 0; i < in.touch_count; i++) {
+        const Vector2 t = GetTouchPosition(i);
+        in.touches[i] = {(uint64_t)GetTouchPointId(i), {t.x, t.y}};
+    }
     static const struct {
         int rk;
         Key k;
-    } map[] = {{KEY_ENTER, KeyEnter},   {KEY_BACKSPACE, KeyBackspace},
-               {KEY_DELETE, KeyDelete}, {KEY_LEFT, KeyLeft},
-               {KEY_RIGHT, KeyRight},   {KEY_UP, KeyUp},
-               {KEY_DOWN, KeyDown},     {KEY_HOME, KeyHome},
-               {KEY_END, KeyEnd},       {KEY_TAB, KeyTab},
-               {KEY_ESCAPE, KeyEscape}, {KEY_SPACE, KeySpace},
-               {KEY_A, KeyA},           {KEY_C, KeyC},
-               {KEY_V, KeyV},           {KEY_X, KeyX}};
+    } map[] = {{KEY_ENTER, KeyEnter},
+               {KEY_BACKSPACE, KeyBackspace},
+               {KEY_DELETE, KeyDelete},
+               {KEY_LEFT, KeyLeft},
+               {KEY_RIGHT, KeyRight},
+               {KEY_UP, KeyUp},
+               {KEY_DOWN, KeyDown},
+               {KEY_HOME, KeyHome},
+               {KEY_END, KeyEnd},
+               {KEY_TAB, KeyTab},
+               {KEY_ESCAPE, KeyEscape},
+               {KEY_SPACE, KeySpace},
+               {KEY_A, KeyA},
+               {KEY_C, KeyC},
+               {KEY_V, KeyV},
+               {KEY_X, KeyX},
+               {KEY_Z, KeyZ},
+               {KEY_Y, KeyY},
+               {KEY_PAGE_UP, KeyPageUp},
+               {KEY_PAGE_DOWN, KeyPageDown}};
     const bool shift = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
     const bool ctrl = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
     for (const auto& e : map)

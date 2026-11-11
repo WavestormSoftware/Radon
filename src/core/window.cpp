@@ -74,7 +74,12 @@ bool begin_window_impl(Context& ctx, ID id, std::string_view title, Rect& rect, 
     }
     w->last_frame = s.frame;
     if (!w->open) return false;
-    if (!overlay && s.in.pointer_pressed && s.hover_window == id && w->z != s.z_counter) w->z = ++s.z_counter;
+    if (flags & kWindowDocked)
+        w->z = 0;  // docked panels stay under every floating window
+    else if (!overlay && w->z == 0)
+        w->z = ++s.z_counter;  // a panel that was just undocked
+    else if (!overlay && s.in.pointer_pressed && s.hover_window == id && w->z != s.z_counter)
+        w->z = ++s.z_counter;
 
     WindowFrame& f = s.wstack[s.wstack_n++];
     f = WindowFrame{};
@@ -98,7 +103,7 @@ bool begin_window_impl(Context& ctx, ID id, std::string_view title, Rect& rect, 
 
     const bool titlebar = flags & WindowTitleBar;
     const float th = titlebar ? t.title_height : 0;
-    const float pad = t.padding, rad = t.window_radius;
+    const float pad = t.padding, rad = (flags & kWindowDocked) ? 0 : t.window_radius;
     Rect cb{};
     if (titlebar) {
         Rect tr{rect.x, rect.y, rect.w, th};
@@ -165,6 +170,11 @@ bool begin_window_impl(Context& ctx, ID id, std::string_view title, Rect& rect, 
               f.content.h - 2 * pad};
     push_clip(s, f.content, true);
     push_layout(s, body);
+    if (s.cfg.a11y && !title.empty()) {
+        s.last_id = id;
+        s.last_rect = r;
+        a11y_node(s, A11yRole::Window, title);
+    }
     return true;
 }
 
@@ -194,6 +204,9 @@ void end_window(Context& ctx) {
     WindowState& w = s.wins[f.slot];
     const Layout& L = s.layouts[f.layout_index];
     w.content_h = L.max.y - L.body.y + 2 * t.padding;
+    // While the soft keyboard covers the bottom, a window with a focused field can scroll that much further.
+    if (s.in.keyboard_inset > 0 && s.wants_text_next && s.focus_window == f.id)
+        w.content_h += s.in.keyboard_inset;
 
     if (f.flags & WindowScrollable) {
         const Rect saved_rect = s.last_rect;

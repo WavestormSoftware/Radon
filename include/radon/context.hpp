@@ -67,6 +67,17 @@ public:
     /// Turns transitions on or off at runtime (for "reduce motion" settings).
     void set_animations(bool enabled);
 
+    /// Glyphs missing from `font` are taken from `fallback` (emoji, CJK, symbols). Chains up to 4 deep.
+    void set_font_fallback(FontHandle font, FontHandle fallback);
+    /// The keyboard the focused text field wants. Backends pass it when showing the soft keyboard.
+    TextInputType text_input_type() const;
+    /// The strongest haptic feedback a widget asked for during the last frame. Backends play it.
+    Haptic haptic() const;
+    /// Pinch, rotate, two-finger pan and swipe for the current frame.
+    const Gesture& gesture() const;
+    /// The accessibility tree of the last frame (empty unless Config::a11y). Valid until begin_frame.
+    const A11yNode* a11y_nodes(int* count) const;
+
 private:
     friend detail::State& detail::state(Context&);
     friend const detail::State& detail::state(const Context&);

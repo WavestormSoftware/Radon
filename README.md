@@ -15,17 +15,27 @@ no dependencies in the core.
 |---|---|
 | ![Data page](docs/screenshots/gallery-data.png) | ![Phone layout](docs/screenshots/gallery-phone.png) |
 
-- **70+ widgets**: buttons, checkbox, radio, switch, sliders, range slider, steppers, text boxes with
-  selection and clipboard, password and search fields, multi-line text area, combo, segmented control,
-  chips, rating, tabs, list box, sortable tables, a clipper for 100,000-row lists, tree, calendar and date
-  picker, pagination, breadcrumbs, menu bar, context menus, popups, modal dialogs, drawers and bottom
-  sheets, toasts, alerts, cards, avatars, color picker, plots, progress ring, skeletons, 42 vector icons.
+- **90+ widgets**: buttons, checkbox, radio, switch, sliders, range slider, steppers, text boxes with
+  selection, clipboard and undo/redo, password and search fields, multi-line text area, combo, searchable
+  and multi-select combos, autocomplete, wheel and time pickers, number pad, segmented control, chips,
+  rating, tabs, list box, sortable tables with resizable columns and tree rows, a clipper for 100,000-row
+  lists, tree, calendar and date picker, pagination, breadcrumbs, menu bar, context menus, popups, modal
+  dialogs, drawers and bottom sheets, toasts, alerts, cards, carousels, accordions, avatars, color picker,
+  line/area/bar/stacked/scatter/pie charts and sparklines, rich text and Markdown, progress ring,
+  skeletons, 56 vector icons.
+- **Docking**: split, tabbed panels you can drag out into floating windows and dock again.
+- **Drag and drop**: a typed payload from any widget to any widget, and reorderable lists.
 - **Transitions**: popups, dialogs, drawers, toasts and tooltips animate in; tabs, switches and segmented
   controls slide; `transition_begin` fades page changes; `animate()` drives your own. One flag turns all
   motion off.
 - **Made for touch as well as mouse**: `Theme::touch()` gives finger-sized targets, flick scrolling has
-  momentum, a long-press is a right-click, and layouts respect the safe area. UI is laid out in logical
-  pixels, so it has the same physical size on a 4K monitor and a phone.
+  momentum, a long-press is a right-click, and layouts respect the safe area. Multi-touch pinch, rotate
+  and pan, swipes, pull to refresh, swipeable list rows, edge-swipe drawers and swipe-to-dismiss sheets;
+  long-press text selection with handles; fields scroll above the soft keyboard and ask for the right
+  keyboard type; haptic feedback on Android and iOS. UI is laid out in logical pixels, so it has the
+  same physical size on a 4K monitor and a phone.
+- **Accessible**: an accessibility tree (roles, labels, values, states, bounds) and screen-reader actions,
+  ready for a platform bridge. Font fallback chains bring in emoji, CJK and symbol fonts.
 - **Native where it counts**: system light/dark theme, mouse cursors, IME and soft keyboard placement,
   file dialogs, opening URLs, the Android back button, app background/foreground, and sleeping while
   idle instead of redrawing. See [platforms](docs/platforms.md).
@@ -37,7 +47,7 @@ no dependencies in the core.
 - **Predictable**: all memory is allocated up front from a `Config`. A full pool never crashes: the work
   is skipped and `ctx.error()` turns true. An allocation test checks zero heap allocations per frame.
 
-Radon is young (0.2). Only Linux has been built and run so far; [docs/STATUS.md](docs/STATUS.md) lists what
+Radon is young (0.3). Only Linux has been built and run so far; [docs/STATUS.md](docs/STATUS.md) lists what
 has been verified on each platform.
 
 ## Quick start

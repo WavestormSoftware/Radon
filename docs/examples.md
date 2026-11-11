@@ -26,7 +26,7 @@ Every program accepts `--font <ttf>`, `--light` / `--dark` (default: the system 
 | `08_palette` | Swatches + `color_picker` editing a color in place | ![](screenshots/ex-08-palette.png) |
 | `09_calculator` | A button grid with `layout_row` and primary-styled operators | ![](screenshots/ex-09-calculator.png) |
 | `10_dashboard` | A docked creative-app layout: menu, toolbar, canvas, color/brush/layer panels | ![](screenshots/ex-10-dashboard.png) |
-| `11_mobile_app` | A phone app: `Theme::touch`, safe area, bottom `nav_bar`, bottom sheet, toasts, a clipped 2,000-row list | ![](screenshots/ex-11-mobile-app.png) |
+| `11_mobile_app` | A phone app: `Theme::touch`, safe area, bottom `nav_bar`, pull to refresh, swipe-to-delete rows in a clipped 2,000-row list, an edge-swipe drawer, a swipeable bottom sheet, wheel and time pickers, Markdown, toasts | ![](screenshots/ex-11-mobile-app.png) |
 | `game_viewport` | A render-target view inside a panel with `rd::viewport` (pointer, focus) | |
 | `game_canvas` | `rd::Canvas` sprite, gamepad state and a sound effect | |
 | `examples/raylib` | Radon drawn by raylib with a raylib 3D scene in a panel (`-DRD_BACKEND_RAYLIB=ON`) | |

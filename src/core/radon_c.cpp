@@ -58,6 +58,9 @@ void rd_begin_frame(rd_context* c, const rd_input* in, float dt) {
     }
     if (in->text_utf8)
         for (const char* p = in->text_utf8; *p; p++) i.text.push(*p);
+    for (int t = 0; in->touches_xy && t < in->touch_count && t < rd::kMaxTouches; t++)
+        i.touches[i.touch_count++] = {(uint64_t)t + 1, {in->touches_xy[2 * t], in->touches_xy[2 * t + 1]}};
+    i.keyboard_inset = in->keyboard_inset;
     C(c).begin_frame(i, dt);
 }
 void rd_end_frame(rd_context* c) {
@@ -80,6 +83,18 @@ const uint8_t* rd_atlas(const rd_context* c, int* size, uint32_t* version) {
     *size = c->ctx.atlas_size();
     *version = c->ctx.atlas_version();
     return c->ctx.atlas_pixels();
+}
+int rd_text_input_type(const rd_context* c) {
+    return (int)c->ctx.text_input_type();
+}
+int rd_haptic(const rd_context* c) {
+    return (int)c->ctx.haptic();
+}
+float rd_pinch(const rd_context* c) {
+    return c->ctx.gesture().pinch;
+}
+int rd_swipe(const rd_context* c) {
+    return (int)c->ctx.gesture().swipe;
 }
 int rd_pointer_over_ui(const rd_context* c) {
     return c->ctx.pointer_over_ui();

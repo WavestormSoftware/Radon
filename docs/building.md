@@ -124,7 +124,7 @@ The dependency-free core can also be installed:
 cmake --install build/linux-clang-release --prefix /usr/local
 ```
 ```cmake
-find_package(Radon 0.2 REQUIRED)
+find_package(Radon 0.3 REQUIRED)
 target_link_libraries(app PRIVATE radon::radon)            # bring your own backend
 ```
 The SDL3 backend is not installed; use `add_subdirectory` / FetchContent when you want it.

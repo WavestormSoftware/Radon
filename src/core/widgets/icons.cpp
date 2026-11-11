@@ -251,6 +251,94 @@ void draw_icon(Context& ctx, Icon icon, const Rect& r, Color c) {
             L(-0.7f, 0, 0.7f, -0.75f);
             L(-0.7f, 0, 0.7f, 0.75f);
             break;
+        case Icon::Filter:
+            L(-1, -0.8f, 1, -0.8f);
+            L(-1, -0.8f, -0.2f, 0.1f);
+            L(1, -0.8f, 0.2f, 0.1f);
+            L(-0.2f, 0.1f, -0.2f, 1);
+            L(0.2f, 0.1f, 0.2f, 0.8f);
+            L(-0.2f, 1, 0.2f, 0.8f);
+            break;
+        case Icon::Grid:
+            for (float y : {-0.95f, 0.15f})
+                for (float x : {-0.95f, 0.15f})
+                    d.rect({m.x + x * u, m.y + y * u, 0.8f * u, 0.8f * u}, c, 2, w);
+            break;
+        case Icon::List:
+            for (float y : {-0.7f, 0.0f, 0.7f}) {
+                dot(-0.9f, y, 0.13f);
+                L(-0.45f, y, 1, y);
+            }
+            break;
+        case Icon::Image:
+            d.rect({m.x - 1.0f * u, m.y - 0.8f * u, 2.0f * u, 1.6f * u}, c, 2, w);
+            L(-0.8f, 0.6f, -0.2f, -0.1f);
+            L(-0.2f, -0.1f, 0.3f, 0.4f);
+            L(0.3f, 0.4f, 0.55f, 0.15f);
+            L(0.55f, 0.15f, 0.85f, 0.6f);
+            dot(0.45f, -0.4f, 0.15f);
+            break;
+        case Icon::Mail:
+            d.rect({m.x - 1.0f * u, m.y - 0.7f * u, 2.0f * u, 1.4f * u}, c, 2, w);
+            L(-1, -0.7f, 0, 0.1f);
+            L(0, 0.1f, 1, -0.7f);
+            break;
+        case Icon::Phone:
+            d.rect({m.x - 0.55f * u, m.y - 1.0f * u, 1.1f * u, 2.0f * u}, c, 0.2f * u, w);
+            L(-0.2f, 0.75f, 0.2f, 0.75f);
+            break;
+        case Icon::Link:
+            d.rect({m.x - 1.05f * u, m.y - 0.35f * u, 1.2f * u, 0.7f * u}, c, 0.35f * u, w);
+            d.rect({m.x - 0.15f * u, m.y - 0.35f * u, 1.2f * u, 0.7f * u}, c, 0.35f * u, w);
+            break;
+        case Icon::Upload:
+            L(0, 0.35f, 0, -1);
+            L(0, -1, -0.6f, -0.4f);
+            L(0, -1, 0.6f, -0.4f);
+            L(-0.95f, 0.9f, 0.95f, 0.9f);
+            break;
+        case Icon::Send:
+            L(-1, -0.9f, 1, 0);
+            L(1, 0, -1, 0.9f);
+            L(-1, 0.9f, -0.6f, 0);
+            L(-0.6f, 0, -1, -0.9f);
+            L(-0.6f, 0, 0.2f, 0);
+            break;
+        case Icon::Archive:
+            d.rect({m.x - 1.0f * u, m.y - 0.9f * u, 2.0f * u, 0.5f * u}, c, 2, w);
+            d.rect({m.x - 0.85f * u, m.y - 0.4f * u, 1.7f * u, 1.3f * u}, c, 2, w);
+            L(-0.3f, 0.05f, 0.3f, 0.05f);
+            break;
+        case Icon::Bookmark:
+            L(-0.6f, -1, 0.6f, -1);
+            L(-0.6f, -1, -0.6f, 1);
+            L(0.6f, -1, 0.6f, 1);
+            L(-0.6f, 1, 0, 0.45f);
+            L(0, 0.45f, 0.6f, 1);
+            break;
+        case Icon::Pin:
+            ring(0, -0.35f, 0.55f);
+            L(-0.45f, 0, 0, 1);
+            L(0.45f, 0, 0, 1);
+            break;
+        case Icon::Backspace:
+            L(-1.1f, 0, -0.5f, -0.75f);
+            L(-0.5f, -0.75f, 1, -0.75f);
+            L(1, -0.75f, 1, 0.75f);
+            L(1, 0.75f, -0.5f, 0.75f);
+            L(-0.5f, 0.75f, -1.1f, 0);
+            L(-0.1f, -0.35f, 0.6f, 0.35f);
+            L(0.6f, -0.35f, -0.1f, 0.35f);
+            break;
+        case Icon::Code:
+            L(-0.4f, -0.8f, -1, 0);
+            L(-1, 0, -0.4f, 0.8f);
+            L(0.4f, -0.8f, 1, 0);
+            L(1, 0, 0.4f, 0.8f);
+            L(0.15f, -1, -0.15f, 1);
+            break;
+        case Icon::Count:
+            break;
     }
 }
 
@@ -258,9 +346,11 @@ Response icon_button(Context& ctx, std::string_view label, Icon icon, bool selec
     State& s = state(ctx);
     const Theme& t = s.cfg.theme;
     ID id = get_id(s, label);
-    Rect r = layout_next(ctx);
+    Rect r = layout_next_w(ctx, std::fmax(t.cell_height, 0.0f));
+    if (in_flow(s)) r.w = r.h;
     Response rs = update_control(ctx, id, r, true, false);
     if (rs.focused && key_pressed(s, KeyEnter)) rs.clicked = true;
+    a11y_node(s, A11yRole::Button, label, {}, selected ? A11yNode::Selected : 0u);
     if (selected) {
         s.dl.rect(r, t.selection, t.corner_radius);
         s.dl.rect(r, with_alpha(t.accent, 0.6f), t.corner_radius, t.border_width);

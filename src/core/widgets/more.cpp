@@ -6,8 +6,7 @@
 namespace rd {
 using namespace detail;
 
-namespace {
-
+namespace detail {
 bool activated(State& s, const Response& rs) {
     return rs.clicked || (rs.focused && (key_pressed(s, KeyEnter) || key_pressed(s, KeySpace)));
 }
@@ -16,6 +15,9 @@ void focus_ring(State& s, const Rect& r, const Response& rs, float radius) {
     const Theme& t = s.cfg.theme;
     if (rs.focused && s.kbd_nav) s.dl.rect(r, t.focus_ring, radius, t.focus_ring_width);
 }
+}  // namespace detail
+
+namespace {
 
 void fill_star(DrawList& d, Vec2 c, float radius, Color col) {
     Vec2 p[10];
@@ -154,9 +156,10 @@ bool segmented(Context& ctx, std::string_view label, int& selected, const char* 
         const ID id = hash_u32(base, (uint32_t)i);
         const Response rs = update_control(ctx, id, tr, true, false);
         if (activated(s, rs)) {
-            changed = changed || selected != i;
+            if (selected != i) changed = true, haptic(s, Haptic::Selection);
             selected = i;
         }
+        a11y_node(s, A11yRole::Tab, items[i], {}, selected == i ? A11yNode::Selected : 0u);
         const float h = animate(s, id, rs.hovered, false);
         draw_text_fit(s, tr, items[i], selected == i ? t.text : lerp(t.text_muted, t.text, h), true);
         focus_ring(s, tr, rs, t.corner_radius);
@@ -168,13 +171,16 @@ Response chip(Context& ctx, std::string_view label, bool selected) {
     State& s = state(ctx);
     const Theme& t = s.cfg.theme;
     ID id = get_id(s, label);
-    Rect r = layout_next(ctx);
     const std::string_view text = visible_label(label);
+    const float mark0 = selected ? t.cell_height * 0.82f * 0.7f : 0;
+    Rect r = layout_next_w(ctx, text_size(s, t.font_body, text).x + 2 * t.padding + mark0);
     const float h = r.h * 0.82f, mark = selected ? h * 0.7f : 0;
     const float w = std::fmin(r.w, text_size(s, t.font_body, text).x + 2 * t.padding + mark);
     const Rect pill{r.x, r.y + (r.h - h) / 2, w, h};
     Response rs = update_control(ctx, id, pill, true, false);
     if (rs.focused && (key_pressed(s, KeyEnter) || key_pressed(s, KeySpace))) rs.clicked = true;
+    if (rs.clicked) haptic(s, Haptic::Selection);
+    a11y_node(s, A11yRole::Button, label, {}, selected ? A11yNode::Selected : 0u);
     s.dl.rect(pill, selected ? t.selection : control_color(s, id, rs), h / 2);
     s.dl.rect(pill, selected ? t.accent : t.border, h / 2, t.border_width);
     focus_ring(s, pill, rs, h / 2);
@@ -218,11 +224,12 @@ Response link(Context& ctx, std::string_view text) {
     State& s = state(ctx);
     const Theme& t = s.cfg.theme;
     ID id = get_id(s, text);
-    Rect r = layout_next(ctx);
     text = visible_label(text);
     const Vec2 sz = text_size(s, t.font_body, text);
+    Rect r = layout_next_w(ctx, sz.x);
     const Rect lr{r.x, r.y, std::fmin(sz.x, r.w), r.h};
     Response rs = update_control(ctx, id, lr, true, false);
+    a11y_node(s, A11yRole::Link, text);
     if (rs.focused && key_pressed(s, KeyEnter)) rs.clicked = true;
     if (rs.hovered) s.cursor = Cursor::Hand;
     draw_text_fit(s, lr, text, t.accent, false);
@@ -355,9 +362,10 @@ bool nav_bar(Context& ctx, std::string_view label, int& selected, const Icon* ic
         const ID id = hash_u32(base, (uint32_t)i);
         const Response rs = update_control(ctx, id, tr, true, false);
         if (activated(s, rs)) {
-            changed = changed || selected != i;
+            if (selected != i) changed = true, haptic(s, Haptic::Selection);
             selected = i;
         }
+        a11y_node(s, A11yRole::Tab, labels ? labels[i] : "", {}, selected == i ? A11yNode::Selected : 0u);
         const Color c =
             selected == i ? t.accent : lerp(t.text_muted, t.text, animate(s, id, rs.hovered, false));
         if (icons) draw_icon(ctx, icons[i], {tr.x + (sw - ih) / 2, top, ih, ih}, c);
@@ -408,6 +416,7 @@ void heading(Context& ctx, std::string_view text) {
     text = visible_label(text);
     extend_height(s, r, text_size(s, f, text).y);
     draw_text_centered(s, f, r, text, t.text, false);
+    a11y_static(s, A11yRole::Heading, r, text);
 }
 
 void avatar(Context& ctx, std::string_view name, Color color) {
@@ -445,6 +454,7 @@ void alert(Context& ctx, Tone tone, std::string_view text) {
     static const Icon icons[] = {Icon::Info, Icon::Check, Icon::Warning, Icon::Close};
     draw_icon(ctx, icons[(int)tone], {r.x + pad * 0.5f, r.y + (r.h - is) / 2, is, is}, c);
     const float y = r.y + (r.h - (float)n * lh) / 2;
+    a11y_static(s, A11yRole::Text, r, text);
     for (int i = 0; i < n; i++)
         draw_text(s, t.font_body, {r.x + is + pad, y + (float)i * lh},
                   text.substr(lines[i].start, lines[i].length), t.text);

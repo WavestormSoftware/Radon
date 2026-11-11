@@ -19,7 +19,17 @@ State::State(const Config& c)
       arena_mem(new uint8_t[kArenaSize]),
       dl(c.max_draw_commands, c.max_vertices, c.max_indices) {
     tip[0] = 0;
+    dnd_type[0] = dnd_preview[0] = search[0] = 0;
     arena.mem = arena_mem.get();
+    const int ub = cfg.undo_bytes > 0 ? cfg.undo_bytes : 0;
+    undo_mem.reset(new char[(size_t)ub + 2]);
+    undo.mem = undo_mem.get();
+    undo.cap = ub / 2;
+    redo.mem = undo_mem.get() + ub / 2;
+    redo.cap = ub / 2;
+    dock_nodes.reset(new DockNode[cfg.max_dock_nodes > 0 ? cfg.max_dock_nodes : 1]);
+    dock_panels.reset(new DockPanel[cfg.max_dock_panels > 0 ? cfg.max_dock_panels : 1]);
+    a11y.reset(new A11yNode[cfg.a11y && cfg.max_a11y_nodes > 0 ? cfg.max_a11y_nodes : 1]);
     reset_atlas(*this);
 }
 
@@ -140,8 +150,8 @@ void pop_alpha(State& s) {
 }
 
 void kinetic(State& s, float& scroll, float& vel, bool dragging, float maxs) {
-    if (s.in.pointer_pressed) vel = 0;  // a new touch stops the glide
-    if (dragging) {
+    if (s.in.pointer_pressed) vel = 0;       // a new touch stops the glide
+    if (dragging && s.in.touch_count < 2) {  // two fingers pinch or pan; they never scroll
         scroll -= s.pointer_delta.y;
         if (s.dt > 0) vel = 0.6f * vel + 0.4f * (-s.pointer_delta.y / s.dt);
     } else if (s.cfg.animations && !s.in.pointer_down && std::fabs(vel) > 8.0f) {
@@ -169,6 +179,10 @@ Response update_control(Context& ctx, ID id, const Rect& r, bool focusable, bool
     const bool over = geo && win_ok;
 
     if (over && !s.in.touch && (s.active == 0 || s.active == id)) s.hover = id;
+    if (s.in.a11y_action == A11yAction::Activate && s.in.a11y_target == id && s.disabled == 0) {
+        rs.clicked = true;  // a screen reader "double tap"
+        if (focusable) s.focus = id, s.focus_window = s.cur_window;
+    }
     if (s.in.pointer_pressed && over && s.active == 0) {
         s.active = id;
         s.active_captures = captures;
@@ -218,7 +232,73 @@ Response update_control(Context& ctx, ID id, const Rect& r, bool focusable, bool
     s.last_id = id;
     s.last_rect = r;
     s.last_hovered = rs.hovered;
+    if (s.cfg.a11y) a11y_control(s, id, r, focusable);
     return rs;
+}
+
+float* scroll_target(State& s, Rect* view) {
+    const int wl = s.wstack_n > 0 ? s.wstack[s.wstack_n - 1].layout_index : -1;
+    if (s.cstack_n > 0 && s.cstack[s.cstack_n - 1].layout_index > wl &&
+        s.cstack[s.cstack_n - 1].kind == ChildScroll) {
+        const ChildFrame& f = s.cstack[s.cstack_n - 1];
+        if (view) *view = f.rect;
+        return &s.children[f.slot].scroll;
+    }
+    if (s.wstack_n == 0 || !(s.wstack[s.wstack_n - 1].flags & WindowScrollable)) return nullptr;
+    const WindowFrame& f = s.wstack[s.wstack_n - 1];
+    if (view) *view = f.content;
+    return &s.wins[f.slot].scroll;
+}
+
+// Pinch, rotation, two-finger pan, pointer velocity and swipes.
+static void update_gesture(State& s, const Input& in) {
+    Gesture& g = s.gesture;
+    const Vec2 vel = in.pointer_pressed ? Vec2{} : g.velocity;
+    g = Gesture{};
+    g.fingers = in.touch_count;
+    g.center = in.pointer;
+    if (in.touch_count > 0) {
+        Vec2 c{};
+        for (int i = 0; i < in.touch_count; i++) c.x += in.touches[i].pos.x, c.y += in.touches[i].pos.y;
+        g.center = {c.x / (float)in.touch_count, c.y / (float)in.touch_count};
+    }
+    if (in.touch_count >= 2 && s.prev_touch_count >= 2) {
+        const Touch *p0 = nullptr, *p1 = nullptr;  // the same two fingers last frame
+        for (int i = 0; i < s.prev_touch_count; i++) {
+            if (s.prev_touches[i].id == in.touches[0].id) p0 = &s.prev_touches[i];
+            if (s.prev_touches[i].id == in.touches[1].id) p1 = &s.prev_touches[i];
+        }
+        if (p0 && p1) {
+            const Vec2 a0 = in.touches[0].pos, a1 = in.touches[1].pos, b0 = p0->pos, b1 = p1->pos;
+            const float d = std::hypot(a1.x - a0.x, a1.y - a0.y), pd = std::hypot(b1.x - b0.x, b1.y - b0.y);
+            if (pd > 1 && d > 1) {
+                g.pinch = d / pd;
+                float r = std::atan2(a1.y - a0.y, a1.x - a0.x) - std::atan2(b1.y - b0.y, b1.x - b0.x);
+                if (r > 3.14159265f) r -= 6.2831853f;
+                if (r < -3.14159265f) r += 6.2831853f;
+                g.rotate = r;
+            }
+            g.pan = {(a0.x + a1.x - b0.x - b1.x) / 2, (a0.y + a1.y - b0.y - b1.y) / 2};
+        }
+    }
+    g.velocity = vel;
+    if ((in.pointer_down || in.pointer_released) && !in.pointer_pressed && s.dt > 0) {
+        const float k = 0.4f;
+        g.velocity = {vel.x + (s.pointer_delta.x / s.dt - vel.x) * k,
+                      vel.y + (s.pointer_delta.y / s.dt - vel.y) * k};
+    }
+    if (in.pointer_released && in.touch && !s.long_fired && s.prev_touch_count < 2) {
+        const float dx = in.pointer.x - s.press_pos.x, dy = in.pointer.y - s.press_pos.y;
+        const Vec2 v = g.velocity;
+        if (std::hypot(dx, dy) > 30 && std::hypot(v.x, v.y) > 400) {
+            if (std::fabs(v.x) > std::fabs(v.y))
+                g.swipe = v.x < 0 ? SwipeDir::Left : SwipeDir::Right;
+            else
+                g.swipe = v.y < 0 ? SwipeDir::Up : SwipeDir::Down;
+        }
+    }
+    s.prev_touch_count = in.touch_count < kMaxTouches ? in.touch_count : kMaxTouches;
+    for (int i = 0; i < s.prev_touch_count; i++) s.prev_touches[i] = in.touches[i];
 }
 
 }  // namespace detail
@@ -245,6 +325,8 @@ void Context::begin_frame(const Input& input, float dt) {
     s.time += dt;
     s.wheel_used = s.drag_used = false;
     s.animating = false;
+    s.haptic = Haptic::None;
+    s.text_type = TextInputType::Text;
     s.cursor = Cursor::Arrow;
     s.text_rect = {};
     s.alpha = 1;
@@ -276,6 +358,14 @@ void Context::begin_frame(const Input& input, float dt) {
         s.press_pos = input.pointer;
         s.touch_moved = false;
         s.press_window = s.hover_window;
+        const float dx = input.pointer.x - s.last_press_pos.x, dy = input.pointer.y - s.last_press_pos.y;
+        const bool again = s.time - s.last_press_time < 0.4f && dx * dx + dy * dy < 64 && s.clicks < 3;
+        s.clicks = again ? s.clicks + 1 : 1;
+        s.last_press_time = s.time;
+        s.last_press_pos = input.pointer;
+        s.edge_fired = false;
+        s.sheet_lock = 0;
+        s.sheet_drag = 0;
     }
     if (input.touch && input.pointer_down) {
         const float dx = input.pointer.x - s.press_pos.x, dy = input.pointer.y - s.press_pos.y;
@@ -290,7 +380,16 @@ void Context::begin_frame(const Input& input, float dt) {
         if (s.press_time >= 0.5f) {
             s.secondary = s.long_fired = true;
             s.touch_moved = true;  // the release must not also click
+            detail::haptic(s, Haptic::Medium);
         }
+    }
+    update_gesture(s, input);
+    s.drag_used = s.dnd_active;  // a drag-and-drop never scrolls what is under it
+    s.a11y_n = 0;
+    if (input.a11y_action != A11yAction::None && input.a11y_target != 0) {
+        if (input.a11y_action != A11yAction::Activate) s.focus = input.a11y_target, s.kbd_nav = true;
+        if (input.a11y_action == A11yAction::Increment) s.in.keys.push({KeyRight, false, false, false});
+        if (input.a11y_action == A11yAction::Decrement) s.in.keys.push({KeyLeft, false, false, false});
     }
     s.hover = 0;
     s.updated_focus = false;
@@ -363,6 +462,8 @@ void Context::end_frame() {
         s.dl.set_alpha(1);
     }
     draw_toasts(s);
+    draw_dnd_preview(s);
+    if (!s.in.pointer_down) s.dnd_active = false;  // the drop frame is over
     end_frame_windows(s);
     s.dl.sort_by_layer();
     if (s.dl.overflow()) s.error = true;
@@ -420,6 +521,28 @@ bool Context::can_dismiss() const {
 }
 void Context::set_animations(bool enabled) {
     s_->cfg.animations = enabled;
+}
+TextInputType Context::text_input_type() const {
+    return s_->text_type;
+}
+Haptic Context::haptic() const {
+    return s_->haptic;
+}
+const Gesture& Context::gesture() const {
+    return s_->gesture;
+}
+const A11yNode* Context::a11y_nodes(int* count) const {
+    if (count) *count = s_->a11y_n;
+    return s_->a11y.get();
+}
+void Context::set_font_fallback(FontHandle font, FontHandle fallback) {
+    detail::State& s = *s_;
+    if (font < 0 || font >= s.font_n || fallback >= s.font_n || fallback == font) {
+        s.error = true;
+        return;
+    }
+    s.fonts[font].fallback = fallback;
+    detail::reset_atlas(s);
 }
 
 void Context::set_dpi_scale(float scale) {

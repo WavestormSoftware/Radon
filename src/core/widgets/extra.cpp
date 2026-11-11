@@ -10,8 +10,10 @@ Response button(Context& ctx, std::string_view label, ButtonStyle style) {
     State& s = state(ctx);
     const Theme& t = s.cfg.theme;
     ID id = get_id(s, label);
-    Rect r = layout_next(ctx);
+    Rect r = layout_next_w(
+        ctx, std::fmax(t.cell_height, text_size(s, t.font_body, visible_label(label)).x + 2 * t.padding));
     Response rs = update_control(ctx, id, r, true, false);
+    a11y_node(s, A11yRole::Button, label);
     if (rs.focused && key_pressed(s, KeyEnter)) rs.clicked = true;
     float press = 0;
     float h = animate(s, id, rs.hovered, s.active == id, &press);
@@ -45,9 +47,10 @@ Response radio_button(Context& ctx, std::string_view label, int& value, int opti
     Rect r = layout_next(ctx);
     Response rs = update_control(ctx, id, r, true, false);
     if (rs.clicked || (rs.focused && (key_pressed(s, KeySpace) || key_pressed(s, KeyEnter)))) {
-        if (value != option) rs.changed = true;
+        if (value != option) rs.changed = true, haptic(s, Haptic::Selection);
         value = option;
     }
+    a11y_node(s, A11yRole::Radio, label, {}, value == option ? A11yNode::Checked : 0u);
     const float bs = std::fmin(r.h * 0.64f, r.w);
     Rect box{r.x, r.y + (r.h - bs) / 2, bs, bs};
     const bool on = value == option;
@@ -71,7 +74,9 @@ Response toggle(Context& ctx, std::string_view label, bool& value) {
     if (rs.clicked || (rs.focused && key_pressed(s, KeySpace))) {
         value = !value;
         rs.changed = true;
+        haptic(s, Haptic::Light);
     }
+    a11y_node(s, A11yRole::Switch, label, value ? "on" : "off", value ? A11yNode::Checked : 0u);
     const float th = std::fmin(r.h * 0.62f, r.w), tw = th * 1.8f;
     Rect track{r.x, r.y + (r.h - th) / 2, tw, th};
     const float on = anim_to(s, hash_u32(id, 77), value ? 1.0f : 0.0f, 0.15f, value ? 1.0f : 0.0f);
@@ -178,6 +183,7 @@ bool tab_bar(Context& ctx, std::string_view label, int& selected, const char* co
         Rect tr{x, r.y, sz.x + 2 * t.padding, r.h};
         x += tr.w;
         Response rs = update_control(ctx, hash_u32(base, (uint32_t)i), tr, true, false);
+        a11y_node(s, A11yRole::Tab, tabs[i], {}, selected == i ? A11yNode::Selected : 0u);
         if (rs.clicked || (rs.focused && key_pressed(s, KeyEnter))) {
             changed = changed || selected != i;
             selected = i;
@@ -203,6 +209,7 @@ Response list_row(Context& ctx, std::string_view label, bool selected, const Ico
     Rect r = layout_next(ctx);
     Response rs = update_control(ctx, id, r, true, false);
     if (rs.focused && key_pressed(s, KeyEnter)) rs.clicked = true;
+    a11y_node(s, A11yRole::ListItem, label, {}, selected ? A11yNode::Selected : 0u);
     const Theme& t = s.cfg.theme;
     Color bg = selected ? t.selection : with_alpha(t.surface_hover, animate(s, id, rs.hovered, false));
     s.dl.rect(r, bg, t.corner_radius);
@@ -256,9 +263,10 @@ Response label_colored(Context& ctx, std::string_view text, Color color) {
 void badge(Context& ctx, std::string_view text, Color bg) {
     State& s = state(ctx);
     const Theme& t = s.cfg.theme;
-    Rect r = layout_next(ctx);
     text = visible_label(text);
     Vec2 sz = text_size(s, t.font_small >= 0 ? t.font_small : t.font_body, text);
+    Rect r = layout_next_w(ctx, sz.x + 2 * t.padding);
+    a11y_static(s, A11yRole::Text, r, text);
     const float h = std::fmin(r.h, r.h * 0.72f), w = std::fmin(r.w, sz.x + 2 * t.padding);
     Rect pill{r.x, r.y + (r.h - h) / 2, w, h};
     s.dl.rect(pill, bg, h / 2);

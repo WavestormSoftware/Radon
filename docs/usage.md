@@ -25,6 +25,11 @@ thread-safe. For tutorials see [getting-started.md](getting-started.md) and [wid
 | `animating()` | True while a transition or input is in progress; when false the host may sleep. |
 | `can_dismiss()` | True when Escape / Android back would close a popup, dialog, drawer or text focus. |
 | `set_animations(on)` | Turn transitions and scroll momentum on or off at runtime. |
+| `set_font_fallback(font, fallback)` | Glyphs missing from `font` come from `fallback` (emoji, CJK, symbols); chains up to 4 deep. |
+| `text_input_type()` | `TextInputType::{Text,Number,Decimal,Email,Url,Password}` the focused field wants. |
+| `haptic()` | `Haptic::{None,Selection,Light,Medium}`: the strongest feedback a widget asked for this frame. |
+| `gesture()` | `Gesture`: `fingers`, `center`, `pinch`, `rotate`, `pan` (two fingers), `swipe`, `velocity`. |
+| `a11y_nodes(&count)` | The accessibility tree of the last frame (needs `Config::a11y`). See [accessibility.md](accessibility.md). |
 
 `hash_id(seed, string)` is the 32-bit FNV-1a hash used for IDs.
 
@@ -32,7 +37,9 @@ thread-safe. For tutorials see [getting-started.md](getting-started.md) and [wid
 
 `max_windows` (32), `max_id_stack` (32), `max_layout_stack` (64), `max_draw_commands` (4096),
 `max_vertices` (65536), `max_indices` (196608), `max_textboxes` (16), `max_children` (32), `max_fonts` (4),
-`max_glyphs` (4096), `max_anims` (256), `atlas_size` (1024), `dpi_scale`, `animations`, `theme`.
+`max_glyphs` (4096), `max_anims` (256), `atlas_size` (1024), `undo_bytes` (8192, text undo + redo),
+`max_dock_nodes` (32), `max_dock_panels` (32), `max_a11y_nodes` (1024), `dpi_scale`, `animations`, `a11y`
+(false), `theme`.
 A full pool skips the work, sets `error()` and keeps running.
 
 ## Input
@@ -43,10 +50,13 @@ A full pool skips the work, sets `error()` and keeps running.
 | `secondary_pressed` | Right mouse button went down this frame (context menus). |
 | `touch` | The pointer is a finger: no hover, drag scrolls with momentum, 8 px tap slop, long-press = secondary click. |
 | `wheel` | Lines; positive scrolls up. |
-| `keys` | `KeyEvent{key, shift, ctrl, alt}`, 16 per frame. Keys: Enter, Backspace, Delete, Left, Right, Up, Down, Home, End, Tab, Escape, Space, A, C, V, X. |
+| `keys` | `KeyEvent{key, shift, ctrl, alt}`, 16 per frame. Keys: Enter, Backspace, Delete, Left, Right, Up, Down, Home, End, Tab, Escape, Space, A, C, V, X, Z, Y, PageUp, PageDown. |
 | `text` | UTF-8 bytes typed this frame (256 max). |
 | `screen_size` | Window size in logical px; used to center modals. |
 | `safe_area` | Mobile insets: x=left, y=top, w=right, h=bottom. Zero on desktop. `safe_rect()` is the screen minus the insets. |
+| `touches`, `touch_count` | Every finger down (`Touch{id, pos}`, up to 10), the pointer's finger first. Feeds `gesture()`. |
+| `keyboard_inset` | Logical px at the bottom covered by the soft keyboard; focused fields scroll above it. |
+| `a11y_action`, `a11y_target` | A screen reader request (`Activate`, `Focus`, `Increment`, `Decrement`) for a widget ID. |
 
 `Response`: `hovered`, `focused`, `pressed` (became active), `clicked` (released over it), `changed`.
 

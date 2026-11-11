@@ -13,11 +13,16 @@ using namespace rd;
 
 namespace {
 
-const char* const kPages[] = {"Widgets", "Inputs",    "Layout", "Lists and menus",
-                              "Theming", "Dashboard", "Data",   "Motion and native"};
-constexpr int kPageCount = 8, kDashboard = 5;
-const Icon kPageIcons[] = {Icon::Star,     Icon::Pencil, Icon::Menu,     Icon::Folder,
-                           Icon::Settings, Icon::Eye,    Icon::Calendar, Icon::Play};
+const char* const kPages[] = {
+    "Widgets",           "Inputs", "Layout",  "Lists and menus", "Theming",  "Dashboard", "Data",
+    "Motion and native", "Charts", "Pickers", "Rich text",       "Gestures", "Docking"};
+constexpr int kPageCount = 13, kDashboard = 5, kDocking = 12;
+const Icon kPageIcons[] = {Icon::Star, Icon::Pencil,   Icon::Menu, Icon::Folder, Icon::Settings,
+                           Icon::Eye,  Icon::Calendar, Icon::Play, Icon::Grid,   Icon::Clock,
+                           Icon::Code, Icon::Phone,    Icon::List};
+bool desktop_only(int page) {
+    return page == kDashboard || page == kDocking;
+}
 
 bool s_eye(Context& ctx, int i, bool visible) {
     char id[8];
@@ -174,7 +179,7 @@ void Gallery::panel_rows(Context& ctx) {
     layout_row(ctx, 2, a, 2, 0);
     button(ctx, "120 px");
     button(ctx, "fill");
-    const float b[] = {-100, 100};
+    const float b[] = {-(101 + ctx.theme().spacing), 100};  // fill, leaving room for the 100 px cell
     layout_row(ctx, 2, b, 2, 0);
     button(ctx, "fill");
     button(ctx, "100 px");
@@ -191,8 +196,7 @@ void Gallery::panel_rows(Context& ctx) {
 
 void Gallery::panel_columns(Context& ctx) {
     separator_text(ctx, "Nested columns");
-    const float w[] = {-1, -1};
-    layout_row(ctx, 2, w, 2, 0);
+    layout_row(ctx, 2, nullptr, 0, 0);  // two equal columns
     layout_begin_column(ctx);
     layout_row(ctx, 1, nullptr, 0, 0);
     button(ctx, "Left 1");
@@ -666,6 +670,347 @@ void Gallery::panel_native(Context& ctx) {
     bullet_text(ctx, "The app sleeps while nothing is moving");
 }
 
+void Gallery::panel_flow(Context& ctx) {
+    separator_text(ctx, "Flow layout (wraps)");
+    static const char* const tags[] = {"Design", "Code",   "Docs",   "Tests", "Mobile",
+                                       "Games",  "Charts", "Layout", "Fonts", "Accessibility"};
+    flow_begin(ctx);
+    for (int i = 0; i < 10; i++)
+        if (chip(ctx, tags[i], tags_[i]).clicked) tags_[i] = !tags_[i];
+    button(ctx, "A button");
+    link(ctx, "a link");
+    flow_end(ctx);
+    separator_text(ctx, "Responsive grid");
+    const int n = layout_grid(ctx, 64, 56);
+    const Icon icons[] = {Icon::Home,     Icon::Mail,     Icon::Phone, Icon::Image,
+                          Icon::Bookmark, Icon::Pin,      Icon::Send,  Icon::Archive,
+                          Icon::Upload,   Icon::Download, Icon::Link,  Icon::Filter};
+    const char* ids[] = {"g0", "g1", "g2", "g3", "g4", "g5", "g6", "g7", "g8", "g9", "g10", "g11"};
+    for (int i = 0; i < 12; i++) icon_button(ctx, ids[i], icons[i]);
+    layout_row(ctx, 1, nullptr, 0, 0);
+    char b[48];
+    std::snprintf(b, sizeof b, "%d columns fit this width", n);
+    label_colored(ctx, b, ctx.theme().text_muted);
+}
+
+void Gallery::panel_charts(Context& ctx) {
+    separator_text(ctx, "Line and area");
+    static const float sales[] = {12, 19, 15, 24, 28, 22, 31, 35, 30, 38, 42, 47};
+    static const float costs[] = {10, 12, 14, 15, 17, 18, 19, 22, 24, 23, 26, 28};
+    static const char* const months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    const ChartSeries s2[] = {{"Revenue", sales, 12}, {"Costs", costs, 12}};
+    layout_row(ctx, 1, nullptr, 0, 0);
+    chart(ctx, "##area", ChartType::Area, s2, 2, months, 190);
+    separator_text(ctx, "Bars");
+    static const float q1[] = {4, 7, 3, 8}, q2[] = {5, 6, 6, 9}, q3[] = {2, 3, 4, 2};
+    static const char* const teams[] = {"North", "South", "East", "West"};
+    const ChartSeries s3[] = {{"Q1", q1, 4}, {"Q2", q2, 4}, {"Q3", q3, 4}};
+    chart(ctx, "##bars", ChartType::Bar, s3, 3, teams, 170);
+    chart(ctx, "##stack", ChartType::StackedBar, s3, 3, teams, 170);
+}
+
+void Gallery::panel_charts2(Context& ctx) {
+    separator_text(ctx, "Pie and donut");
+    static const float share[] = {42, 26, 18, 9, 5};
+    static const char* const os[] = {"Android", "iOS", "Windows", "macOS", "Linux"};
+    layout_row(ctx, 1, nullptr, 0, 0);
+    pie_chart(ctx, "##donut", share, os, 5, 150, true);
+    pie_chart(ctx, "##pie", share, os, 5, 130, false);
+    separator_text(ctx, "Scatter");
+    static float pts[40];
+    for (int i = 0; i < 40; i++) pts[i] = 20 + 15 * std::sin((float)i * 0.7f) + (float)((i * 37) % 11);
+    const ChartSeries sc[] = {{"Samples", pts, 40}};
+    chart(ctx, "##scatter", ChartType::Scatter, sc, 1, nullptr, 140);
+    separator_text(ctx, "Sparklines");
+    static const float a[] = {3, 5, 4, 7, 6, 9, 8, 11}, b[] = {9, 8, 8, 6, 7, 5, 4, 3},
+                       c[] = {2, 6, 3, 7, 2, 8, 3, 9};
+    const float cols[] = {90, -80, 70};
+    const char* names[] = {"Users", "Errors", "Load"};
+    const float* data[] = {a, b, c};
+    const char* now[] = {"11.2k", "3", "9%"};
+    const Theme& t = ctx.theme();
+    const Color colors[] = {t.success, t.error, t.accent};
+    for (int i = 0; i < 3; i++) {
+        layout_row(ctx, 3, cols, 3, 0);
+        label(ctx, names[i]);
+        sparkline(ctx, data[i], 8, colors[i]);
+        label_colored(ctx, now[i], t.text_muted);
+    }
+}
+
+void Gallery::panel_tree_table(Context& ctx) {
+    separator_text(ctx, "Tree table: drag the header edges, click to sort");
+    struct Item {
+        const char* name;
+        const char* size;
+        const char* kind;
+        int depth, parent;
+    };
+    static const Item items[] = {
+        {"assets", "", "Folder", 0, -1},        {"brushes.cfg", "4 KB", "Config", 1, 0},
+        {"city.psd", "48 MB", "Artwork", 1, 0}, {"src", "", "Folder", 0, -1},
+        {"main.cpp", "6 KB", "C++", 1, 3},      {"gallery.cpp", "38 KB", "C++", 1, 3},
+        {"docs", "", "Folder", 0, -1},          {"widgets.md", "22 KB", "Markdown", 1, 6}};
+    const int folder_of[] = {0, -1, -1, 1, -1, -1, 2, -1};
+    if (table_begin(ctx, "files", tcols_, 3, 200, &tsort_)) {
+        if (tsort_.changed) toast(ctx, tsort_.ascending ? "Sorted ascending" : "Sorted descending");
+        int row = 0;
+        for (int i = 0; i < 8; i++) {
+            const Item& it = items[i];
+            if (it.parent >= 0 && !tree_open_[folder_of[it.parent]]) continue;
+            bool* open = folder_of[i] >= 0 ? &tree_open_[folder_of[i]] : nullptr;
+            if (table_tree_row(ctx, row++, it.name, it.depth, open, tsel_ == i).clicked) tsel_ = i;
+            label(ctx, it.size);
+            label_colored(ctx, it.kind, ctx.theme().text_muted);
+        }
+        table_end(ctx);
+    }
+}
+
+void Gallery::panel_pickers(Context& ctx) {
+    separator_text(ctx, "Wheels");
+    static const char* const sizes[] = {"XS", "S", "M", "L", "XL", "XXL"};
+    static const char* const colors[] = {"Black", "White", "Pink", "Navy", "Olive"};
+    layout_row(ctx, 2, nullptr, 0, 0);
+    wheel_picker(ctx, "##size", wheel_a_, sizes, 6, 5);
+    wheel_picker(ctx, "##color", wheel_b_, colors, 5, 5);
+    layout_row(ctx, 1, nullptr, 0, 0);
+    char b[64];
+    std::snprintf(b, sizeof b, "%s, %s", sizes[wheel_a_], colors[wheel_b_]);
+    label_colored(ctx, b, ctx.theme().text_muted);
+    separator_text(ctx, "Time");
+    row2(ctx, "24-hour");
+    time_picker(ctx, "##t24", hour_, minute_, true);
+    row2(ctx, "12-hour");
+    time_picker(ctx, "##t12", hour_, minute_, false);
+}
+
+void Gallery::panel_pickers2(Context& ctx) {
+    separator_text(ctx, "Searchable and multiple choice");
+    static const char* const countries[] = {"Argentina", "Australia",   "Belgium", "Brazil",   "Canada",
+                                            "Denmark",   "Finland",     "France",  "Germany",  "Japan",
+                                            "Kenya",     "Netherlands", "Norway",  "Portugal", "Spain"};
+    row2(ctx, "Country");
+    combo_search(ctx, "##country", csearch_, countries, 15);
+    static const char* const fruit[] = {"Apple", "Apricot", "Banana", "Blueberry", "Cherry", "Mango"};
+    row2(ctx, "Fruit");
+    multi_combo(ctx, "##fruit", fruits_, fruit, 6);
+    row2(ctx, "Autocomplete");
+    autocomplete(ctx, "##auto", fruit_buf_, fruit, 6, "Type a fruit");
+    separator_text(ctx, "Number pad");
+    row2(ctx, "Amount");
+    textbox(ctx, "##amount", amount_buf_, "0", TextInputType::Decimal);
+    layout_row(ctx, 1, nullptr, 0, 0);
+    number_pad(ctx, "##pad", amount_buf_, true);
+}
+
+void Gallery::panel_richtext(Context& ctx) {
+    separator_text(ctx, "Rich text");
+    layout_row(ctx, 1, nullptr, 0, 0);
+    if (!rich_text(ctx,
+                   "Mix **bold**, *italic* and `code` with {#3dd68c}colored text{/}, icons :star: :heart: "
+                   ":check: and [links](https://github.com/WavestormSoftware/Radon). Lines wrap at the "
+                   "width of the cell.")
+             .link.empty())
+        toast(ctx, "Link clicked");
+    separator_text(ctx, "Selectable text");
+    selectable_text(ctx, "##sel", "Select me with the mouse, or a long press\non a touch screen, then copy.");
+}
+
+void Gallery::panel_markdown(Context& ctx) {
+    separator_text(ctx, "Markdown");
+    layout_row(ctx, 1, nullptr, 0, 0);
+    const RichTextResponse r = markdown(ctx,
+                                        "# Release notes\n"
+                                        "Radon **0.3** adds touch gestures, pickers, charts, docking and "
+                                        "*rich text*.\n\n"
+                                        "## Highlights\n"
+                                        "- Pull to refresh, swipe rows, edge swipes\n"
+                                        "- Undo and redo in every text box\n"
+                                        "- Drag and drop with `drag_source`\n\n"
+                                        "1. Read the [widget guide](docs/widgets.md)\n"
+                                        "2. Run the gallery\n\n"
+                                        "> Every widget still allocates nothing per frame.\n\n"
+                                        "```\nrd::markdown(ctx, text);\n```\n"
+                                        "---\n");
+    if (!r.link.empty()) toast(ctx, "Link clicked");
+}
+
+void Gallery::panel_gestures(Context& ctx) {
+    separator_text(ctx, "Pull to refresh");
+    if (begin_child(ctx, "feed", 170)) {
+        pull_to_refresh(ctx, "ptr", refreshing_);
+        if (refreshing_ && refresh_clock_ <= 0) refresh_clock_ = 1.2f;
+        for (int i = 0; i < 8; i++) {
+            char b[48];
+            std::snprintf(b, sizeof b, "Post %d (refreshed %d times)", i + 1, refreshes_);
+            layout_row(ctx, 1, nullptr, 0, 0);
+            list_item(ctx, b, false, Icon::Image);
+        }
+        end_child(ctx);
+    }
+    layout_row(ctx, 1, nullptr, 0, 0);
+    label_colored(ctx, "Drag the list down with a finger (or the mouse in touch mode).",
+                  ctx.theme().text_muted);
+    separator_text(ctx, "Carousel");
+    if (carousel_begin(ctx, "cards", 150, 180)) {
+        const char* titles[] = {"Sunrise", "City", "Forest", "Desert", "Ocean", "Night"};
+        for (int i = 0; i < 6; i++) {
+            layout_begin_column(ctx);
+            char id[8];
+            std::snprintf(id, sizeof id, "c%d", i);
+            push_id(ctx, id);
+            if (begin_card(ctx, "card")) {
+                layout_row(ctx, 1, nullptr, 0, 0);
+                heading(ctx, titles[i]);
+                label_colored(ctx, "Swipe or scroll", ctx.theme().text_muted);
+                end_card(ctx);
+            }
+            pop_id(ctx);
+            layout_end_column(ctx);
+        }
+        carousel_end(ctx);
+    }
+    separator_text(ctx, "Pinch and swipe");
+    const Gesture& g = ctx.gesture();
+    if (g.pinch != 1) zoom2_ = std::fmin(std::fmax(zoom2_ * g.pinch, 0.5f), 3.0f);
+    if (g.swipe != SwipeDir::None) {
+        static const char* const dirs[] = {"", "left", "right", "up", "down"};
+        std::snprintf(gesture_log_, sizeof gesture_log_, "Swiped %s at %.0f px/s", dirs[(int)g.swipe],
+                      (double)std::hypot(g.velocity.x, g.velocity.y));
+    }
+    layout_row(ctx, 1, nullptr, 0, 0);
+    Canvas cv = canvas_begin(ctx, {1000, 120}, ctx.theme().background);
+    zoom2_ = std::fmin(std::fmax(zoom2_ * cv.pinch, 0.5f), 3.0f);
+    pan_.x += cv.pan2.x;
+    pan_.y += cv.pan2.y;
+    const float r = 24 * zoom2_;
+    cv.circle({cv.rect.w / 2 + pan_.x, 60 + pan_.y}, r, ctx.theme().accent);
+    canvas_end(ctx);
+    label_colored(ctx, gesture_log_, ctx.theme().text_muted);
+}
+
+void Gallery::panel_swipes(Context& ctx) {
+    separator_text(ctx, "Swipe a row left");
+    static const char* const mail[] = {"Invoice #2041",      "Lunch on Friday?", "Your build passed",
+                                       "New login detected", "Weekly report",    "Design review notes"};
+    const SwipeAction acts[] = {{"Archive", Icon::Archive, ctx.theme().warning},
+                                {"Delete", Icon::Trash, ctx.theme().error}};
+    for (int i = 0; i < inbox_n_; i++) {
+        layout_row(ctx, 1, nullptr, 0, 0);
+        push_id(ctx, mail[inbox_[i]]);
+        int act = -1;
+        if (swipe_item(ctx, mail[inbox_[i]], acts, 2, act).clicked) toast(ctx, mail[inbox_[i]]);
+        pop_id(ctx);
+        if (act >= 0) {
+            toast(ctx, act == 0 ? "Archived" : "Deleted", act == 0 ? Tone::Info : Tone::Error);
+            for (int k = i; k + 1 < inbox_n_; k++) inbox_[k] = inbox_[k + 1];
+            inbox_n_--;
+            break;
+        }
+    }
+    layout_row(ctx, 1, nullptr, 0, 0);
+    if (inbox_n_ < 6 && button(ctx, "Restore all").clicked) {
+        for (int i = 0; i < 6; i++) inbox_[i] = i;
+        inbox_n_ = 6;
+    }
+    separator_text(ctx, "Accordion");
+    static const char* const qs[] = {"What is Radon?", "Does it allocate?", "Which platforms?"};
+    static const char* const as[] = {
+        "An immediate-mode UI library for C++17 with a draw list you render yourself.",
+        "Every pool is allocated once from a Config; frames make no heap allocations.",
+        "Windows, Linux, macOS, the web, Android and iOS through SDL3, or your own backend."};
+    for (int i = 0; i < 3; i++) {
+        push_id(ctx, qs[i]);
+        if (accordion_begin(ctx, qs[i], acc_open_, i)) {
+            layout_row(ctx, 1, nullptr, 0, 0);
+            label_wrapped(ctx, as[i]);
+            accordion_end(ctx);
+        }
+        pop_id(ctx);
+    }
+}
+
+void Gallery::panel_dnd(Context& ctx) {
+    separator_text(ctx, "Reorder (drag a row)");
+    static const char* const steps[] = {"Sketch", "Ink", "Color", "Shade", "Export"};
+    reorder_list(ctx, "steps", order_, steps, 5);
+    separator_text(ctx, "Drag tags between boxes");
+    static const char* const tags[] = {"red", "green", "blue", "cyan", "pink", "gold"};
+    const float cols[] = {-1, -1};
+    layout_row(ctx, 2, cols, 2, 0);
+    for (int box = 0; box < 2; box++) {
+        layout_begin_column(ctx);
+        layout_row(ctx, 1, nullptr, 0, 0);
+        label_colored(ctx, box == 0 ? "Inbox" : "Done", ctx.theme().text_muted);
+        for (int i = 0; i < 6; i++) {
+            if (bucket_[i] != box) continue;
+            layout_row(ctx, 1, nullptr, 0, 0);
+            chip(ctx, tags[i], box == 1);
+            drag_source(ctx, "tag", &i, sizeof i, tags[i]);
+        }
+        layout_row(ctx, 1, nullptr, 0, 40);
+        button(ctx, box == 0 ? "Drop here##0" : "Drop here##1", ButtonStyle::Ghost);
+        int n = 0;
+        if (const void* p = drop_target(ctx, "tag", &n)) {
+            int i;
+            std::memcpy(&i, p, sizeof i);
+            if (i >= 0 && i < 6) bucket_[i] = box;
+        }
+        layout_end_column(ctx);
+    }
+    layout_row(ctx, 1, nullptr, 0, 0);
+    label_colored(ctx, dragging(ctx) ? "Dragging..." : "Mouse: press and drag. Touch: long-press, then drag.",
+                  ctx.theme().text_muted);
+}
+
+void Gallery::docking(Context& ctx, Rect area) {
+    dock_space(ctx, "dock", area);
+    if (begin_dock_panel(ctx, "Scene")) {
+        layout_row(ctx, 1, nullptr, 0, 0);
+        label_colored(ctx, "Drag a tab to float it; drag a title onto a highlighted zone to dock it.",
+                      ctx.theme().text_muted);
+        Canvas cv = canvas_begin(ctx, {2000, 300}, ctx.theme().background);
+        for (int i = 0; i < 6; i++)
+            cv.fill_rect({40.0f + 70.0f * (float)i, 40.0f + 20.0f * (float)(i % 3), 50, 50},
+                         ctx.theme().chart[i], 8);
+        canvas_end(ctx);
+        end_dock_panel(ctx);
+    }
+    if (dock_assets_ && begin_dock_panel(ctx, "Assets", &dock_assets_, DockPlace::Left, 0.2f)) {
+        layout_row(ctx, 1, nullptr, 0, 0);
+        static const char* const files[] = {"city.psd", "cat.png", "sky.png", "brushes.cfg", "theme.json"};
+        for (int i = 0; i < 5; i++) list_item(ctx, files[i], i == 1, Icon::Image);
+        end_dock_panel(ctx);
+    }
+    if (dock_inspector_ && begin_dock_panel(ctx, "Inspector", &dock_inspector_, DockPlace::Right, 0.25f)) {
+        panel_toggles(ctx);
+        panel_sliders(ctx);
+        end_dock_panel(ctx);
+    }
+    if (dock_stats_ && begin_dock_panel(ctx, "Stats", &dock_stats_, DockPlace::Right, 0.25f)) {
+        panel_charts2(ctx);
+        end_dock_panel(ctx);
+    }
+    if (dock_console_ && begin_dock_panel(ctx, "Console", &dock_console_, DockPlace::Bottom, 0.25f)) {
+        layout_row(ctx, 1, nullptr, 0, 0);
+        label_colored(ctx, "[info] gallery started", ctx.theme().text_muted);
+        label_colored(ctx, "[info] dock layout restored", ctx.theme().text_muted);
+        textbox(ctx, "##cmd", console_buf_, "Type a command");
+        end_dock_panel(ctx);
+    }
+    if (!(dock_console_ && dock_inspector_ && dock_assets_ && dock_stats_)) {
+        Rect r{area.x + area.w - 170, area.y + area.h - 46, 160, 38};
+        if (begin_window(ctx, "reopen", r, WindowBorder)) {
+            layout_row(ctx, 1, nullptr, 0, 0);
+            if (button(ctx, "Reopen panels").clicked)
+                dock_console_ = dock_inspector_ = dock_assets_ = dock_stats_ = true;
+            end_window(ctx);
+        }
+    }
+}
+
 // Drawers live at the top level (outside any window), so they are opened through flags.
 void Gallery::overlays(Context& ctx) {
     if (want_sheet_) open_modal(ctx, "sheet");
@@ -682,20 +1027,23 @@ void Gallery::overlays(Context& ctx) {
         if (button(ctx, "Cancel").clicked) close_modal(ctx);
         drawer_end(ctx);
     }
-    if (drawer_begin(ctx, "side", Side::Left, 250)) {
+    if (drawer_begin(ctx, "side", Side::Left, 260)) {  // also opens with a swipe from the left edge
         layout_row(ctx, 1, nullptr, 0, 0);
         heading(ctx, "Radon");
-        const Icon icons[] = {Icon::Home, Icon::User, Icon::Bell, Icon::Settings};
-        const char* names[] = {"Home", "Profile", "Notifications", "Settings"};
-        for (int i = 0; i < 4; i++)
-            if (list_item(ctx, names[i], i == 0, icons[i]).clicked) close_modal(ctx);
+        for (int i = 0; i < kPageCount; i++) {
+            if (desktop_only(i) && compact_) continue;
+            if (list_item(ctx, kPages[i], page_ == i, kPageIcons[i]).clicked) {
+                page_ = i;
+                close_modal(ctx);
+            }
+        }
         drawer_end(ctx);
     }
     if (drawer_begin(ctx, "pages", Side::Bottom, 380)) {
         layout_row(ctx, 1, nullptr, 0, 0);
         heading(ctx, "Pages");
         for (int i = 0; i < kPageCount; i++) {
-            if (i == kDashboard) continue;  // desktop only
+            if (desktop_only(i)) continue;
             if (list_item(ctx, kPages[i], page_ == i, kPageIcons[i]).clicked) {
                 page_ = i;
                 close_modal(ctx);
@@ -706,7 +1054,13 @@ void Gallery::overlays(Context& ctx) {
 }
 
 void Gallery::frame(Context& ctx, const Input& in, int w, int h) {
+    if (refreshing_ && (refresh_clock_ -= 1.0f / 60) <= 0) {  // pretend to load something
+        refreshing_ = false;
+        refreshes_++;
+        toast(ctx, "Refreshed", Tone::Success, 1.5f);
+    }
     const bool compact = w < 760;
+    compact_ = compact;
     const bool want_touch = compact || (runner_ && runner_->options().touch);
     if (!theme_init_ || want_touch != touch_) {  // phones get finger-sized rows
         if (!theme_init_) theme_ = make_theme(fonts_, runner_ ? runner_->dark() : true);
@@ -729,14 +1083,28 @@ void Gallery::frame(Context& ctx, const Input& in, int w, int h) {
         }
         return;
     }
-    if (page_ == kDashboard) page_ = 0;
+    if (desktop_only(page_) && compact) page_ = 0;
+    if (compact && edge_swipe(ctx, Side::Left)) want_side_ = true;
+    if (page_ == kDocking) {
+        Rect nav{8, 8, sw - 8, (float)h - 16};
+        if (begin_window(ctx, "Radon", nav, WindowBorder | WindowTitleBar)) {
+            for (int i = 0; i < kPageCount; i++) {
+                layout_row(ctx, 1, nullptr, 0, 0);
+                if (list_item(ctx, kPages[i], page_ == i, kPageIcons[i]).clicked) page_ = i;
+            }
+            end_window(ctx);
+        }
+        docking(ctx, {sw + 8, 8, (float)w - sw - 16, (float)h - 16});
+        overlays(ctx);
+        return;
+    }
 
     if (compact) {  // bottom navigation, extended under the home indicator
         Rect nav{0, safe.y + safe.h - bar, (float)w, bar + in.safe_area.h};
         if (begin_window(ctx, "nav", nav, WindowNone)) {
-            static const int pages[] = {0, 1, 6, 7};
-            static const Icon icons[] = {Icon::Star, Icon::Pencil, Icon::Calendar, Icon::Play, Icon::Menu};
-            static const char* const names[] = {"Widgets", "Inputs", "Data", "Motion", "More"};
+            static const int pages[] = {0, 1, 11, 8};
+            static const Icon icons[] = {Icon::Star, Icon::Pencil, Icon::Phone, Icon::Grid, Icon::Menu};
+            static const char* const names[] = {"Widgets", "Inputs", "Gestures", "Charts", "More"};
             int sel = 4;
             for (int i = 0; i < 4; i++)
                 if (pages[i] == page_) sel = i;
@@ -758,7 +1126,7 @@ void Gallery::frame(Context& ctx, const Input& in, int w, int h) {
             }
             spacing(ctx, 12);
             layout_row(ctx, 1, nullptr, 0, 0);
-            label_colored(ctx, "Radon 0.2.0", ctx.theme().text_muted);
+            label_colored(ctx, "Radon 0.3.0", ctx.theme().text_muted);
             label_colored(ctx, "Tab: move focus", ctx.theme().text_muted);
             label_colored(ctx, "Enter/Space: activate", ctx.theme().text_muted);
             end_window(ctx);
@@ -770,13 +1138,18 @@ void Gallery::frame(Context& ctx, const Input& in, int w, int h) {
                                &Gallery::panel_feedback};
     static const Panel p1[] = {&Gallery::panel_text, &Gallery::panel_choices, &Gallery::panel_colors,
                                &Gallery::panel_inputs2, &Gallery::panel_tabs};
-    static const Panel p2[] = {&Gallery::panel_rows, &Gallery::panel_columns, &Gallery::panel_regions};
+    static const Panel p2[] = {&Gallery::panel_rows, &Gallery::panel_columns, &Gallery::panel_regions,
+                               &Gallery::panel_flow};
     static const Panel p3[] = {&Gallery::panel_menus, &Gallery::panel_lists, &Gallery::panel_tree};
     static const Panel p4[] = {&Gallery::panel_theme, &Gallery::panel_theme_preview};
     static const Panel p6[] = {&Gallery::panel_table, &Gallery::panel_calendar, &Gallery::panel_clipper};
     static const Panel p7[] = {&Gallery::panel_alerts, &Gallery::panel_overlays, &Gallery::panel_native};
-    static const Panel* const all[] = {p0, p1, p2, p3, p4, p4, p6, p7};
-    static const int counts[] = {4, 5, 3, 3, 2, 2, 3, 3};
+    static const Panel p8[] = {&Gallery::panel_charts, &Gallery::panel_charts2, &Gallery::panel_tree_table};
+    static const Panel p9[] = {&Gallery::panel_pickers, &Gallery::panel_pickers2};
+    static const Panel p10[] = {&Gallery::panel_richtext, &Gallery::panel_markdown};
+    static const Panel p11[] = {&Gallery::panel_gestures, &Gallery::panel_swipes, &Gallery::panel_dnd};
+    static const Panel* const all[] = {p0, p1, p2, p3, p4, p4, p6, p7, p8, p9, p10, p11, p11};
+    static const int counts[] = {4, 5, 4, 3, 2, 2, 3, 3, 3, 2, 2, 3, 3};
     const Panel* panels = all[page_];
     const int count = counts[page_];
 
@@ -793,6 +1166,7 @@ void Gallery::frame(Context& ctx, const Input& in, int w, int h) {
         char title[32];
         std::snprintf(title, sizeof title, "p%d-c%d", page_, c);
         if (begin_window(ctx, title, cols_[c], WindowBorder | WindowScrollable)) {
+            if (compact && c == 0 && pull_to_refresh(ctx, "refresh", refreshing_)) refresh_clock_ = 1.2f;
             transition_begin(ctx, "page", page_);
             for (int i = c; i < count; i += ncols) {
                 char pid[32];

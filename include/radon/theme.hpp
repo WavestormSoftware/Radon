@@ -20,7 +20,11 @@ struct Theme {
     bool shadows = true;         ///< draw window and popup shadows
     // Typography. A font handle already carries its pixel size. -1 falls back to the default font.
     FontHandle font_body = -1, font_heading = -1, font_small = -1;
-    FontHandle font_large = -1;  ///< heading() text; falls back to font_heading
+    FontHandle font_large = -1;   ///< heading() text; falls back to font_heading
+    FontHandle font_bold = -1;    ///< rich text **bold**; without it bold is drawn twice, offset
+    FontHandle font_italic = -1;  ///< rich text *italic*; falls back to the body font
+    FontHandle font_mono = -1;    ///< rich text `code` and code blocks; falls back to the body font
+    Color chart[8];               ///< series colors for charts, in order
 
     /// Wavestorm dark: near-black navy surfaces with a hot pink accent.
     static Theme dark();

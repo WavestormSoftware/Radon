@@ -48,7 +48,7 @@ void tooltip(Context& ctx, std::string_view text) {
     auto& s = detail::state(ctx);
     if (!s.last_hovered || s.in.touch) return;
     size_t n = detail::utf8_fit(text, sizeof(s.tip) - 1);
-    std::memcpy(s.tip, text.data(), n);
+    if (n) std::memcpy(s.tip, text.data(), n);
     s.tip[n] = 0;
     s.tip_pos = {s.in.pointer.x + 12, s.in.pointer.y + 18};
     s.tip_set = true;

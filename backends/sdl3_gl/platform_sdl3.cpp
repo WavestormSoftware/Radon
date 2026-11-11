@@ -13,6 +13,13 @@
 
 #include "radon_sdl3_gl.hpp"
 
+#if defined(__ANDROID__)
+#include <jni.h>
+#endif
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+extern "C" void rd_ios_haptic(int strength);  // haptics_ios.m: 1 selection, 2 light, 3 medium
+#endif
+
 namespace rd::sdl3 {
 
 struct Platform {
@@ -21,8 +28,13 @@ struct Platform {
     bool gles = false;
     bool quit = false;
     bool text_input = false;
+    TextInputType text_type = TextInputType::Text;
     bool finger_active = false;
-    SDL_FingerID finger = 0;
+    SDL_FingerID finger = 0;  // the finger that drives the pointer
+    Touch touches[kMaxTouches];
+    int touch_count = 0;
+    int height_before_keyboard = 0;  // window height when the soft keyboard was requested
+    bool haptics = true;
     Uint64 last_ticks = 0;
     Vec2 pointer;
     bool down = false;
@@ -73,6 +85,14 @@ int map_key(SDL_Keycode k) {
             return KeyV;
         case SDLK_X:
             return KeyX;
+        case SDLK_Z:
+            return KeyZ;
+        case SDLK_Y:
+            return KeyY;
+        case SDLK_PAGEUP:
+            return KeyPageUp;
+        case SDLK_PAGEDOWN:
+            return KeyPageDown;
         default:
             return KeyNone;
     }
@@ -173,27 +193,39 @@ void handle_event(Platform* p, Input& in, const SDL_Event& e, float k, int ww, i
             in.wheel += e.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -e.wheel.y : e.wheel.y;
             break;
         case SDL_EVENT_FINGER_DOWN:
-            if (!p->finger_active) {
+        case SDL_EVENT_FINGER_MOTION:
+        case SDL_EVENT_FINGER_UP:
+        case SDL_EVENT_FINGER_CANCELED: {
+            const Vec2 pos{e.tfinger.x * (float)ww * k, e.tfinger.y * (float)wh * k};
+            const uint64_t id = (uint64_t)e.tfinger.fingerID;
+            int slot = -1;
+            for (int i = 0; i < p->touch_count; i++)
+                if (p->touches[i].id == id) slot = i;
+            const bool up = e.type == SDL_EVENT_FINGER_UP || e.type == SDL_EVENT_FINGER_CANCELED;
+            if (up) {
+                if (slot >= 0) p->touches[slot] = p->touches[--p->touch_count];
+            } else if (slot >= 0) {
+                p->touches[slot].pos = pos;
+            } else if (e.type == SDL_EVENT_FINGER_DOWN && p->touch_count < kMaxTouches) {
+                p->touches[p->touch_count++] = {id, pos};
+            }
+            // The first finger down drives the pointer; extra fingers only feed gestures.
+            if (e.type == SDL_EVENT_FINGER_DOWN && !p->finger_active) {
                 p->finger_active = true;
                 p->finger = e.tfinger.fingerID;
-                p->pointer = {e.tfinger.x * (float)ww * k, e.tfinger.y * (float)wh * k};
+                p->pointer = pos;
                 p->touch = true;
                 p->down = in.pointer_pressed = true;
+            } else if (p->finger_active && p->finger == e.tfinger.fingerID) {
+                p->pointer = pos;
+                if (up) {
+                    p->finger_active = false;
+                    p->down = false;
+                    in.pointer_released = true;
+                }
             }
             break;
-        case SDL_EVENT_FINGER_MOTION:
-            if (p->finger_active && p->finger == e.tfinger.fingerID)
-                p->pointer = {e.tfinger.x * (float)ww * k, e.tfinger.y * (float)wh * k};
-            break;
-        case SDL_EVENT_FINGER_UP:
-        case SDL_EVENT_FINGER_CANCELED:
-            if (p->finger_active && p->finger == e.tfinger.fingerID) {
-                p->pointer = {e.tfinger.x * (float)ww * k, e.tfinger.y * (float)wh * k};
-                p->finger_active = false;
-                p->down = false;
-                in.pointer_released = true;
-            }
-            break;
+        }
         case SDL_EVENT_KEY_DOWN: {
             if (e.key.key == SDLK_AC_BACK && !p->can_dismiss) {
                 p->quit = true;  // nothing to close: back leaves the app, as Android users expect
@@ -324,6 +356,7 @@ Platform* create_platform(const PlatformConfig& cfg) {
     SDL_GL_MakeCurrent(p->window, p->gl);
     SDL_GL_SetSwapInterval(cfg.vsync ? 1 : 0);
     p->wait_events = cfg.wait_events;
+    p->haptics = cfg.haptics;
     p->last_ticks = SDL_GetTicksNS();
     return p.release();
 }
@@ -346,6 +379,40 @@ float dpi_scale(const Platform* p) {
     float d = SDL_GetWindowDisplayScale(p->window);
     if (d <= 0) d = SDL_GetWindowPixelDensity(p->window);
     return d > 0 ? d : 1.0f;
+}
+
+void play_haptic(Haptic h) {
+    if (h == Haptic::None) return;
+#if defined(__ANDROID__)
+    // View.performHapticFeedback needs no VIBRATE permission and follows the user's touch-feedback setting.
+    JNIEnv* env = (JNIEnv*)SDL_GetAndroidJNIEnv();
+    jobject activity = (jobject)SDL_GetAndroidActivity();
+    if (!env || !activity) return;
+    jclass act = env->GetObjectClass(activity);
+    jmethodID get_window = env->GetMethodID(act, "getWindow", "()Landroid/view/Window;");
+    jobject window = get_window ? env->CallObjectMethod(activity, get_window) : nullptr;
+    if (window) {
+        jclass win = env->GetObjectClass(window);
+        jmethodID get_decor = env->GetMethodID(win, "getDecorView", "()Landroid/view/View;");
+        jobject view = get_decor ? env->CallObjectMethod(window, get_decor) : nullptr;
+        if (view) {
+            jclass vc = env->GetObjectClass(view);
+            jmethodID perform = env->GetMethodID(vc, "performHapticFeedback", "(I)Z");
+            // HapticFeedbackConstants: CLOCK_TICK 4, KEYBOARD_TAP 3, LONG_PRESS 0
+            const jint kind = h == Haptic::Selection ? 4 : (h == Haptic::Light ? 3 : 0);
+            if (perform) env->CallBooleanMethod(view, perform, kind);
+            env->DeleteLocalRef(vc);
+            env->DeleteLocalRef(view);
+        }
+        env->DeleteLocalRef(win);
+        env->DeleteLocalRef(window);
+    }
+    env->DeleteLocalRef(act);
+    env->DeleteLocalRef(activity);
+    if (env->ExceptionCheck()) env->ExceptionClear();
+#elif defined(__APPLE__) && TARGET_OS_IPHONE
+    rd_ios_haptic((int)h);
+#endif
 }
 
 bool is_gles(const Platform* p) {
@@ -438,6 +505,16 @@ bool poll(Platform* p, Input& in, float& dt) {
     in.pointer = p->pointer;
     in.pointer_down = p->down;
     in.touch = p->touch;
+    // The pointer's finger goes first, so touches[0] is always the pointer.
+    in.touch_count = 0;
+    for (int i = 0; i < p->touch_count; i++)
+        if (p->finger_active && p->touches[i].id == (uint64_t)p->finger)
+            in.touches[in.touch_count++] = p->touches[i];
+    for (int i = 0; i < p->touch_count && in.touch_count < kMaxTouches; i++)
+        if (!(p->finger_active && p->touches[i].id == (uint64_t)p->finger))
+            in.touches[in.touch_count++] = p->touches[i];
+    in.a11y_action = A11yAction::None;
+    in.a11y_target = 0;
 
     SDL_Rect safe{0, 0, ww, wh};
     in.safe_area = {};
@@ -447,6 +524,12 @@ bool poll(Platform* p, Input& in, float& dt) {
         if (in.safe_area.x < 0 || in.safe_area.y < 0 || in.safe_area.w < 0 || in.safe_area.h < 0)
             in.safe_area = {};
     }
+
+    // shortcut: SDL does not report the soft keyboard's height. When the window did not shrink for it
+    // (iOS, Android adjustPan), assume it covers 40% of the screen; use the real height once SDL has it.
+    in.keyboard_inset = 0;
+    if (p->text_input && SDL_ScreenKeyboardShown(p->window) && wh >= p->height_before_keyboard - 1)
+        in.keyboard_inset = (float)wh * k * 0.4f;
 
     Uint64 now = SDL_GetTicksNS();
     dt = (float)((double)(now - p->last_ticks) * 1e-9);
@@ -467,13 +550,33 @@ void finish_frame(Platform* p, Context& ctx) {
             p->text_area = r;
         }
     }
-    if (want != p->text_input) {
-        if (want)
-            SDL_StartTextInput(p->window);
-        else
+    const TextInputType type = ctx.text_input_type();
+    if (want != p->text_input || (want && type != p->text_type)) {
+        if (want) {
+            if (!p->text_input) SDL_GetWindowSize(p->window, nullptr, &p->height_before_keyboard);
+            static const SDL_TextInputType map[] = {
+                SDL_TEXTINPUT_TYPE_TEXT,   SDL_TEXTINPUT_TYPE_NUMBER,
+                SDL_TEXTINPUT_TYPE_NUMBER, SDL_TEXTINPUT_TYPE_TEXT_EMAIL,
+                SDL_TEXTINPUT_TYPE_TEXT,   SDL_TEXTINPUT_TYPE_TEXT_PASSWORD_HIDDEN};
+            const SDL_PropertiesID props = SDL_CreateProperties();
+            SDL_SetNumberProperty(props, SDL_PROP_TEXTINPUT_TYPE_NUMBER, map[(int)type]);
+            if (type != TextInputType::Text)
+                SDL_SetNumberProperty(props, SDL_PROP_TEXTINPUT_CAPITALIZATION_NUMBER, SDL_CAPITALIZE_NONE);
+            // Android InputType: URI keyboard (TYPE_CLASS_TEXT | VARIATION_URI), decimal number pad.
+            if (type == TextInputType::Url)
+                SDL_SetNumberProperty(props, SDL_PROP_TEXTINPUT_ANDROID_INPUTTYPE_NUMBER, 0x11);
+            if (type == TextInputType::Decimal)
+                SDL_SetNumberProperty(props, SDL_PROP_TEXTINPUT_ANDROID_INPUTTYPE_NUMBER, 0x2002);
+            if (p->text_input) SDL_StopTextInput(p->window);  // switch keyboards
+            SDL_StartTextInputWithProperties(p->window, props);
+            SDL_DestroyProperties(props);
+        } else {
             SDL_StopTextInput(p->window);
+        }
         p->text_input = want;
+        p->text_type = type;
     }
+    if (p->haptics && ctx.haptic() != Haptic::None) play_haptic(ctx.haptic());
     if (ctx.cursor() != p->cursor) {
         static const SDL_SystemCursor map[] = {SDL_SYSTEM_CURSOR_DEFAULT,   SDL_SYSTEM_CURSOR_TEXT,
                                                SDL_SYSTEM_CURSOR_POINTER,   SDL_SYSTEM_CURSOR_EW_RESIZE,

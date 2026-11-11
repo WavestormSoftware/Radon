@@ -62,8 +62,36 @@ const FontSlot* font_of(const State& s, FontHandle f) {
     return (f >= 0 && f < s.font_n) ? &s.fonts[f] : nullptr;
 }
 
-static float advance_of(const FontSlot& f, uint32_t cp, uint32_t next) {
+// The font in f's fallback chain that has a glyph for `cp` (f itself when none has), its glyph index
+// and its scale for f's pixel size.
+static const FontSlot* resolve(const State& s, const FontSlot& f, uint32_t cp, int* gi, float* scale) {
+    const FontSlot* cur = &f;
+    for (int d = 0; d < 4; d++) {
+        const int g = stbtt_FindGlyphIndex(&cur->info, (int)cp);
+        if (g) {
+            *gi = g;
+            *scale = cur == &f ? f.scale : stbtt_ScaleForPixelHeight(&cur->info, f.pixel_size);
+            return cur;
+        }
+        if (cur->fallback < 0 || cur->fallback >= s.font_n) break;
+        cur = &s.fonts[cur->fallback];
+    }
+    *gi = 0;
+    *scale = f.scale;
+    return &f;
+}
+
+static float advance_of(const State& s, const FontSlot& f, uint32_t cp, uint32_t next) {
     int adv, lsb;
+    if (f.fallback >= 0) {
+        int gi;
+        float sc;
+        const FontSlot* g = resolve(s, f, cp, &gi, &sc);
+        if (g != &f) {
+            stbtt_GetGlyphHMetrics(&g->info, gi, &adv, &lsb);
+            return adv * sc;
+        }
+    }
     stbtt_GetCodepointHMetrics(&f.info, (int)cp, &adv, &lsb);
     float a = adv * f.scale;
     if (next) a += stbtt_GetCodepointKernAdvance(&f.info, (int)cp, (int)next) * f.scale;
@@ -80,7 +108,7 @@ Vec2 text_size(const State& s, FontHandle h, std::string_view text) {
         uint32_t cp, nx = 0;
         p += utf8_decode(p, e, cp);
         if (p < e) utf8_decode(p, e, nx);
-        w += advance_of(*f, cp, nx);
+        w += advance_of(s, *f, cp, nx);
     }
     return {w, f->ascent - f->descent + f->line_gap};
 }
@@ -109,18 +137,20 @@ static const Glyph* glyph_for(State& s, FontHandle h, const FontSlot& f, uint32_
         return nullptr;
     }
     const float dpi = s.cfg.dpi_scale;
-    const float sc = f.scale * dpi;
-    int gi = stbtt_FindGlyphIndex(&f.info, (int)cp);
+    int gi;
+    float gscale;
+    const FontSlot& src = *resolve(s, f, cp, &gi, &gscale);
+    const float sc = gscale * dpi;
     int x0, y0, x1, y1;
-    stbtt_GetGlyphBitmapBox(&f.info, gi, sc, sc, &x0, &y0, &x1, &y1);
+    stbtt_GetGlyphBitmapBox(&src.info, gi, sc, sc, &x0, &y0, &x1, &y1);
     int bw = x1 - x0, bh = y1 - y0;
     Glyph g;
     g.font = h;
     g.cp = cp;
     g.used = true;
     int adv, lsb;
-    stbtt_GetGlyphHMetrics(&f.info, gi, &adv, &lsb);
-    g.advance = adv * f.scale;
+    stbtt_GetGlyphHMetrics(&src.info, gi, &adv, &lsb);
+    g.advance = adv * gscale;
     g.xoff = x0 / dpi;
     g.yoff = y0 / dpi;
     g.w = bw / dpi;
@@ -136,8 +166,8 @@ static const Glyph* glyph_for(State& s, FontHandle h, const FontSlot& f, uint32_
         }
         const int stride = s.cfg.atlas_size;
         s.arena.used = 0;
-        stbtt_MakeGlyphBitmap(&f.info, s.atlas.get() + (size_t)(rc.y + 1) * stride + rc.x + 1, bw, bh, stride,
-                              sc, sc, gi);
+        stbtt_MakeGlyphBitmap(&src.info, s.atlas.get() + (size_t)(rc.y + 1) * stride + rc.x + 1, bw, bh,
+                              stride, sc, sc, gi);
         s.arena.used = 0;
         const float inv = 1.0f / stride;
         g.u0 = (rc.x + 1) * inv;
@@ -169,7 +199,7 @@ void draw_text(State& s, FontHandle h, Vec2 pos, std::string_view text, Color c)
         if (g && g->w > 0 && g->h > 0)
             s.dl.glyph({snap(pen + g->xoff), snap(base + g->yoff), g->w, g->h}, {g->u0, g->v0, g->u1, g->v1},
                        c);
-        pen += advance_of(*f, cp, nx);
+        pen += advance_of(s, *f, cp, nx);
     }
 }
 
@@ -196,7 +226,7 @@ int index_at_x(const State& s, FontHandle h, std::string_view text, float x) {
         uint32_t cp, nx = 0;
         int len = utf8_decode(p, e, cp);
         if (p + len < e) utf8_decode(p + len, e, nx);
-        float a = advance_of(*f, cp, nx);
+        float a = advance_of(s, *f, cp, nx);
         if (x < pen + a / 2) return (int)(p - b);
         pen += a;
         p += len;
@@ -282,8 +312,11 @@ int wrap_text(const Context& ctx, FontHandle font, std::string_view text, float 
     }
     return detail::wrap_with(
         text, max_width,
-        [](void* u, uint32_t cp) { return detail::advance_of(*static_cast<Env*>(u)->f, cp, 0); }, &env, lines,
-        max_lines);
+        [](void* u, uint32_t cp) {
+            const Env& e = *static_cast<Env*>(u);
+            return detail::advance_of(*e.s, *e.f, cp, 0);
+        },
+        &env, lines, max_lines);
 }
 
 }  // namespace rd

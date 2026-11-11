@@ -23,6 +23,9 @@ constexpr int kMaxThemeStack = 8;
 constexpr size_t kArenaSize = 1u << 20;
 constexpr int kMaxAlpha = 8;
 constexpr int kMaxToasts = 4;
+constexpr int kMaxUndo = 32;
+constexpr int kDndBytes = 256;
+constexpr uint32_t kWindowDocked = 1u << 30;  // internal window flag: docked panel (z fixed at 0)
 
 struct Layout {
     Rect body;
@@ -33,7 +36,10 @@ struct Layout {
     int index = 1;
     float row_h = 0;
     float next_row = 0;
+    int mode = 0;      // LayoutRows, LayoutFlow (wrap) or LayoutStrip (one endless row)
+    float flow_w = 0;  // flow/strip: width of a cell from plain layout_next
 };
+enum { LayoutRows = 0, LayoutFlow = 1, LayoutStrip = 2 };
 
 struct WindowState {
     ID id = 0;
@@ -62,6 +68,35 @@ struct TextEdit {
     int cursor = 0, anchor = 0;
     float scroll = 0, scroll_y = 0;
     uint32_t last_frame = 0;
+    int word_lo = -1, word_hi = -1;  // word-wise drag after a double-click or long-press
+    int handle = 0;                  // touch selection handle being dragged: 1 start, 2 end
+    float kb = 0;                    // keyboard inset when the field last checked it
+};
+
+/// Snapshots of one text buffer (undo or redo) in a fixed byte arena; the oldest drop off.
+struct UndoStack {
+    char* mem = nullptr;
+    int cap = 0, used = 0, n = 0;
+    struct Entry {
+        int off, len, cursor;
+    } e[kMaxUndo];
+    void clear() { used = n = 0; }
+    void push(const char* p, int len, int cursor) {
+        if (len > cap) return clear();
+        while (n > 0 && (used + len > cap || n == kMaxUndo)) {  // drop the oldest
+            const int d = e[0].len;
+            std::memmove(mem, mem + d, (size_t)(used - d));
+            used -= d;
+            for (int i = 1; i < n; i++) e[i - 1] = {e[i].off - d, e[i].len, e[i].cursor};
+            n--;
+        }
+        std::memcpy(mem + used, p, (size_t)len);
+        e[n++] = {used, len, cursor};
+        used += len;
+    }
+    void pop() {
+        if (n > 0) used = e[--n].off;
+    }
 };
 
 struct ChildState {
@@ -69,13 +104,36 @@ struct ChildState {
     float scroll = 0, content_h = 0;
     uint32_t last_frame = 0;
     float vel = 0;
+    int lock = 0;      // carousel drag direction: 0 undecided, 1 horizontal, 2 vertical (not ours)
+    float target = 0;  // carousel: where the strip snaps to
 };
 
+enum { ChildScroll = 0, ChildCard = 1, ChildAccordion = 2, ChildStrip = 3 };
 struct ChildFrame {
     int slot = 0, layout_index = 0, clip_base = 0;
     Rect rect;
     float pad = 0;
-    bool card = false;
+    int kind = ChildScroll;
+    float extra = 0;  // carousel: item width
+};
+
+struct DockNode {
+    ID dock = 0;                          // the dock_space it belongs to
+    bool used = false, vertical = false;  // split: children side by side, or stacked when vertical
+    int parent = -1, child[2] = {-1, -1};
+    float ratio = 0.5f;
+    ID selected = 0;  // leaf: the visible tab
+    int main = -1;    // root only: the leaf that "Center" panels go to
+    Rect rect, body;  // body = below the tab strip
+};
+
+struct DockPanel {
+    ID id = 0, dock = 0;
+    int node = -1;  // leaf node, or -1 when floating
+    Rect float_rect;
+    char title[48];
+    uint32_t last_frame = 0, order = 0;
+    bool closable = false, close_clicked = false;
 };
 
 struct PickerState {
@@ -102,6 +160,7 @@ struct FontSlot {
     stbtt_fontinfo info;
     float pixel_size = 0, scale = 0;  // scale: font units -> logical pixels
     float ascent = 0, descent = 0, line_gap = 0;
+    FontHandle fallback = -1;  // where glyphs missing from this font come from
 };
 
 struct Glyph {
@@ -131,6 +190,43 @@ struct State {
     int id_n = 0;
 
     ID hover = 0, focus = 0, active = 0, hover_window = 0, focus_window = 0, cur_window = 0;
+    int clicks = 0;  // 1, 2 (double) or 3 (triple) for the press this frame
+    float last_press_time = -10;
+    Vec2 last_press_pos;
+    Haptic haptic = Haptic::None;
+    TextInputType text_type = TextInputType::Text;
+    Gesture gesture;
+    Touch prev_touches[kMaxTouches];
+    int prev_touch_count = 0;
+    bool edge_fired = false;
+    float sheet_drag = 0;  // drawer swipe-to-dismiss offset
+    int sheet_lock = 0;    // 0 undecided, 1 dragging the sheet, 2 not ours
+    // drag and drop
+    bool dnd_active = false, dnd_delivered = false;
+    ID dnd_source = 0;
+    char dnd_type[32];
+    uint8_t dnd_data[kDndBytes];
+    int dnd_size = 0;
+    char dnd_preview[64];
+    // undo for the focused text box
+    std::unique_ptr<char[]> undo_mem;
+    UndoStack undo, redo;
+    ID undo_id = 0;
+    bool undo_typing = false;
+    // docking
+    std::unique_ptr<DockNode[]> dock_nodes;
+    std::unique_ptr<DockPanel[]> dock_panels;
+    ID dock_cur = 0;
+    int dock_cur_root = -1, dock_main = -1;
+    uint32_t dock_order = 0;
+    ID dock_dragging = 0;  // floating panel whose title is being dragged (last frame)
+    int dock_target = -1, dock_zone = -1;
+    // accessibility
+    std::unique_ptr<A11yNode[]> a11y;
+    int a11y_n = 0;
+    // filter text of the open combo_search popup
+    char search[64];
+    int search_len = 0;
     ID press_window = 0;
     bool updated_focus = false, press_claimed = false, kbd_nav = false, active_captures = false,
          touch_moved = false;
@@ -233,6 +329,13 @@ float animate(State& s, ID id, bool hover, bool press, float* press_out = nullpt
 /// the previous frame restarts at `from`. Safe to call more than once per frame.
 float anim_to(State& s, ID id, float target, float duration, float from);
 Anim* anim_slot(State& s, ID id, bool& fresh);
+/// Asks the backend for haptic feedback this frame (the strongest request wins).
+inline void haptic(State& s, Haptic h) {
+    if (h > s.haptic) s.haptic = h;
+}
+/// The innermost scroll container: a child region (child_slot >= 0) or the current window. Returns
+/// the scroll offset to adjust and its visible rect, or null outside any window.
+float* scroll_target(State& s, Rect* view);
 bool push_alpha(State& s, float mul);
 void pop_alpha(State& s);
 /// Touch flick scrolling: tracks the drag velocity and keeps scrolling after release.
@@ -241,6 +344,9 @@ Rect intersect(const Rect& a, const Rect& b);
 
 // layout.cpp
 Layout& top_layout(State& s);
+/// The next cell with a known width: wraps in flow layouts, else same as layout_next.
+Rect layout_next_w(Context& ctx, float w);
+bool in_flow(const State& s);
 bool push_layout(State& s, const Rect& body);
 void extend_height(State& s, Rect& r, float needed);
 
@@ -265,7 +371,33 @@ void open_popup_id(State& s, ID id);
 bool popup_begin_id(Context& ctx, ID id, float min_w);
 Response textbox_impl(Context& ctx, ID id, Rect r, TextBuffer& buf, const char* hint, int mode, float inset_l,
                       float inset_r);
-enum { TextSingle = 0, TextPassword = 1, TextMulti = 2 };
+enum {
+    TextSingle = 0,
+    TextPassword = 1,
+    TextMulti = 2,
+    TextReadOnly = 4,
+    TextNumber = 8,
+    TextDecimal = 16,
+    TextEmail = 32,
+    TextUrl = 64
+};
+ChildState* find_child(State& s, ID id);
+TextEdit* find_edit(State& s, ID id);
+bool activated(State& s, const Response& rs);
+void focus_ring(State& s, const Rect& r, const Response& rs, float radius);
+// a11y.cpp: describes the last widget (s.last_id / s.last_rect). No-op unless Config::a11y.
+void a11y_node(State& s, A11yRole role, std::string_view label, std::string_view value = {},
+               uint32_t flags = 0);
+void a11y_control(State& s, ID id, const Rect& r, bool focusable);
+/// A node for non-interactive content (text, headings, images).
+void a11y_static(State& s, A11yRole role, const Rect& r, std::string_view label);
+// chart.cpp
+float nice_step(float raw);
+void format_tick(char* out, size_t cap, float v, float step);
+// richtext.cpp
+FontHandle bold_font(const Theme& t);
+// dnd.cpp
+void draw_dnd_preview(State& s);
 /// Largest length <= `cap` that does not cut a UTF-8 code point in half.
 inline size_t utf8_fit(std::string_view t, size_t cap) {
     size_t n = t.size() < cap ? t.size() : cap;

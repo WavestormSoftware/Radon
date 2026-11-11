@@ -15,6 +15,8 @@ struct PlatformConfig {
     /// Sleep until the next input event while the UI is idle (Context::animating() is false) instead
     /// of redrawing every frame. Saves battery. Ignored on the web, where the browser owns the loop.
     bool wait_events = false;
+    /// Play the haptic feedback widgets ask for (Context::haptic) on Android and iOS.
+    bool haptics = true;
 };
 
 struct Platform;
@@ -24,7 +26,8 @@ Platform* create_platform(const PlatformConfig& cfg);
 void destroy_platform(Platform* p);
 /// Pumps events and fills `input` for the next frame. Returns false when the app should quit.
 bool poll(Platform* p, Input& input, float& dt_seconds);
-/// Call once per frame after Context::end_frame: soft keyboard, clipboard wiring, swap.
+/// Call once per frame after Context::end_frame: soft keyboard (with the field's keyboard type), haptics,
+/// cursor, swap.
 void finish_frame(Platform* p, Context& ctx);
 /// Applies DPI scale and clipboard callbacks to a context. Call once after creating it.
 void attach(Platform* p, Context& ctx);
@@ -48,6 +51,9 @@ void show_file_dialog(Platform* p, FileDialog kind, const char* default_location
 /// Returns true once when a dialog has finished. `path` is empty if the user cancelled.
 bool poll_file_dialog(Platform* p, std::string& path);
 bool is_gles(const Platform* p);
+/// Plays haptic feedback (Android: View.performHapticFeedback; iOS: UIFeedbackGenerator). No-op elsewhere.
+/// finish_frame calls it with Context::haptic().
+void play_haptic(Haptic h);
 
 /// Number of connected gamepads.
 int gamepad_count(const Platform* p);

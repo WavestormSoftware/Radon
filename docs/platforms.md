@@ -39,8 +39,33 @@ whenever the window is narrower than 760 px). With `Input::touch` set by the bac
 Drawers add the insets themselves. `set_toast_offset(ui, h)` keeps toasts above a bottom bar.
 
 Phone-style building blocks: `nav_bar` (bottom navigation), `drawer_begin` (navigation drawer and bottom
-sheet), `toast`, `segmented`, `chip`, `list_clipper_begin`. `examples/snippets/11_mobile_app.cpp` puts
-them together.
+sheet, both swipe-to-dismiss), `edge_swipe`, `pull_to_refresh`, `swipe_item`, `carousel_begin`,
+`wheel_picker`, `time_picker`, `number_pad`, `toast`, `segmented`, `chip`, `list_clipper_begin`.
+`examples/snippets/11_mobile_app.cpp` puts them together.
+
+### Multi-touch and gestures
+
+The backend fills `Input::touches` with every finger (the pointer's finger first); `pointer` keeps
+following the first finger, so every widget works with one finger as before. `ctx.gesture()` turns the
+fingers into `pinch` (scale change this frame), `rotate`, two-finger `pan`, a `swipe` direction on the
+frame a fast flick ends, and the pointer `velocity`. Two fingers never scroll a window.
+
+### Soft keyboard
+
+A focused field asks for a keyboard through `ctx.text_input_type()` (number pad, decimal, email, URL,
+password); the SDL backend passes it to `SDL_StartTextInputWithProperties`. When `Input::keyboard_inset`
+is non-zero, the focused field scrolls its window or child region so it sits above the keyboard, and its
+window gets that much extra scroll room. SDL does
+not report the keyboard's height: the backend uses 0 when the window shrank for the keyboard and 40% of
+the screen when it did not (iOS, Android `adjustPan`).
+
+### Haptics
+
+Widgets ask for feedback with `ctx.haptic()` (`Selection` for wheel detents and segment changes, `Light`
+for switches, chips and drops, `Medium` for long presses and a completed pull to refresh). `finish_frame`
+plays it: `View.performHapticFeedback` on Android (no permission needed; it follows the user's touch
+feedback setting) and `UIImpactFeedbackGenerator` / `UISelectionFeedbackGenerator` on iOS. Turn it off with
+`PlatformConfig::haptics = false`.
 
 ## Native features
 
@@ -112,3 +137,8 @@ momentum. Widget results never depend on animations. Two things do move while an
 | `ctx.wants_text_input()`, `ctx.text_input_rect()` | after `end_frame`: show the keyboard / place the IME |
 | `ctx.can_dismiss()` | on Android back: send `KeyEscape` if true, otherwise leave |
 | `ctx.animating()` | after `end_frame`: decide whether to sleep |
+| `Input::touches`, `Input::touch_count` | every frame: every finger down, the pointer's first |
+| `Input::keyboard_inset` | every frame: px covered by the soft keyboard |
+| `ctx.text_input_type()` | after `end_frame`: which soft keyboard to show |
+| `ctx.haptic()` | after `end_frame`: play it if not `None` |
+| `ctx.a11y_nodes()`, `Input::a11y_action` | forward to a screen reader, see [accessibility.md](accessibility.md) |

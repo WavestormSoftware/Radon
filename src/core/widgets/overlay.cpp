@@ -16,7 +16,7 @@ void toast(Context& ctx, std::string_view text, Tone tone, float seconds) {
         if (t.age > slot->age) slot = &t;  // all busy: replace the oldest
     }
     const size_t n = utf8_fit(text, sizeof(slot->text) - 1);
-    std::memcpy(slot->text, text.data(), n);
+    if (n) std::memcpy(slot->text, text.data(), n);
     slot->text[n] = 0;
     slot->tone = tone;
     slot->age = 0;
@@ -77,14 +77,50 @@ bool drawer_begin(Context& ctx, std::string_view id, Side side, float size) {
     const Rect sa = s.in.safe_area;
     const float rad =
         s.cfg.theme.window_radius;  // the rounded edge on the screen border is pushed off screen
+    const float extent = side == Side::Bottom ? std::fmin(size + sa.h, sc.y - sa.y)
+                                              : std::fmin(size + (side == Side::Left ? sa.x : sa.w), sc.x);
+
+    // Swipe toward the edge to dismiss: the panel follows the finger, a long or fast swipe closes it.
+    float scroll = 0;
+    for (int i = 0; i < s.cfg.max_windows; i++)
+        if (s.wins[i].used && s.wins[i].id == mid) scroll = s.wins[i].scroll;
+    const float dx = s.in.pointer.x - s.press_pos.x, dy = s.in.pointer.y - s.press_pos.y;
+    const float toward = side == Side::Bottom ? dy : (side == Side::Left ? -dx : dx);
+    const bool grab = s.active == hash_u32(mid, 93);  // the bottom sheet handle (mouse and touch)
+    if (s.in.pointer_down && s.sheet_lock == 0 && s.press_window == mid && s.in.touch && s.touch_moved &&
+        !s.active_captures) {
+        const bool along =
+            side == Side::Bottom ? std::fabs(dy) > std::fabs(dx) : std::fabs(dx) > std::fabs(dy);
+        s.sheet_lock = along && toward > 0 && (side != Side::Bottom || scroll <= 0.5f) ? 1 : 2;
+    }
+    if (grab) s.sheet_lock = 1;
+    const bool dragging = s.sheet_lock == 1 && s.in.pointer_down;
+    if (dragging) {
+        s.sheet_drag = std::fmax(0.0f, toward);
+        s.drag_used = true;
+    } else if (s.sheet_lock == 1 && s.in.pointer_released) {
+        const Vec2 v = s.gesture.velocity;
+        const float vt = side == Side::Bottom ? v.y : (side == Side::Left ? -v.x : v.x);
+        s.sheet_lock = 2;
+        if (s.sheet_drag > extent / 3 || vt > 500) {
+            s.modal_id = 0;
+            s.sheet_drag = 0;
+            haptic(s, Haptic::Light);
+            return false;
+        }
+    } else if (s.sheet_drag > 0) {  // spring back
+        s.sheet_drag *= s.cfg.animations ? std::exp(-s.dt * 14) : 0.0f;
+        if (s.sheet_drag < 0.5f) s.sheet_drag = 0;
+        s.animating = true;
+    }
+    const float off = s.sheet_drag;
+    const float shown = k * clamp01(1 - off / std::fmax(1.0f, extent));
     Rect r;
     if (side == Side::Bottom) {
-        const float h = std::fmin(size + sa.h, sc.y - sa.y);
-        r = {0, sc.y - h * k, sc.x, h + rad};
+        r = {0, sc.y - extent * k + off, sc.x, extent + rad};
     } else {
-        const float w = std::fmin(size + (side == Side::Left ? sa.x : sa.w), sc.x);
-        r = side == Side::Left ? Rect{-w * (1 - k) - rad, 0, w + rad, sc.y}
-                               : Rect{sc.x - w * k, 0, w + rad, sc.y};
+        r = side == Side::Left ? Rect{-extent * (1 - k) - rad - off, 0, extent + rad, sc.y}
+                               : Rect{sc.x - extent * k + off, 0, extent + rad, sc.y};
     }
     if (s.in.pointer_pressed && !r.contains(s.in.pointer) && s.popup_id == 0 &&
         s.frame > s.modal_open_frame) {
@@ -95,13 +131,21 @@ bool drawer_begin(Context& ctx, std::string_view id, Side side, float size) {
     s.dl.set_layer(kOverlayLayer);
     s.dl.break_command();
     s.dl.set_clip({-1e6f, -1e6f, 2e6f, 2e6f});
-    s.dl.rect({0, 0, sc.x, sc.y}, {0, 0, 0, (uint8_t)(150 * k)});
+    s.dl.rect({0, 0, sc.x, sc.y}, {0, 0, 0, (uint8_t)(150 * shown)});
     s.dl.set_layer(layer);
     s.dl.break_command();
     if (!begin_window_impl(ctx, mid, "", r, WindowScrollable, true)) return false;
     Layout& l = top_layout(s);  // keep content clear of the off-screen edge, notches and system bars
     if (side == Side::Bottom) {
-        l.body.h -= rad + sa.h;
+        const Theme& t = s.cfg.theme;
+        const Rect hr{r.x, r.y, r.w, 22};  // grab handle
+        const ID hid = hash_u32(mid, 93);
+        update_control(ctx, hid, hr, false, true);
+        if (s.hover == hid || s.active == hid) s.cursor = Cursor::ResizeNS;
+        s.dl.rect({r.x + r.w / 2 - 18, r.y + 8, 36, 4},
+                  lerp(t.border, t.text_muted, animate(s, hid, s.hover == hid || grab, false)), 2);
+        l.body.y += 12;
+        l.body.h -= rad + sa.h + 12;
     } else {
         const float lead = side == Side::Left ? rad + sa.x : 0;
         l.body.x += lead;

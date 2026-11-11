@@ -18,8 +18,13 @@ struct Config {
     int max_glyphs = 4096;  ///< glyph cache entries
     int max_anims = 256;    ///< hover/press blend slots, keyed by ID
     int atlas_size = 1024;  ///< glyph atlas, square
+    int undo_bytes = 8192;  ///< undo + redo history of the focused text box
+    int max_dock_nodes = 32;
+    int max_dock_panels = 32;
+    int max_a11y_nodes = 1024;
     float dpi_scale = 1.0f;
     bool animations = true;  ///< transitions; widget results never depend on them
+    bool a11y = false;       ///< record the accessibility tree each frame (Context::a11y_nodes)
     Theme theme = Theme::dark();
 };
 

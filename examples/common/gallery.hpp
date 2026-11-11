@@ -46,6 +46,18 @@ private:
     void panel_alerts(rd::Context&);
     void panel_overlays(rd::Context&);
     void panel_native(rd::Context&);
+    void panel_flow(rd::Context&);
+    void panel_charts(rd::Context&);
+    void panel_charts2(rd::Context&);
+    void panel_tree_table(rd::Context&);
+    void panel_pickers(rd::Context&);
+    void panel_pickers2(rd::Context&);
+    void panel_richtext(rd::Context&);
+    void panel_markdown(rd::Context&);
+    void panel_gestures(rd::Context&);
+    void panel_swipes(rd::Context&);
+    void panel_dnd(rd::Context&);
+    void docking(rd::Context&, rd::Rect area);
     void overlays(rd::Context&);
     void panel_theme(rd::Context&);
     void panel_theme_preview(rd::Context&);
@@ -54,6 +66,7 @@ private:
 
     Fonts fonts_;
     int page_ = 0;
+    bool compact_ = false;  // phone layout
     rd::TextureId checker_ = 0;
     rd::Rect cols_[3]{}, dash_[8]{};
 
@@ -104,6 +117,28 @@ private:
     char picked_[160] = "No file chosen";
     Runner* runner_ = nullptr;
 
+    // 0.3 pages
+    bool tags_[10]{true, false, true, false, false, true, false, false, true, false};
+    rd::TableColumn tcols_[3]{{"Name", 170, 80}, {"Size", 80, 50}, {"Kind", 0, 50}};
+    rd::TableSort tsort_{};
+    bool tree_open_[3]{true, false, true};
+    int tsel_ = -1;
+    int wheel_a_ = 3, wheel_b_ = 1, hour_ = 9, minute_ = 41, csearch_ = 4;
+    bool fruits_[6]{true, false, true, false, false, false};
+    char fruit_[32] = "", amount_[16] = "42";
+    rd::TextBuffer fruit_buf_{fruit_, sizeof fruit_, 0}, amount_buf_{amount_, sizeof amount_, 2};
+    bool refreshing_ = false;
+    float refresh_clock_ = 0;
+    int refreshes_ = 0;
+    int inbox_[6]{0, 1, 2, 3, 4, 5}, inbox_n_ = 6;
+    int order_[5]{0, 1, 2, 3, 4}, acc_open_ = 0;
+    int bucket_[6]{0, 0, 0, 1, 1, 0};
+    char gesture_log_[96] = "Pinch or swipe with two fingers on a touch screen";
+    float zoom2_ = 1;
+    rd::Vec2 pan_{};
+    bool dock_console_ = true, dock_inspector_ = true, dock_assets_ = true, dock_stats_ = true;
+    char console_[64] = "";
+    rd::TextBuffer console_buf_{console_, sizeof console_, 0};
     rd::Color brush_color_{0, 0, 0, 255};
     char brush_search_[32] = "";
     rd::TextBuffer brush_search_buf_{brush_search_, sizeof brush_search_, 0};
