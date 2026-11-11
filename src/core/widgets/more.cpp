@@ -276,6 +276,9 @@ bool date_picker(Context& ctx, std::string_view label, int& year, int& month, in
     return changed;
 }
 
+// Page buttons hash their page index; these salts are out of reach of any int page count.
+constexpr uint32_t kPrevSalt = 0xFFFFFFF0u, kNextSalt = 0xFFFFFFF1u;
+
 bool pagination(Context& ctx, std::string_view label, int& page, int n) {
     State& s = state(ctx);
     const Theme& t = s.cfg.theme;
@@ -306,9 +309,9 @@ bool pagination(Context& ctx, std::string_view label, int& page, int n) {
     };
     Rect c;
     int np = page;
-    Response rs = cell(1000, c);
+    Response rs = cell(kPrevSalt, c);
     if (activated(s, rs) && page > 0) np = page - 1;
-    draw_frame(s, c, control_color(s, hash_u32(base, 1000), rs), rs.focused);
+    draw_frame(s, c, control_color(s, hash_u32(base, kPrevSalt), rs), rs.focused);
     draw_icon(ctx, Icon::ChevronLeft, c, page > 0 ? t.text : t.text_muted);
     for (int i = 0; i < k; i++) {
         if (items[i] < 0) {
@@ -326,9 +329,9 @@ bool pagination(Context& ctx, std::string_view label, int& page, int n) {
         std::snprintf(num, sizeof num, "%d", items[i] + 1);
         draw_text_fit(s, c, num, on ? t.accent_text : t.text, true);
     }
-    rs = cell(1001, c);
+    rs = cell(kNextSalt, c);
     if (activated(s, rs) && page < n - 1) np = page + 1;
-    draw_frame(s, c, control_color(s, hash_u32(base, 1001), rs), rs.focused);
+    draw_frame(s, c, control_color(s, hash_u32(base, kNextSalt), rs), rs.focused);
     draw_icon(ctx, Icon::ChevronRight, c, page < n - 1 ? t.text : t.text_muted);
     page = np;
     return page != old;

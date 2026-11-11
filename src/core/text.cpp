@@ -226,8 +226,7 @@ int wrap_with(std::string_view text, float max_w, AdvanceFn adv, void* user, Tex
     const char* p = b;
     int line_start = 0;
     float w = 0;
-    int last_space = -1;   // byte index of the last space on this line
-    float w_at_space = 0;  // width before that space
+    int last_space = -1;  // byte index of the last space on this line
     while (p < e) {
         uint32_t cp;
         int len = utf8_decode(p, e, cp);
@@ -261,12 +260,10 @@ int wrap_with(std::string_view text, float max_w, AdvanceFn adv, void* user, Tex
         }
         if (cp == ' ') {
             last_space = at;
-            w_at_space = w;
         }
         w += a;
         p += len;
     }
-    (void)w_at_space;
     emit(line_start, (int)text.size() - line_start);
     return n < max_lines ? n : max_lines;
 }

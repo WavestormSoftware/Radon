@@ -163,3 +163,15 @@ TEST_CASE("atlas overflow: never crashes, warns, recovers next frame") {
     CHECK(h.ctx.warning());
     h.frame(ui);  // atlas was cleared; frame must still complete
 }
+
+TEST_CASE("utf8_fit and utf8_trim_tail never leave half a code point") {
+    using namespace rd::detail;
+    const std::string_view euro = "ab\xE2\x82\xAC";  // a, b, then a 3-byte euro sign
+    CHECK(utf8_fit(euro, 10) == 5);
+    CHECK(utf8_fit(euro, 4) == 2);  // the cap lands inside the euro sign
+    CHECK(utf8_fit(euro, 2) == 2);
+    CHECK(utf8_trim_tail(euro.data(), 5) == 5);
+    CHECK(utf8_trim_tail(euro.data(), 4) == 2);
+    CHECK(utf8_trim_tail(euro.data(), 3) == 2);
+    CHECK(utf8_trim_tail("abc", 3) == 3);
+}

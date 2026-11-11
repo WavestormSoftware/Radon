@@ -264,6 +264,21 @@ bool popup_begin_id(Context& ctx, ID id, float min_w);
 Response textbox_impl(Context& ctx, ID id, Rect r, TextBuffer& buf, const char* hint, int mode, float inset_l,
                       float inset_r);
 enum { TextSingle = 0, TextPassword = 1, TextMulti = 2 };
+/// Largest length <= `cap` that does not cut a UTF-8 code point in half.
+inline size_t utf8_fit(std::string_view t, size_t cap) {
+    size_t n = t.size() < cap ? t.size() : cap;
+    while (n > 0 && n < t.size() && (static_cast<unsigned char>(t[n]) & 0xC0) == 0x80) n--;
+    return n;
+}
+/// Drops an incomplete code point at the end of `p[0..n)` (text that was cut at a byte limit).
+inline size_t utf8_trim_tail(const char* p, size_t n) {
+    size_t i = n;
+    while (i > 0 && n - i < 3 && (static_cast<unsigned char>(p[i - 1]) & 0xC0) == 0x80) i--;
+    if (i == 0) return n;
+    const unsigned char c = static_cast<unsigned char>(p[i - 1]);
+    const size_t need = c >= 0xF0 ? 4 : c >= 0xE0 ? 3 : c >= 0xC0 ? 2 : 1;
+    return need > n - (i - 1) ? i - 1 : n;
+}
 inline FontHandle small_font(const Theme& t) {
     return t.font_small >= 0 ? t.font_small : t.font_body;
 }

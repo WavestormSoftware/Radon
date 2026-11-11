@@ -10,6 +10,9 @@ cmake --build --preset linux-gcc-debug
 ctest --preset linux-gcc-debug
 ```
 
+The text tests need a TrueType font. They look for `$RD_TEST_FONT`, `examples/assets/font.ttf`, then common
+system fonts. Set `RD_REQUIRE_TEST_FONT=1` to make a missing font an error instead of a skip (CI does).
+
 Before opening a pull request, run what CI runs:
 
 ```sh

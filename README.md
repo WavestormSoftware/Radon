@@ -70,6 +70,7 @@ void frame(const rd::Input& input, float dt) {
 ```cmake
 include(FetchContent)
 FetchContent_Declare(radon GIT_REPOSITORY https://github.com/WavestormSoftware/Radon.git GIT_TAG main)
+set(RD_BACKEND_SDL3_GL ON)   # optional: also fetch SDL3 and build the backend; leave off for the core alone
 FetchContent_MakeAvailable(radon)
 target_link_libraries(app PRIVATE radon::radon radon::sdl3_gl)   # core + the SDL3/OpenGL backend
 ```

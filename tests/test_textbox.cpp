@@ -121,6 +121,14 @@ TEST_CASE("capacity is respected and no code point is split") {
     CHECK(t.buf.length == 15);
 }
 
+TEST_CASE("paste cut at the clipboard limit never leaves half a code point") {
+    Tb t;
+    t.focus();
+    t.clip.text = "ab\xE2\x82";  // a euro sign cut after two of its three bytes
+    t.key(KeyV, false, true);
+    CHECK(t.text() == "ab");
+}
+
 TEST_CASE("UTF-8: cursor and delete move by whole code points") {
     Tb t;
     t.focus();

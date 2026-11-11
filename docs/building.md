@@ -105,13 +105,14 @@ Device builds need your Apple developer team in the generated Xcode project.
 |---|---|---|
 | `RD_BUILD_EXAMPLES` | ON on desktop | the gallery and examples |
 | `RD_BUILD_TESTS` | ON on desktop | doctest suite + allocation test |
-| `RD_BACKEND_SDL3_GL` | ON | the SDL3/GL backend |
+| `RD_BACKEND_SDL3_GL` | ON when top-level, OFF as a subproject | the SDL3/GL backend (fetches SDL3) |
 | `RD_WARNINGS_AS_ERRORS` | OFF (ON in presets) | `-Werror` / `/WX` |
 | `RD_INSTALL` | ON when top-level on desktop | install rules for the core and `find_package(Radon)` |
 
 ## Using Radon from your project
 
 ```cmake
+set(RD_BACKEND_SDL3_GL ON)                                 # only if you want the SDL3 backend (fetches SDL3)
 add_subdirectory(Radon)                                    # or FetchContent_Declare(...)
 target_link_libraries(app PRIVATE radon::radon radon::sdl3_gl)
 ```

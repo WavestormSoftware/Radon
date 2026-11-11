@@ -183,7 +183,11 @@ Renderer* create_renderer(const RendererConfig& cfg) {
                                    : "#version 330 core\n";
     GLuint vs = compile(r.get(), GL_VERTEX_SHADER, header + kVertexBody);
     GLuint fs = compile(r.get(), GL_FRAGMENT_SHADER, header + kFragmentBody);
-    if (!vs || !fs) return nullptr;
+    if (!vs || !fs) {
+        if (vs) r->DeleteShader(vs);
+        if (fs) r->DeleteShader(fs);
+        return nullptr;
+    }
     r->program = r->CreateProgram();
     r->AttachShader(r->program, vs);
     r->AttachShader(r->program, fs);
@@ -196,6 +200,7 @@ Renderer* create_renderer(const RendererConfig& cfg) {
         char log[2048];
         r->GetProgramInfoLog(r->program, sizeof log, nullptr, log);
         std::fprintf(stderr, "radon: program link failed:\n%s\n", log);
+        r->DeleteProgram(r->program);
         return nullptr;
     }
     r->u_scale = r->GetUniformLocation(r->program, "u_scale");

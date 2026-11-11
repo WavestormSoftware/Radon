@@ -30,6 +30,7 @@ fills once per frame. The `radon::sdl3_gl` backend does that for you.
 With CMake:
 
 ```cmake
+set(RD_BACKEND_SDL3_GL ON)                   # only for radon::sdl3_gl; the core alone needs no SDL
 add_subdirectory(Radon)                      # or FetchContent
 target_link_libraries(myapp PRIVATE radon::radon)        # the core only
 target_link_libraries(myapp PRIVATE radon::sdl3_gl)      # core + SDL3 window/input/renderer

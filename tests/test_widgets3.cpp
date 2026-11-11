@@ -248,6 +248,19 @@ TEST_CASE("pagination steps and clamps") {
     CHECK(page == 19);
 }
 
+TEST_CASE("pagination: page button 1001 does not share focus with next") {
+    Ui u;
+    int page = 1002;
+    u.body = [&] { pagination(u.h.ctx, "p", page, 3000); };
+    u.frame();
+    // cells: prev, 1, "...", 1001, 1002, 1003, "...", 3000, next; each 28 px wide plus a 4 px gap
+    u.click(8 + 3 * 32 + 14, u.row(0));  // the button for page index 1001
+    CHECK(page == 1001);
+    u.h.key(KeyEnter);  // the focused page button activates; Next must not fire with it
+    u.frame();
+    CHECK(page == 1001);
+}
+
 TEST_CASE("table header sorts and rows select") {
     Ui u;
     int sort = 0, selected = -1;

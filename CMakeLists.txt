@@ -6,6 +6,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# The backend is on by default only when Radon is the top-level project (any platform), so a project that
+# adds just the dependency-free core does not download and build SDL3.
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+    set(_rd_top_level ON)
+else()
+    set(_rd_top_level OFF)
+endif()
+
 # Demos and tests are on by default only when Radon is the top-level project on a desktop.
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR ANDROID OR IOS OR NOT CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     set(_rd_desktop OFF)
@@ -14,7 +22,7 @@ else()
 endif()
 option(RD_BUILD_EXAMPLES "Build the demos" ${_rd_desktop})
 option(RD_BUILD_TESTS "Build the tests" ${_rd_desktop})
-option(RD_BACKEND_SDL3_GL "Build the SDL3 + OpenGL ES 3 backend" ON)
+option(RD_BACKEND_SDL3_GL "Build the SDL3 + OpenGL ES 3 backend (fetches SDL3)" ${_rd_top_level})
 option(RD_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 option(RD_INSTALL "Install the core library and a CMake package (find_package(Radon))" ${_rd_desktop})
 
@@ -63,9 +71,6 @@ if(RD_BACKEND_SDL3_GL)
     add_library(radon::sdl3_gl ALIAS radon_sdl3_gl)
     target_include_directories(radon_sdl3_gl PUBLIC backends/sdl3_gl)
     target_link_libraries(radon_sdl3_gl PUBLIC radon SDL3::SDL3)
-    if(NOT (CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR ANDROID OR IOS OR WIN32 OR APPLE))
-        find_package(OpenGL QUIET)
-    endif()
     rd_warnings(radon_sdl3_gl)
 endif()
 

@@ -15,7 +15,7 @@ void toast(Context& ctx, std::string_view text, Tone tone, float seconds) {
         }
         if (t.age > slot->age) slot = &t;  // all busy: replace the oldest
     }
-    const size_t n = text.size() < sizeof(slot->text) - 1 ? text.size() : sizeof(slot->text) - 1;
+    const size_t n = utf8_fit(text, sizeof(slot->text) - 1);
     std::memcpy(slot->text, text.data(), n);
     slot->text[n] = 0;
     slot->tone = tone;

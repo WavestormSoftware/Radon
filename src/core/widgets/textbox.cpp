@@ -253,7 +253,7 @@ Response textbox_impl(Context& ctx, ID id, Rect r, TextBuffer& buf, const char* 
                             if (((unsigned char)tmp[i] >= 0x20 && tmp[i] != 0x7f) ||
                                 (multi && tmp[i] == '\n'))
                                 tmp[m++] = tmp[i];
-                        ep.insert(tmp, m);
+                        ep.insert(tmp, (int)utf8_trim_tail(tmp, (size_t)m));
                     }
                     break;
                 default:

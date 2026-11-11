@@ -37,6 +37,10 @@ inline const std::vector<uint8_t>& font_bytes() {
             bytes.clear();
         }
     }
+    if (std::getenv("RD_REQUIRE_TEST_FONT")) {  // CI sets this so text tests cannot be skipped silently
+        std::fprintf(stderr, "no test font found; set RD_TEST_FONT to a .ttf file\n");
+        std::abort();
+    }
     return bytes;
 }
 

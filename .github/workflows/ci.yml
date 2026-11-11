@@ -1,6 +1,12 @@
 name: ci
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
+env:
+  RD_REQUIRE_TEST_FONT: "1"  # the text tests must run, not skip, on every platform
+
 jobs:
   linux:
     runs-on: ubuntu-latest
@@ -9,7 +15,7 @@ jobs:
         preset: [linux-gcc-debug, linux-clang-release]
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y ninja-build clang libgl1-mesa-dev libx11-dev libxext-dev libwayland-dev libxkbcommon-dev libasound2-dev
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build clang libgl1-mesa-dev libx11-dev libxext-dev libwayland-dev libxkbcommon-dev libasound2-dev fonts-dejavu-core
       - run: scripts/check_core_includes.sh
       - run: cmake --preset ${{ matrix.preset }}
       - run: cmake --build --preset ${{ matrix.preset }}

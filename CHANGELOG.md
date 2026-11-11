@@ -28,6 +28,10 @@ Radon follows [semantic versioning](https://semver.org); before 1.0, minor versi
 
 ### Changed
 
+- `RD_BACKEND_SDL3_GL` now defaults to ON only for a top-level build. Adding Radon with `add_subdirectory`
+  or FetchContent builds the dependency-free core alone; set the option to ON to get the backend (and SDL3).
+- CI fails, instead of skipping, when no test font is found (`RD_REQUIRE_TEST_FONT=1`) and runs with
+  read-only repository permissions.
 - `rd::sdl3::dpi_scale()` now returns the OS display scale instead of the pixel density. On Android and
   on scaled Windows/Linux desktops the UI was drawn at 1:1 device pixels before and came out tiny;
   pointer positions and the safe area are converted to logical pixels to match.
@@ -37,6 +41,11 @@ Radon follows [semantic versioning](https://semver.org); before 1.0, minor versi
 
 ### Fixed
 
+- `pagination`: the page buttons for pages 1001 and 1002 shared an ID with Prev and Next, so they shared
+  focus and hover (Enter on one also fired the other). Prev and Next now use IDs no page can reach.
+- Tooltips, toasts and pasted text cut at a byte limit could end in half a UTF-8 code point. Long IME
+  commits in the SDL3 backend are now pushed in whole code points.
+- The SDL3 renderer no longer leaks shader and program objects when startup fails.
 - The backend tested `defined(TARGET_OS_IPHONE)`, which is also true on macOS, so a Mac build would
   have asked for a fullscreen GLES window.
 - A child region and its window both scrolled when dragged with a finger.

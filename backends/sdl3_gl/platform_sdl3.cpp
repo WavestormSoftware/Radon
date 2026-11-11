@@ -206,9 +206,19 @@ void handle_event(Platform* p, Input& in, const SDL_Event& e, float k, int ww, i
             in.keys.push({key, (m & SDL_KMOD_SHIFT) != 0, ctrl, (m & SDL_KMOD_ALT) != 0});
             break;
         }
-        case SDL_EVENT_TEXT_INPUT:
-            for (const char* c = e.text.text; *c; c++) in.text.push(*c);
+        case SDL_EVENT_TEXT_INPUT: {
+            // Push whole code points only: a commit longer than the queue must not end mid-character.
+            const char* c = e.text.text;
+            const char* end = c + SDL_strlen(c);
+            while (c < end) {
+                uint32_t cp;
+                const int len = utf8_decode(c, end, cp);
+                if (in.text.count + len > (int)sizeof in.text.items) break;
+                for (int i = 0; i < len; i++) in.text.push(c[i]);
+                c += len;
+            }
             break;
+        }
         default:
             break;
     }
