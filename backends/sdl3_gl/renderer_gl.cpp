@@ -275,6 +275,12 @@ Renderer* create_renderer(const RendererConfig& cfg) {
     r->VertexAttribPointer(3, 2, GL_FLOAT, 0, stride, (const void*)offsetof(DrawVertex, local));
     r->EnableVertexAttribArray(4);
     r->VertexAttribPointer(4, 4, GL_FLOAT, 0, stride, (const void*)offsetof(DrawVertex, shape));
+    r->EnableVertexAttribArray(5);
+    r->VertexAttribPointer(5, 4, GL_UNSIGNED_BYTE, 1, stride, (const void*)offsetof(DrawVertex, color2));
+    r->EnableVertexAttribArray(6);
+    r->VertexAttribPointer(6, 4, GL_FLOAT, 0, stride, (const void*)offsetof(DrawVertex, radii));
+    r->EnableVertexAttribArray(7);
+    r->VertexAttribPointer(7, 4, GL_FLOAT, 0, stride, (const void*)offsetof(DrawVertex, grad));
     r->GenTextures(1, &r->atlas_tex);
     return r.release();
 }

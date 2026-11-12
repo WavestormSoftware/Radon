@@ -76,10 +76,11 @@ shape center. `shape.z` selects how to shade:
 
 | `shape.z` | Meaning |
 |---|---|
-| `>= 0` | Signed-distance rounded rectangle. `border > 0` means "draw only a ring of that width". `uv.x > 0` means a soft shadow with that blur. |
-| `-1` (`ShapeGlyph`) | Text: `texture(atlas, uv).r` is coverage, multiplied into `color.a`. |
+| `>= 0` | Signed-distance rounded rectangle with per-corner radii in `radii` (tl, tr, br, bl). If `grad.z` is 1 (linear) or 2 (radial) the color is `mix(color, color2, t)`, see `shaders.cpp`. `border > 0` means "draw only a ring of that width". `uv.x > 0` means a soft shadow with that blur. |
+| `-1` (`ShapeGlyph`) | Text: `texture(atlas, uv).r` is a signed distance (0.5 = the glyph edge); smooth it over `fwidth` and multiply into `color.a`. |
 | `-2` (`ShapeImage`) | `texture(tex, uv) * color`. |
 | `-3` (`ShapeSolid`) | `color`, interpolated across the triangle (lines, triangles, gradients). |
+| `-4` (`ShapeLine`) | Anti-aliased round-capped line: `local` is (along, across) the segment, `shape.xy` is (half length, half width). |
 
 The reference fragment shader is `backends/sdl3_gl/shaders.cpp` (about 25 lines). Use premultiplied or
 straight alpha blending with `SRC_ALPHA, ONE_MINUS_SRC_ALPHA` as the GL backend does.

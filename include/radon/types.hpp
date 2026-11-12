@@ -24,6 +24,63 @@ struct Color {
     uint8_t r = 0, g = 0, b = 0, a = 255;
 };
 
+/// Per-corner radii (top-left, top-right, bottom-right, bottom-left). A single float converts to all four.
+struct Corners {
+    float tl = 0, tr = 0, br = 0, bl = 0;
+    Corners() = default;
+    Corners(float r) : tl(r), tr(r), br(r), bl(r) {}
+    Corners(float tl_, float tr_, float br_, float bl_) : tl(tl_), tr(tr_), br(br_), bl(bl_) {}
+    static Corners top(float r) { return {r, r, 0, 0}; }
+    static Corners bottom(float r) { return {0, 0, r, r}; }
+    float max() const {
+        float m = tl;
+        for (float v : {tr, br, bl}) m = v > m ? v : m;
+        return m;
+    }
+};
+
+/// A fill: a flat color or a two-color gradient. A `Color` converts to a solid Paint, so anywhere a
+/// Paint is expected you can pass a plain color.
+struct Paint {
+    enum Kind : uint8_t { Solid, Linear, Radial };
+    Kind kind = Solid;
+    Color a{0, 0, 0, 0}, b{0, 0, 0, 0};  ///< solid: a. gradients: a at the start / center, b at the end / edge
+    float angle = 90;                     ///< linear: degrees, 0 = left to right, 90 = top to bottom
+    Vec2 center{0.5f, 0.5f};              ///< radial: center as a fraction of the shape
+    float radius = 0.5f;                  ///< radial: radius as a fraction of the shape's larger side
+    Paint() = default;
+    Paint(Color c) : a(c), b(c) {}
+    static Paint linear(Color from, Color to, float angle_deg = 90) {
+        Paint p;
+        p.kind = Linear, p.a = from, p.b = to, p.angle = angle_deg;
+        return p;
+    }
+    static Paint radial(Color inner, Color outer, Vec2 center = {0.5f, 0.5f}, float radius = 0.5f) {
+        Paint p;
+        p.kind = Radial, p.a = inner, p.b = outer, p.center = center, p.radius = radius;
+        return p;
+    }
+    /// True for the default Paint; themes use it to mean "fall back to the plain color".
+    bool empty() const { return kind == Solid && a.a == 0; }
+};
+
+struct Shadow {
+    Color color{0, 0, 0, 0};  ///< alpha 0 = no shadow
+    float blur = 0;
+    Vec2 offset;
+    float spread = 0;  ///< grows the shadow shape on every side
+};
+
+/// Everything needed to draw a modern box in one call: see `rd::box`.
+struct Style {
+    Paint fill;
+    Paint border_paint;
+    float border = 0;  ///< border width, 0 = none
+    Corners radius;
+    Shadow shadow;
+    float opacity = 1;
+};
+
 enum Key : int {
     KeyNone = 0,
     KeyEnter,

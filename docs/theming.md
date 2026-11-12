@@ -93,3 +93,21 @@ t.cell_height = 24;            // denser rows
 t.padding = 6;
 t.background = {16, 16, 20, 255};
 ```
+
+## Gradients, rounded corners and glass
+
+`Paint` is a solid color or a two-color gradient (a `Color` converts to one). `Style` bundles fill, border, per-corner
+radii, shadow and opacity, and `rd::box` draws it in one call:
+
+```cpp
+rd::Style card;
+card.fill = rd::Paint::linear({40, 30, 90, 255}, {20, 90, 130, 255}, 35);  // angle in degrees
+card.radius = rd::Corners(18, 18, 4, 4);
+card.border = 1;
+card.border_paint = rd::Color{255, 255, 255, 40};
+card.shadow = {{0, 0, 0, 120}, 28, {0, 10}};
+rd::box(ui, rect, card);
+```
+
+Themes take optional fills: `accent_paint` (primary buttons, progress), `window_paint`, `card_paint`.
+`Theme::glass(base)` turns any theme into translucent, rounded, gradient-accented glass. Draw a colorful `box` behind it.

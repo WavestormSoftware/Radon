@@ -88,7 +88,7 @@ Response progress_bar(Context& ctx, float fraction) {
         pop_clip(s);
         if (s.cfg.animations) s.animating = true;
     } else {
-        s.dl.rect({bar.x, bar.y, bar.w * fraction, bar.h}, t.accent, bar.h / 2);
+        s.dl.fill({bar.x, bar.y, bar.w * fraction, bar.h}, pick(t.accent_paint, t.accent), bar.h / 2);
     }
     s.dl.rect(bar, t.border, bar.h / 2, t.border_width);
     if (s.cfg.a11y) {
@@ -159,6 +159,9 @@ void canvas_end(Context& ctx) {
     pop_clip(state(ctx));
 }
 
+void Canvas::box(Rect r, const Style& st) {
+    state(*ctx_).dl.box({rect.x + r.x, rect.y + r.y, r.w, r.h}, st);
+}
 void Canvas::fill_rect(Rect r, Color c, float radius) {
     state(*ctx_).dl.rect({rect.x + r.x, rect.y + r.y, r.w, r.h}, c, radius);
 }
@@ -200,4 +203,8 @@ bool collapsing_header(Context& ctx, std::string_view label, bool& open) {
     return open;
 }
 
+}  // namespace rd
+
+namespace rd {
+void box(Context& ctx, const Rect& r, const Style& st) { detail::state(ctx).dl.box(r, st); }
 }  // namespace rd

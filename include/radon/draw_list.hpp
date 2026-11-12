@@ -13,6 +13,9 @@ struct DrawVertex {
     Color color;
     Vec2 local;  ///< position relative to the shape center
     Vec4 shape;
+    Color color2{};  ///< gradient end color
+    Vec4 radii;      ///< per-corner radii (tl, tr, br, bl) for rect shapes
+    Vec4 grad;       ///< gradient: z = 0 none, 1 linear (xy = direction / extent), 2 radial (xy = center, w = 1 / radius)
 };
 
 /// ShapeLine (-4): anti-aliased capsule; `local` = (along, across) the segment, shape.xy = (half length, half width).
@@ -50,6 +53,10 @@ public:
     /// Rounded rectangle. border > 0 draws only a ring of that width.
     void rect(const Rect& r, Color c, float radius = 0, float border = 0);
     void shadow(const Rect& r, Color c, float radius, float blur, Vec2 offset);
+    /// Rounded rectangle with a Paint fill (solid or gradient), per-corner radii and an optional ring.
+    void fill(const Rect& r, const Paint& p, const Corners& radius = {}, float border = 0);
+    /// A complete modern box: shadow, fill, border, corner radii and opacity from one Style.
+    void box(const Rect& r, const Style& st);
     void glyph(const Rect& quad, const Rect& uv, Color c);
     void image(TextureId tex, const Rect& quad, const Rect& uv, Color tint);
     /// Axis-aligned quad with a color per corner (top-left, top-right, bottom-right, bottom-left).
@@ -59,8 +66,9 @@ public:
 
 private:
     bool begin(TextureId tex, int nverts, int nidx);
-    void quad(TextureId tex, const Rect& pos, Vec2 uv0, Vec2 uv1, Color c, Vec2 center, Vec4 shape);
-    void rect_shape(const Rect& r, Color c, float radius, float border, float margin, float blur,
+    void quad(TextureId tex, const Rect& pos, Vec2 uv0, Vec2 uv1, Color c, Vec2 center, Vec4 shape,
+              Color c2 = {}, Vec4 radii = {}, Vec4 grad = {});
+    void rect_shape(const Rect& r, const Paint& p, const Corners& radius, float border, float margin, float blur,
                     Vec2 center_offset);
 
     std::unique_ptr<DrawVertex[]> verts_;

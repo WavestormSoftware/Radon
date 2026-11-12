@@ -52,6 +52,11 @@ struct ViewportResponse : Response {
 /// started inside keeps reporting `local` and `down` after the pointer leaves. `flip_y` for GL render
 /// targets.
 ViewportResponse viewport(Context& ctx, TextureId tex, Vec2 size, bool flip_y = false);
+/// Draws a modern box at `r` in one call: drop shadow, solid or gradient fill, border, per-corner radii and opacity.
+///   rd::Style st; st.fill = rd::Paint::linear(a, b, 90); st.radius = 14; st.shadow = {black, 24, {0, 8}};
+///   rd::box(ui, r, st);
+void box(Context& ctx, const Rect& r, const Style& st);
+
 /// Immediate-mode 2D drawing area. Coordinates are relative to the canvas top-left and everything is
 /// clipped to it. Pair `canvas_begin` with `canvas_end`. Shapes are drawn in call order.
 class Canvas {
@@ -61,6 +66,8 @@ public:
     Vec2 local;         ///< pointer relative to the canvas top-left
     float pinch = 1;    ///< two-finger zoom factor this frame, while the fingers are over the canvas
     Vec2 pan2;          ///< two-finger pan this frame
+    /// A shadowed, bordered, gradient-filled box; see `rd::box`. Coordinates are canvas-relative.
+    void box(Rect r, const Style& st);
     void fill_rect(Rect r, Color c, float radius = 0);
     void stroke_rect(Rect r, Color c, float thickness = 1, float radius = 0);
     void circle(Vec2 center, float radius, Color c);

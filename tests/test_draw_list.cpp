@@ -80,3 +80,39 @@ TEST_CASE("windows sort by z-order, popups and tooltips above") {
     REQUIRE(dl.command_count() >= 2);
     for (int i = 1; i < dl.command_count(); i++) CHECK(dl.commands()[i - 1].layer <= dl.commands()[i].layer);
 }
+
+TEST_CASE("box: gradient fill, per-corner radii and shadow share one command") {
+    DrawList dl(16, 64, 96);
+    Style st;
+    st.fill = Paint::linear({255, 0, 0, 255}, {0, 0, 255, 255}, 90);
+    st.radius = Corners::top(8);
+    st.shadow = {{0, 0, 0, 100}, 12, {0, 4}, 0};
+    st.border = 1;
+    st.border_paint = Color{255, 255, 255, 80};
+    dl.box({0, 0, 100, 40}, st);
+    CHECK(dl.command_count() == 1);
+    CHECK(dl.vertex_count() == 12);  // shadow + fill + border
+    const DrawVertex& v = dl.vertices()[4];  // the fill quad
+    CHECK(v.grad.z == 1);
+    CHECK(v.radii.x == 8);
+    CHECK(v.radii.z == 0);
+    CHECK(v.color2.b == 255);
+}
+
+TEST_CASE("box: opacity multiplies every layer and is restored afterwards") {
+    DrawList dl(16, 64, 96);
+    Style st;
+    st.fill = Color{10, 20, 30, 200};
+    st.opacity = 0.5f;
+    dl.box({0, 0, 10, 10}, st);
+    CHECK(dl.vertices()[0].color.a == 100);
+    CHECK(dl.alpha() == 1.0f);
+}
+
+TEST_CASE("line is a capsule quad that fits its segment") {
+    DrawList dl(16, 64, 96);
+    dl.line({0, 0}, {10, 0}, {1, 2, 3, 255}, 2);
+    CHECK(dl.vertex_count() == 4);
+    CHECK(dl.vertices()[0].shape.z == ShapeLine);
+    CHECK(dl.vertices()[0].shape.x == 5);  // half length
+}

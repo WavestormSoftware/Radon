@@ -10,16 +10,25 @@ layout(location = 1) in vec2 a_uv;
 layout(location = 2) in vec4 a_color;
 layout(location = 3) in vec2 a_local;
 layout(location = 4) in vec4 a_shape;
+layout(location = 5) in vec4 a_color2;
+layout(location = 6) in vec4 a_radii;
+layout(location = 7) in vec4 a_grad;
 uniform vec2 u_scale;
 out vec2 v_uv;
 out vec4 v_color;
 out vec2 v_local;
 out vec4 v_shape;
+out vec4 v_color2;
+out vec4 v_radii;
+out vec4 v_grad;
 void main() {
     v_uv = a_uv;
     v_color = a_color;
     v_local = a_local;
     v_shape = a_shape;
+    v_color2 = a_color2;
+    v_radii = a_radii;
+    v_grad = a_grad;
     gl_Position = vec4(a_pos.x * u_scale.x - 1.0, 1.0 - a_pos.y * u_scale.y, 0.0, 1.0);
 }
 )";
@@ -32,9 +41,14 @@ in vec2 v_uv;
 in vec4 v_color;
 in vec2 v_local;
 in vec4 v_shape;
+in vec4 v_color2;
+in vec4 v_radii;
+in vec4 v_grad;
 out vec4 o_color;
 
-float sd_box(vec2 p, vec2 half_size, float r) {
+// r = (top-left, top-right, bottom-right, bottom-left)
+float sd_box(vec2 p, vec2 half_size, vec4 radii) {
+    float r = p.x < 0.0 ? (p.y < 0.0 ? radii.x : radii.w) : (p.y < 0.0 ? radii.y : radii.z);
     vec2 q = abs(p) - half_size + r;
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }
@@ -56,7 +70,7 @@ void main() {
         o_color = vec4(v_color.rgb, v_color.a * smoothstep(0.5 - w, 0.5 + w, sd));
         return;
     }
-    float d = sd_box(v_local, v_shape.xy, v_shape.z);
+    float d = sd_box(v_local, v_shape.xy, v_radii);
     float blur = v_uv.x;
     float a;
     if (blur > 0.0) {
@@ -66,7 +80,13 @@ void main() {
         a = clamp(0.5 - d / aa, 0.0, 1.0);
         if (v_shape.w > 0.0) a -= clamp(0.5 - (d + v_shape.w) / aa, 0.0, 1.0);
     }
-    o_color = vec4(v_color.rgb, v_color.a * a);
+    vec4 col = v_color;
+    if (v_grad.z > 0.5) {  // 1 = linear, 2 = radial; dithered so slow gradients do not band
+        float t = v_grad.z < 1.5 ? dot(v_local, v_grad.xy) + 0.5 : length(v_local - v_grad.xy) * v_grad.w;
+        col = mix(v_color, v_color2, clamp(t, 0.0, 1.0));
+        col.rgb += (fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5) / 255.0;
+    }
+    o_color = vec4(col.rgb, col.a * a);
 }
 )";
 

@@ -141,7 +141,7 @@ bool begin_window_impl(Context& ctx, ID id, std::string_view title, Rect& rect, 
 
     const Rect r = rect;
     if ((flags & WindowBorder) && t.shadows) s.dl.shadow(r, t.shadow, rad, t.shadow_blur, {0, 8});
-    s.dl.rect(r, t.surface, rad);
+    s.dl.fill(r, pick(t.window_paint, t.surface), rad);
     if (titlebar) {
         s.dl.rect({r.x, r.y, r.w, th}, t.surface_hover, rad);
         s.dl.rect({r.x, r.y + th / 2, r.w, th / 2}, t.surface_hover, 0);

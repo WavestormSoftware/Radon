@@ -430,6 +430,14 @@ inline Color tone_color(const Theme& t, Tone tone) {
 namespace rd::detail {
 
 /// Fill color for a pressable control, blended by the hover/press animation.
+/// A theme Paint, or `fallback` when the theme left it empty.
+inline Paint pick(const Paint& p, Color fallback) { return p.empty() ? Paint(fallback) : p; }
+inline Paint lighten(Paint p, float k) {
+    auto l = [k](Color c) { return Color{(uint8_t)(c.r + (255 - c.r) * k), (uint8_t)(c.g + (255 - c.g) * k), (uint8_t)(c.b + (255 - c.b) * k), c.a}; };
+    p.a = l(p.a), p.b = l(p.b);
+    return p;
+}
+
 inline Color control_color(State& s, ID id, const Response& rs) {
     float press = 0;
     float h = animate(s, id, rs.hovered, s.active == id, &press);
