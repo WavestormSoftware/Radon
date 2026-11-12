@@ -147,6 +147,7 @@ struct Anim {
     float hover = 0, press = 0;  // anim_to keeps its value in `hover`
     uint32_t last_frame = 0;
     int key = 0;  // transition_begin: the key the content was last shown for
+    float vel = 0, from = 0, t = 0;  // spring velocity; tween start value and elapsed time (`hover` holds the target)
 };
 
 struct Toast {

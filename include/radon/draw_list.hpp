@@ -19,7 +19,8 @@ struct DrawVertex {
 };
 
 /// ShapeLine (-4): anti-aliased capsule; `local` = (along, across) the segment, shape.xy = (half length, half width).
-enum : int { ShapeGlyph = -1, ShapeImage = -2, ShapeSolid = -3, ShapeLine = -4 };
+/// ShapeBlur (-5): a rounded rect that shows the blurred framebuffer (see DrawCommand::blur).
+enum : int { ShapeGlyph = -1, ShapeImage = -2, ShapeSolid = -3, ShapeLine = -4, ShapeBlur = -5 };
 
 struct DrawCommand {
     TextureId texture = 0;
@@ -27,6 +28,7 @@ struct DrawCommand {
     uint32_t index_offset = 0;
     uint32_t index_count = 0;
     uint32_t layer = 0;  ///< internal: commands are stable-sorted by layer (window z-order)
+    float blur = 0;      ///< > 0: before drawing, blur the framebuffer so far with this radius (px) for the ShapeBlur quad
 };
 
 class DrawList {
@@ -57,6 +59,9 @@ public:
     void fill(const Rect& r, const Paint& p, const Corners& radius = {}, float border = 0);
     /// A complete modern box: shadow, fill, border, corner radii and opacity from one Style.
     void box(const Rect& r, const Style& st);
+    /// Frosted backdrop: shows the already-drawn frame blurred by `radius` px inside the rounded rect. Draw a
+    /// translucent fill on top to tint it. Costs a framebuffer copy and four passes, so use it on a few panels.
+    void blur(const Rect& r, float radius, const Corners& corners = {});
     void glyph(const Rect& quad, const Rect& uv, Color c);
     void image(TextureId tex, const Rect& quad, const Rect& uv, Color tint);
     /// Axis-aligned quad with a color per corner (top-left, top-right, bottom-right, bottom-left).
@@ -79,6 +84,7 @@ private:
     bool overflow_ = false, force_new_ = true;
     Rect clip_{-1e6f, -1e6f, 2e6f, 2e6f};
     uint32_t layer_ = 0;
+    float blur_ = 0;
     float alpha_ = 1;
     Color fade(Color c) const {
         c.a = (uint8_t)((float)c.a * alpha_ + 0.5f);

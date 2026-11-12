@@ -141,10 +141,10 @@ bool begin_window_impl(Context& ctx, ID id, std::string_view title, Rect& rect, 
 
     const Rect r = rect;
     if ((flags & WindowBorder) && t.shadows) s.dl.shadow(r, t.shadow, rad, t.shadow_blur, {0, 8});
+    if (t.backdrop_blur > 0 && !(flags & (WindowTransparent | kWindowDocked))) s.dl.blur(r, t.backdrop_blur, rad);
     if (!(flags & WindowTransparent)) s.dl.fill(r, pick(t.window_paint, t.surface), rad);
     if (titlebar) {
-        s.dl.rect({r.x, r.y, r.w, th}, t.surface_hover, rad);
-        s.dl.rect({r.x, r.y + th / 2, r.w, th / 2}, t.surface_hover, 0);
+        s.dl.fill({r.x, r.y, r.w, th}, t.surface_hover, Corners::top(rad));  // one quad: translucent themes must not double up
         s.dl.rect({r.x, r.y + th - 1, r.w, 1}, t.border);
         draw_text_centered(s, t.font_heading, {r.x + pad, r.y, r.w - 2 * pad - th, th}, visible_label(title),
                            t.text, false);

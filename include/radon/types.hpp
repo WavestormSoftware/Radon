@@ -79,7 +79,44 @@ struct Style {
     Corners radius;
     Shadow shadow;
     float opacity = 1;
+    float backdrop_blur = 0;  ///< > 0 frosts what is behind the box (blur radius in px, up to ~32); the fill tints it
 };
+
+/// Interpolation for animating styles: `rd::blend(base, hover, rd::animate(ui, "card", hovered))`.
+inline Color blend(Color a, Color b, float t) {
+    auto m = [t](uint8_t x, uint8_t y) { return (uint8_t)((float)x + ((float)y - (float)x) * t + 0.5f); };
+    return {m(a.r, b.r), m(a.g, b.g), m(a.b, b.b), m(a.a, b.a)};
+}
+inline float blend(float a, float b, float t) {
+    return a + (b - a) * t;
+}
+inline Corners blend(const Corners& a, const Corners& b, float t) {
+    return {blend(a.tl, b.tl, t), blend(a.tr, b.tr, t), blend(a.br, b.br, t), blend(a.bl, b.bl, t)};
+}
+/// A solid Paint blends smoothly into a gradient (its end color equals its start color).
+inline Paint blend(const Paint& a, const Paint& b, float t) {
+    Paint p;
+    p.kind = a.kind == Paint::Solid ? b.kind : a.kind;
+    p.a = blend(a.a, b.a, t);
+    p.b = blend(a.b, b.b, t);
+    p.angle = blend(a.angle, b.angle, t);
+    p.center = {blend(a.center.x, b.center.x, t), blend(a.center.y, b.center.y, t)};
+    p.radius = blend(a.radius, b.radius, t);
+    return p;
+}
+inline Style blend(const Style& a, const Style& b, float t) {
+    Style s;
+    s.fill = blend(a.fill, b.fill, t);
+    s.border_paint = blend(a.border_paint, b.border_paint, t);
+    s.border = blend(a.border, b.border, t);
+    s.radius = blend(a.radius, b.radius, t);
+    s.shadow = {blend(a.shadow.color, b.shadow.color, t), blend(a.shadow.blur, b.shadow.blur, t),
+                {blend(a.shadow.offset.x, b.shadow.offset.x, t), blend(a.shadow.offset.y, b.shadow.offset.y, t)},
+                blend(a.shadow.spread, b.shadow.spread, t)};
+    s.opacity = blend(a.opacity, b.opacity, t);
+    s.backdrop_blur = blend(a.backdrop_blur, b.backdrop_blur, t);
+    return s;
+}
 
 enum Key : int {
     KeyNone = 0,

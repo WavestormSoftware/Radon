@@ -591,3 +591,79 @@ WindowCommand Context::window_command() const {
     return s_->wcmd;
 }
 }  // namespace rd
+
+namespace rd {
+
+float ease(Ease e, float t) {
+    t = t < 0 ? 0 : (t > 1 ? 1 : t);
+    switch (e) {
+        case Ease::Linear: return t;
+        case Ease::InQuad: return t * t;
+        case Ease::OutQuad: return 1 - (1 - t) * (1 - t);
+        case Ease::InOutQuad: return t < 0.5f ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t);
+        case Ease::OutCubic: return 1 - (1 - t) * (1 - t) * (1 - t);
+        case Ease::InOutCubic: return t < 0.5f ? 4 * t * t * t : 1 - 4 * (1 - t) * (1 - t) * (1 - t);
+        case Ease::OutBack: {
+            const float c1 = 1.70158f, c3 = c1 + 1, u = t - 1;
+            return 1 + c3 * u * u * u + c1 * u * u;
+        }
+        case Ease::OutElastic:
+            return (t == 0 || t == 1) ? t : std::pow(2.0f, -10 * t) * std::sin((t * 10 - 0.75f) * 2.0943951f) + 1;
+    }
+    return t;
+}
+
+namespace {
+float spring_impl(Context& ctx, std::string_view label, float target, bool has_from, float from, SpringParams p) {
+    detail::State& s = detail::state(ctx);
+    if (!s.cfg.animations) return target;
+    bool fresh = false;
+    detail::Anim* a = detail::anim_slot(s, detail::hash_u32(detail::get_id(s, label), 0x5b01), fresh);
+    if (!a) return target;
+    if (fresh) a->hover = has_from ? from : target, a->vel = 0;
+    if (a->last_frame != s.frame) {
+        // Fixed 1/240 s steps keep stiff springs stable whatever the frame time.
+        float left = std::fmin(s.dt, 1.0f / 15);
+        while (left > 0) {
+            const float h = std::fmin(left, 1.0f / 240);
+            a->vel += (p.stiffness * (target - a->hover) - p.damping * a->vel) * h;
+            a->hover += a->vel * h;
+            left -= h;
+        }
+        if (std::fabs(target - a->hover) < 0.001f && std::fabs(a->vel) < 0.01f) a->hover = target, a->vel = 0;
+        a->last_frame = s.frame;
+    }
+    if (a->hover != target) s.animating = true;
+    return a->hover;
+}
+}  // namespace
+
+float spring(Context& ctx, std::string_view id, float target, SpringParams p) {
+    return spring_impl(ctx, id, target, false, 0, p);
+}
+float spring(Context& ctx, std::string_view id, float target, float from, SpringParams p) {
+    return spring_impl(ctx, id, target, true, from, p);
+}
+
+float tween(Context& ctx, std::string_view label, float target, float duration, Ease e) {
+    detail::State& s = detail::state(ctx);
+    if (!s.cfg.animations || duration <= 0) return target;
+    bool fresh = false;
+    detail::Anim* a = detail::anim_slot(s, detail::hash_u32(detail::get_id(s, label), 0x7b02), fresh);
+    if (!a) return target;
+    if (fresh) a->hover = a->from = target, a->t = duration;  // hover = target, from = start of this run
+    if (a->last_frame != s.frame) {
+        if (a->hover != target) {  // new target: restart from where we are now
+            const float k = a->t >= duration ? 1.0f : ease(e, a->t / duration);
+            a->from = a->from + (a->hover - a->from) * k;
+            a->hover = target;
+            a->t = 0;
+        }
+        a->t += s.dt;
+        a->last_frame = s.frame;
+    }
+    if (a->t < duration) s.animating = true;
+    return a->from + (a->hover - a->from) * ease(e, a->t / duration);
+}
+
+}  // namespace rd

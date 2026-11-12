@@ -29,6 +29,7 @@ out vec4 o_color;
 float sd_box(vec2 p, vec2 h, float r) { vec2 q = abs(p) - h + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
 void main() {
     float mode = v_shape.z;
+    if (mode < -4.5) discard;  // frosted backdrop: not supported here yet
     if (mode < -3.5) {
         vec2 q = vec2(max(abs(v_local.x) - v_shape.x, 0.0), v_local.y);
         float d = length(q) - v_shape.y;

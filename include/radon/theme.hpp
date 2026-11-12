@@ -15,6 +15,7 @@ struct Theme {
           title_height = 30, cell_height = 28;
     float window_radius = 8;     ///< corner radius of windows and popups
     float shadow_blur = 18;      ///< window shadow softness
+    float backdrop_blur = 0;     ///< > 0: windows and popups frost what is behind them (blur radius, px)
     float focus_ring_width = 2;  ///< keyboard focus ring
     float indent = 16;           ///< tree node / indent() step
     bool shadows = true;         ///< draw window and popup shadows

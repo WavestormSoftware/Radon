@@ -29,13 +29,13 @@ bool DrawList::begin(TextureId tex, int nverts, int nidx) {
     DrawCommand* last = nc_ ? &cmds_[nc_ - 1] : nullptr;
     bool same = last && !force_new_ && last->texture == tex && last->layer == layer_ &&
                 last->clip.x == clip_.x && last->clip.y == clip_.y && last->clip.w == clip_.w &&
-                last->clip.h == clip_.h;
+                last->clip.h == clip_.h && last->blur == blur_;
     if (!same) {
         if (nc_ >= max_c_) {
             overflow_ = true;
             return false;
         }
-        cmds_[nc_++] = DrawCommand{tex, clip_, (uint32_t)ni_, 0, layer_};
+        cmds_[nc_++] = DrawCommand{tex, clip_, (uint32_t)ni_, 0, layer_, blur_};
         force_new_ = false;
     }
     cmds_[nc_ - 1].index_count += nidx;
@@ -102,6 +102,17 @@ void DrawList::shadow(const Rect& r, Color c, float radius, float blur, Vec2 off
     rect_shape(r, c, radius, 0, blur + 1.0f, blur, offset);
 }
 
+void DrawList::blur(const Rect& r, float radius, const Corners& corners) {
+    if (radius <= 0 || r.w <= 0 || r.h <= 0) return;
+    const float maxr = std::fmin(r.w, r.h) / 2;
+    const Vec4 rad{std::fmin(corners.tl, maxr), std::fmin(corners.tr, maxr), std::fmin(corners.br, maxr),
+                   std::fmin(corners.bl, maxr)};
+    blur_ = std::fmin(radius, 32.0f);
+    quad(0, {r.x - 1, r.y - 1, r.w + 2, r.h + 2}, {0, 0}, {0, 0}, {255, 255, 255, 255},
+         {r.x + r.w / 2, r.y + r.h / 2}, {r.w / 2, r.h / 2, (float)ShapeBlur, 0}, {}, rad, {});
+    blur_ = 0;
+}
+
 void DrawList::box(const Rect& r, const Style& st) {
     const float saved = alpha_;
     alpha_ *= st.opacity;
@@ -110,6 +121,7 @@ void DrawList::box(const Rect& r, const Style& st) {
         Rect sr{r.x - g, r.y - g, r.w + 2 * g, r.h + 2 * g};
         rect_shape(sr, st.shadow.color, st.radius.max() + g, 0, st.shadow.blur + 1.0f, st.shadow.blur, st.shadow.offset);
     }
+    if (st.backdrop_blur > 0) blur(r, st.backdrop_blur, st.radius);
     fill(r, st.fill, st.radius);
     if (st.border > 0) fill(r, st.border_paint, st.radius, st.border);
     alpha_ = saved;

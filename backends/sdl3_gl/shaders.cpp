@@ -37,6 +37,8 @@ void main() {
 // For rects, uv.x carries the shadow blur.
 const char* const kFragmentBody = R"(
 uniform sampler2D u_tex;
+uniform sampler2D u_blur;  // blurred framebuffer, texture unit 1
+uniform vec2 u_fb;         // framebuffer size in pixels
 in vec2 v_uv;
 in vec4 v_color;
 in vec2 v_local;
@@ -55,6 +57,12 @@ float sd_box(vec2 p, vec2 half_size, vec4 radii) {
 
 void main() {
     float mode = v_shape.z;
+    if (mode < -4.5) {  // frosted backdrop: the blurred frame, masked by the rounded rect
+        float d = sd_box(v_local, v_shape.xy, v_radii);
+        float aa = max(fwidth(d), 1e-4);
+        o_color = vec4(texture(u_blur, gl_FragCoord.xy / u_fb).rgb, v_color.a * clamp(0.5 - d / aa, 0.0, 1.0));
+        return;
+    }
     if (mode < -3.5) {  // capsule line: local = (along, across), shape.xy = (half length, half thickness)
         vec2 q = vec2(max(abs(v_local.x) - v_shape.x, 0.0), v_local.y);
         float d = length(q) - v_shape.y;
@@ -87,6 +95,33 @@ void main() {
         col.rgb += (fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5) / 255.0;
     }
     o_color = vec4(col.rgb, col.a * a);
+}
+)";
+
+}  // namespace rd::gl
+
+namespace rd::gl {
+
+// Separable 9-tap Gaussian (5 fetches via linear sampling). `u_step` is the sample spacing in uv units.
+const char* const kBlurVertexBody = R"(
+out vec2 v_uv;
+void main() {
+    vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+    v_uv = p;
+    gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}
+)";
+
+const char* const kBlurFragmentBody = R"(
+uniform sampler2D u_tex;
+uniform vec2 u_step;
+in vec2 v_uv;
+out vec4 o_color;
+void main() {
+    vec4 c = texture(u_tex, v_uv) * 0.2270270270;
+    c += (texture(u_tex, v_uv + u_step * 1.3846153846) + texture(u_tex, v_uv - u_step * 1.3846153846)) * 0.3162162162;
+    c += (texture(u_tex, v_uv + u_step * 3.2307692308) + texture(u_tex, v_uv - u_step * 3.2307692308)) * 0.0702702703;
+    o_color = c;
 }
 )";
 

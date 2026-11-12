@@ -394,6 +394,22 @@ void end_disabled(Context& ctx);
 /// Eases a value stored under `id` toward `target` and returns it; call every frame. The first
 /// frame (and any frame after a pause) starts at `from`. Use it to animate your own drawing.
 float animate(Context& ctx, std::string_view id, float target, float duration = 0.15f, float from = 0.0f);
+
+enum class Ease { Linear, InQuad, OutQuad, InOutQuad, OutCubic, InOutCubic, OutBack, OutElastic };
+/// Maps t in 0..1 through an easing curve (0 -> 0 and 1 -> 1). OutBack and OutElastic overshoot.
+float ease(Ease e, float t);
+
+/// A physical spring pulling the value stored under `id` toward `target`; call every frame and use the result.
+/// Lower `damping` bounces. Unlike `animate` it keeps its momentum when the target changes mid-flight.
+struct SpringParams {
+    float stiffness = 180, damping = 22;
+};
+float spring(Context& ctx, std::string_view id, float target, SpringParams p = {});
+/// As above, starting at `from` the first time (or after the widget was not shown for a frame).
+float spring(Context& ctx, std::string_view id, float target, float from, SpringParams p = {});
+/// Runs a fixed-length, eased transition toward `target`; a new target restarts it from the current value.
+float tween(Context& ctx, std::string_view id, float target, float duration = 0.25f, Ease e = Ease::OutCubic);
+/// Interpolate any style with the blend helpers: `rd::blend(base, hover, rd::animate(ui, "k", hovered))`.
 /// Everything until transition_end fades and slides in whenever `key` changes (page switches, tabs).
 void transition_begin(Context& ctx, std::string_view id, int key);
 void transition_end(Context& ctx);

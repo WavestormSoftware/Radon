@@ -144,14 +144,23 @@ enum : GLenum {
                                 X(void, GetIntegerv, (GLenum, GLint*))
 // clang-format on
 
+#define RD_GL_BLUR_FUNCS(X) \
+    X(void, CopyTexSubImage2D, (GLenum, GLint, GLint, GLint, GLint, GLint, GLsizei, GLsizei)) \
+    X(void, DrawArrays, (GLenum, GLint, GLsizei))
+
 #define RD_DECL(ret, name, args) ret(RD_GLCALL* name) args = nullptr;
 }  // namespace
 
 struct Renderer {
     RD_GL_FUNCS(RD_DECL)
     RD_GL_FBO_FUNCS(RD_DECL)
+    RD_GL_BLUR_FUNCS(RD_DECL)
     GLuint program = 0, vao = 0, vbo = 0, ebo = 0, atlas_tex = 0;
-    GLint u_scale = -1, u_tex = -1;
+    GLint u_scale = -1, u_tex = -1, u_blur = -1, u_fb = -1;
+    // Frosted-glass backdrop: a copy of the frame plus two half-size ping-pong textures.
+    GLuint blur_prog = 0, blur_vao = 0, blur_fbo = 0, blur_full = 0, blur_a = 0, blur_b = 0;
+    GLint bu_tex = -1, bu_step = -1;
+    int blur_w = 0, blur_h = 0;
     uint32_t atlas_version = 0;
     int atlas_size = 0;
     std::vector<GLuint> textures;  // TextureId n (>= 1) is textures[n - 1]; 0 = destroyed
@@ -177,6 +186,7 @@ bool load_functions(Renderer* r) {
     }
     RD_GL_FUNCS(RD_LOAD)
     RD_GL_FBO_FUNCS(RD_LOAD)
+    RD_GL_BLUR_FUNCS(RD_LOAD)
 #undef RD_LOAD
     return true;
 }
@@ -257,6 +267,32 @@ Renderer* create_renderer(const RendererConfig& cfg) {
     }
     r->u_scale = r->GetUniformLocation(r->program, "u_scale");
     r->u_tex = r->GetUniformLocation(r->program, "u_tex");
+    r->u_blur = r->GetUniformLocation(r->program, "u_blur");
+    r->u_fb = r->GetUniformLocation(r->program, "u_fb");
+    // The blur program is optional: without it blur commands just show the unblurred frame.
+    {
+        GLuint bvs = compile(r.get(), GL_VERTEX_SHADER, header + kBlurVertexBody);
+        GLuint bfs = compile(r.get(), GL_FRAGMENT_SHADER, header + kBlurFragmentBody);
+        if (bvs && bfs) {
+            r->blur_prog = r->CreateProgram();
+            r->AttachShader(r->blur_prog, bvs);
+            r->AttachShader(r->blur_prog, bfs);
+            r->LinkProgram(r->blur_prog);
+            GLint lok = 0;
+            r->GetProgramiv(r->blur_prog, GL_LINK_STATUS, &lok);
+            if (!lok) {
+                r->DeleteProgram(r->blur_prog);
+                r->blur_prog = 0;
+            } else {
+                r->bu_tex = r->GetUniformLocation(r->blur_prog, "u_tex");
+                r->bu_step = r->GetUniformLocation(r->blur_prog, "u_step");
+                r->GenVertexArrays(1, &r->blur_vao);
+                r->GenFramebuffers(1, &r->blur_fbo);
+            }
+        }
+        if (bvs) r->DeleteShader(bvs);
+        if (bfs) r->DeleteShader(bfs);
+    }
 
     r->GenVertexArrays(1, &r->vao);
     r->BindVertexArray(r->vao);
@@ -287,6 +323,13 @@ Renderer* create_renderer(const RendererConfig& cfg) {
 
 void destroy_renderer(Renderer* r) {
     if (!r) return;
+    if (r->blur_prog) {
+        r->DeleteProgram(r->blur_prog);
+        r->DeleteVertexArrays(1, &r->blur_vao);
+        r->DeleteFramebuffers(1, &r->blur_fbo);
+    }
+    for (GLuint* t : {&r->blur_full, &r->blur_a, &r->blur_b})
+        if (*t) r->DeleteTextures(1, t);
     r->DeleteProgram(r->program);
     r->DeleteVertexArrays(1, &r->vao);
     r->DeleteBuffers(1, &r->vbo);
@@ -413,6 +456,69 @@ void end_target(Renderer* r) {
     r->in_target = false;
 }
 
+namespace {
+
+GLuint make_color_tex(Renderer* r, int w, int h) {
+    GLuint t = 0;
+    r->GenTextures(1, &t);
+    r->BindTexture(GL_TEXTURE_2D, t);
+    r->TexImage2D(GL_TEXTURE_2D, 0, (GLint)GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    set_tex_params(r);
+    return t;
+}
+
+// Copies the frame drawn so far, blurs it at half size (two horizontal + two vertical passes) and leaves the
+// result bound to texture unit 1. Restores framebuffer, viewport, program, VAO and blend/scissor state.
+// shortcut: one copy of the whole frame per blur command; copy only the command's clip rect if many panels blur.
+void run_blur(Renderer* r, float radius, int fb_w, int fb_h, float dpi) {
+    if (!r->blur_prog) return;
+    const int hw = (fb_w + 1) / 2, hh = (fb_h + 1) / 2;
+    if (r->blur_w != fb_w || r->blur_h != fb_h) {
+        for (GLuint* t : {&r->blur_full, &r->blur_a, &r->blur_b})
+            if (*t) r->DeleteTextures(1, t);
+        r->blur_full = make_color_tex(r, fb_w, fb_h);
+        r->blur_a = make_color_tex(r, hw, hh);
+        r->blur_b = make_color_tex(r, hw, hh);
+        r->blur_w = fb_w;
+        r->blur_h = fb_h;
+    }
+    GLint fbo = 0;
+    r->GetIntegerv(GL_FRAMEBUFFER_BINDING, &fbo);
+    r->ActiveTexture(GL_TEXTURE0);
+    r->BindTexture(GL_TEXTURE_2D, r->blur_full);
+    r->CopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, fb_w, fb_h);
+
+    r->Disable(GL_SCISSOR_TEST);
+    r->Disable(GL_BLEND);
+    r->UseProgram(r->blur_prog);
+    r->Uniform1i(r->bu_tex, 0);
+    r->BindVertexArray(r->blur_vao);
+    r->BindFramebuffer(GL_FRAMEBUFFER, r->blur_fbo);
+    r->Viewport(0, 0, hw, hh);
+    // Two iterations of sigma radius/sqrt(2) add up to sigma = radius (device px); the kernel's own sigma is ~2.3 taps.
+    const float spacing = std::fmax(0.5f, radius * dpi * 0.5f / 2.3f / 1.41f);
+    const GLuint src[4] = {r->blur_full, r->blur_a, r->blur_b, r->blur_a};
+    const GLuint dst[4] = {r->blur_a, r->blur_b, r->blur_a, r->blur_b};
+    for (int i = 0; i < 4; i++) {
+        const bool horizontal = i % 2 == 0;
+        r->FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dst[i], 0);
+        r->BindTexture(GL_TEXTURE_2D, src[i]);
+        r->Uniform2f(r->bu_step, horizontal ? spacing / (float)hw : 0.0f, horizontal ? 0.0f : spacing / (float)hh);
+        r->DrawArrays(GL_TRIANGLES, 0, 3);
+    }
+    r->BindFramebuffer(GL_FRAMEBUFFER, (GLuint)fbo);
+    r->Viewport(0, 0, fb_w, fb_h);
+    r->ActiveTexture(GL_TEXTURE0 + 1);
+    r->BindTexture(GL_TEXTURE_2D, r->blur_b);
+    r->ActiveTexture(GL_TEXTURE0);
+    r->Enable(GL_BLEND);
+    r->Enable(GL_SCISSOR_TEST);
+    r->UseProgram(r->program);
+    r->BindVertexArray(r->vao);
+}
+
+}  // namespace
+
 void render(Renderer* r, const Context& ctx, int fb_w, int fb_h) {
     if (!r || fb_w <= 0 || fb_h <= 0) return;
     const DrawList& dl = ctx.draw_list();
@@ -427,6 +533,8 @@ void render(Renderer* r, const Context& ctx, int fb_w, int fb_h) {
     r->UseProgram(r->program);
     r->Uniform2f(r->u_scale, 2.0f * dpi / (float)fb_w, 2.0f * dpi / (float)fb_h);
     r->Uniform1i(r->u_tex, 0);
+    r->Uniform1i(r->u_blur, 1);
+    r->Uniform2f(r->u_fb, (float)fb_w, (float)fb_h);
     r->ActiveTexture(GL_TEXTURE0);
 
     r->BindTexture(GL_TEXTURE_2D, r->atlas_tex);
@@ -461,6 +569,11 @@ void render(Renderer* r, const Context& ctx, int fb_w, int fb_h) {
         if (x1 <= x0 || y1 <= y0) continue;
         r->Scissor((GLint)x0, (GLint)((float)fb_h - y1), (GLsizei)(x1 - x0),
                    (GLsizei)(y1 - y0));
+        if (c.blur > 0) {
+            run_blur(r, c.blur, fb_w, fb_h, dpi);
+            r->BindTexture(GL_TEXTURE_2D, bound);  // unit 0 again: whatever the previous command left bound
+            r->Scissor((GLint)x0, (GLint)((float)fb_h - y1), (GLsizei)(x1 - x0), (GLsizei)(y1 - y0));
+        }
         GLuint want = c.texture == 0 ? r->atlas_tex
                                      : (c.texture <= r->textures.size() && r->textures[c.texture - 1]
                                             ? r->textures[c.texture - 1]

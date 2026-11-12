@@ -116,3 +116,28 @@ TEST_CASE("line is a capsule quad that fits its segment") {
     CHECK(dl.vertices()[0].shape.z == ShapeLine);
     CHECK(dl.vertices()[0].shape.x == 5);  // half length
 }
+
+TEST_CASE("blur: its own command with the radius, clamped; following draws are not blurred") {
+    DrawList dl(16, 64, 96);
+    dl.rect({0, 0, 10, 10}, {1, 1, 1, 255});
+    dl.blur({0, 0, 100, 50}, 100, 8);
+    dl.rect({0, 0, 10, 10}, {1, 1, 1, 255});
+    REQUIRE(dl.command_count() == 3);
+    CHECK(dl.commands()[0].blur == 0);
+    CHECK(dl.commands()[1].blur == 32);
+    CHECK(dl.commands()[2].blur == 0);
+    CHECK(dl.vertices()[4].shape.z == ShapeBlur);
+}
+
+TEST_CASE("blend interpolates styles; a solid paint blends into a gradient") {
+    Style a, b;
+    a.fill = Color{0, 0, 0, 255};
+    b.fill = Paint::linear({255, 255, 255, 255}, {255, 0, 0, 255});
+    b.radius = 10;
+    Style m = blend(a, b, 0.5f);
+    CHECK(m.radius.tl == 5);
+    CHECK(m.fill.kind == Paint::Linear);
+    CHECK(m.fill.a.r == 128);
+    CHECK(m.fill.b.g == 0);
+    CHECK(blend(a, b, 0).fill.a.r == 0);
+}

@@ -17,7 +17,7 @@ Theme Theme::with_accent(Theme t, Color accent) {
 
 Theme Theme::scaled(Theme t, float k) {
     for (float* m : {&t.padding, &t.spacing, &t.corner_radius, &t.scrollbar_width, &t.title_height,
-                     &t.cell_height, &t.window_radius, &t.shadow_blur, &t.indent})
+                     &t.cell_height, &t.window_radius, &t.shadow_blur, &t.backdrop_blur, &t.indent})
         *m *= k;
     return t;
 }
@@ -47,6 +47,7 @@ Theme Theme::glass(Theme t) {
     t.corner_radius = 10;
     t.window_radius = 16;
     t.shadow_blur = 36;
+    t.backdrop_blur = 20;
     Color hi = mix(t.accent, {255, 255, 255, 255}, 0.22f), lo = mix(t.accent, {90, 60, 255, 255}, 0.35f);
     t.accent_paint = Paint::linear(hi, lo, 90);
     t.window_paint = Paint::linear(a(t.surface, 170), a(t.surface, 120), 90);
