@@ -317,10 +317,10 @@ void Gallery::panel_menus(Context& ctx) {
 
 void Gallery::panel_theme(Context& ctx) {
     separator_text(ctx, "Preset");
-    static const char* const presets[] = {"Wavestorm dark", "Light", "Midnight (blue)"};
+    static const char* const presets[] = {"Wavestorm dark", "Light", "Midnight (blue)", "Glass"};
     row2(ctx, "Theme");
-    if (combo(ctx, "##preset", preset_, presets, 3)) {
-        theme_ = preset_ == 0 ? Theme::dark() : (preset_ == 1 ? Theme::light() : Theme::midnight());
+    if (combo(ctx, "##preset", preset_, presets, 4)) {
+        theme_ = preset_ == 0 ? Theme::dark() : (preset_ == 1 ? Theme::light() : preset_ == 2 ? Theme::midnight() : Theme::glass(Theme::dark()));
         apply_theme(ctx);
     }
     separator_text(ctx, "Accent");
@@ -1077,6 +1077,11 @@ void Gallery::frame(Context& ctx, const Input& in, int w, int h) {
         theme_init_ = true;
         touch_ = want_touch;
         apply_theme(ctx);
+    }
+    if (preset_ == 3) {  // glass surfaces need something colorful behind them
+        Style bg;
+        bg.fill = Paint::linear({0x2a, 0x10, 0x5e, 255}, {0x0b, 0x6e, 0x8a, 255}, 35);
+        box(ctx, {0, 0, (float)w, (float)h}, bg);
     }
     const float sw = compact ? 0.0f : 210.0f;
     const Rect safe = in.safe_rect();

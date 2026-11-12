@@ -24,6 +24,100 @@ struct Color {
     uint8_t r = 0, g = 0, b = 0, a = 255;
 };
 
+/// Per-corner radii (top-left, top-right, bottom-right, bottom-left). A single float converts to all four.
+struct Corners {
+    float tl = 0, tr = 0, br = 0, bl = 0;
+    Corners() = default;
+    Corners(float r) : tl(r), tr(r), br(r), bl(r) {}
+    Corners(float tl_, float tr_, float br_, float bl_) : tl(tl_), tr(tr_), br(br_), bl(bl_) {}
+    static Corners top(float r) { return {r, r, 0, 0}; }
+    static Corners bottom(float r) { return {0, 0, r, r}; }
+    float max() const {
+        float m = tl;
+        for (float v : {tr, br, bl}) m = v > m ? v : m;
+        return m;
+    }
+};
+
+/// A fill: a flat color or a two-color gradient. A `Color` converts to a solid Paint, so anywhere a
+/// Paint is expected you can pass a plain color.
+struct Paint {
+    enum Kind : uint8_t { Solid, Linear, Radial };
+    Kind kind = Solid;
+    Color a{0, 0, 0, 0}, b{0, 0, 0, 0};  ///< solid: a. gradients: a at the start / center, b at the end / edge
+    float angle = 90;                     ///< linear: degrees, 0 = left to right, 90 = top to bottom
+    Vec2 center{0.5f, 0.5f};              ///< radial: center as a fraction of the shape
+    float radius = 0.5f;                  ///< radial: radius as a fraction of the shape's larger side
+    Paint() = default;
+    Paint(Color c) : a(c), b(c) {}
+    static Paint linear(Color from, Color to, float angle_deg = 90) {
+        Paint p;
+        p.kind = Linear, p.a = from, p.b = to, p.angle = angle_deg;
+        return p;
+    }
+    static Paint radial(Color inner, Color outer, Vec2 center = {0.5f, 0.5f}, float radius = 0.5f) {
+        Paint p;
+        p.kind = Radial, p.a = inner, p.b = outer, p.center = center, p.radius = radius;
+        return p;
+    }
+    /// True for the default Paint; themes use it to mean "fall back to the plain color".
+    bool empty() const { return kind == Solid && a.a == 0; }
+};
+
+struct Shadow {
+    Color color{0, 0, 0, 0};  ///< alpha 0 = no shadow
+    float blur = 0;
+    Vec2 offset;
+    float spread = 0;  ///< grows the shadow shape on every side
+};
+
+/// Everything needed to draw a modern box in one call: see `rd::box`.
+struct Style {
+    Paint fill;
+    Paint border_paint;
+    float border = 0;  ///< border width, 0 = none
+    Corners radius;
+    Shadow shadow;
+    float opacity = 1;
+    float backdrop_blur = 0;  ///< > 0 frosts what is behind the box (blur radius in px, up to ~32); the fill tints it
+};
+
+/// Interpolation for animating styles: `rd::blend(base, hover, rd::animate(ui, "card", hovered))`.
+inline Color blend(Color a, Color b, float t) {
+    auto m = [t](uint8_t x, uint8_t y) { return (uint8_t)((float)x + ((float)y - (float)x) * t + 0.5f); };
+    return {m(a.r, b.r), m(a.g, b.g), m(a.b, b.b), m(a.a, b.a)};
+}
+inline float blend(float a, float b, float t) {
+    return a + (b - a) * t;
+}
+inline Corners blend(const Corners& a, const Corners& b, float t) {
+    return {blend(a.tl, b.tl, t), blend(a.tr, b.tr, t), blend(a.br, b.br, t), blend(a.bl, b.bl, t)};
+}
+/// A solid Paint blends smoothly into a gradient (its end color equals its start color).
+inline Paint blend(const Paint& a, const Paint& b, float t) {
+    Paint p;
+    p.kind = a.kind == Paint::Solid ? b.kind : a.kind;
+    p.a = blend(a.a, b.a, t);
+    p.b = blend(a.b, b.b, t);
+    p.angle = blend(a.angle, b.angle, t);
+    p.center = {blend(a.center.x, b.center.x, t), blend(a.center.y, b.center.y, t)};
+    p.radius = blend(a.radius, b.radius, t);
+    return p;
+}
+inline Style blend(const Style& a, const Style& b, float t) {
+    Style s;
+    s.fill = blend(a.fill, b.fill, t);
+    s.border_paint = blend(a.border_paint, b.border_paint, t);
+    s.border = blend(a.border, b.border, t);
+    s.radius = blend(a.radius, b.radius, t);
+    s.shadow = {blend(a.shadow.color, b.shadow.color, t), blend(a.shadow.blur, b.shadow.blur, t),
+                {blend(a.shadow.offset.x, b.shadow.offset.x, t), blend(a.shadow.offset.y, b.shadow.offset.y, t)},
+                blend(a.shadow.spread, b.shadow.spread, t)};
+    s.opacity = blend(a.opacity, b.opacity, t);
+    s.backdrop_blur = blend(a.backdrop_blur, b.backdrop_blur, t);
+    return s;
+}
+
 enum Key : int {
     KeyNone = 0,
     KeyEnter,
@@ -98,6 +192,8 @@ struct Input {
     A11yAction a11y_action = A11yAction::None;
     uint32_t a11y_target = 0;
     Vec2 screen_size{};  ///< window size in logical px (used to center modals)
+    bool window_maximized = false;  ///< the OS window is maximized (the titlebar shows Restore, corners go square)
+    bool window_focused = true;     ///< the OS window has keyboard focus (the titlebar dims when not)
     Rect safe_area{};    ///< mobile insets in logical px: x=left, y=top, w=right, h=bottom; zero on desktop
     /// The screen minus the safe-area insets: where UI can be placed without hitting notches or bars.
     Rect safe_rect() const {
@@ -107,7 +203,18 @@ struct Input {
 };
 
 /// Mouse cursor the UI asks for this frame (see Context::cursor). Backends map it to a system cursor.
-enum class Cursor { Arrow, Text, Hand, ResizeEW, ResizeNS, ResizeNWSE };
+enum class Cursor { Arrow, Text, Hand, ResizeEW, ResizeNS, ResizeNWSE, ResizeNESW };
+
+/// What the custom titlebar asks the host to do with the OS window (see Context::window_command).
+enum class WindowCommand { None, Minimize, Maximize, Restore, Close };
+
+/// Where the OS window may be dragged by (see Context::window_chrome): the caption minus the interactive
+/// controls inside it. Backends feed this to their native hit test.
+struct WindowChrome {
+    Rect caption;
+    Rect no_drag[16];
+    int no_drag_count = 0;
+};
 
 /// Semantic color of alerts and toasts.
 enum class Tone { Info, Success, Warning, Error };

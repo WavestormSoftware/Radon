@@ -147,6 +147,7 @@ struct Anim {
     float hover = 0, press = 0;  // anim_to keeps its value in `hover`
     uint32_t last_frame = 0;
     int key = 0;  // transition_begin: the key the content was last shown for
+    float vel = 0, from = 0, t = 0;  // spring velocity; tween start value and elapsed time (`hover` holds the target)
 };
 
 struct Toast {
@@ -288,6 +289,10 @@ struct State {
     bool animating = false, secondary = false, long_fired = false;
     float press_time = 0;
     Cursor cursor = Cursor::Arrow;
+    WindowChrome chrome;  // titlebar drag region, filled by titlebar_begin
+    WindowCommand wcmd = WindowCommand::None;
+    bool tb_active = false;  // between titlebar_begin and titlebar_end: controls there are not draggable
+    Rect tb_rect;            // the titlebar's content window
     Rect text_rect;
     Toast toasts[kMaxToasts];
     float toast_offset = 0;
@@ -430,6 +435,14 @@ inline Color tone_color(const Theme& t, Tone tone) {
 namespace rd::detail {
 
 /// Fill color for a pressable control, blended by the hover/press animation.
+/// A theme Paint, or `fallback` when the theme left it empty.
+inline Paint pick(const Paint& p, Color fallback) { return p.empty() ? Paint(fallback) : p; }
+inline Paint lighten(Paint p, float k) {
+    auto l = [k](Color c) { return Color{(uint8_t)(c.r + (255 - c.r) * k), (uint8_t)(c.g + (255 - c.g) * k), (uint8_t)(c.b + (255 - c.b) * k), c.a}; };
+    p.a = l(p.a), p.b = l(p.b);
+    return p;
+}
+
 inline Color control_color(State& s, ID id, const Response& rs) {
     float press = 0;
     float h = animate(s, id, rs.hovered, s.active == id, &press);

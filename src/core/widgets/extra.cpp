@@ -18,10 +18,11 @@ Response button(Context& ctx, std::string_view label, ButtonStyle style) {
     float press = 0;
     float h = animate(s, id, rs.hovered, s.active == id, &press);
     const float k = clamp01(0.6f * h + 0.4f * press);
-    Color fill, text = t.text, ring{0, 0, 0, 0};
+    Paint fill;
+    Color text = t.text, ring{0, 0, 0, 0};
     switch (style) {
         case ButtonStyle::Primary:
-            fill = lerp(t.accent, Color{255, 255, 255, 255}, 0.18f * k);
+            fill = lighten(pick(t.accent_paint, t.accent), 0.18f * k);
             text = t.accent_text;
             break;
         case ButtonStyle::Danger:
@@ -33,7 +34,7 @@ Response button(Context& ctx, std::string_view label, ButtonStyle style) {
             fill = with_alpha(t.surface_active, k);
             break;
     }
-    s.dl.rect(r, fill, t.corner_radius);
+    s.dl.fill(r, fill, t.corner_radius);
     if (ring.a) s.dl.rect(r, ring, t.corner_radius, t.border_width);
     if (rs.focused && s.kbd_nav) s.dl.rect(r, t.focus_ring, t.corner_radius, t.focus_ring_width);
     draw_text_fit(s, r, visible_label(label), text, true);

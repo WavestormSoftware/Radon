@@ -12,6 +12,8 @@ enum WindowFlags : uint32_t {
     WindowScrollable = 1 << 3,
     WindowTitleBar = 1 << 4,
     WindowBorder = 1 << 5,
+    WindowTransparent = 1 << 6,  ///< no background fill
+    WindowNoPadding = 1 << 7,    ///< content starts at the window edge
     WindowDefault = WindowMovable | WindowResizable | WindowTitleBar | WindowBorder,
 };
 
@@ -52,6 +54,28 @@ struct ViewportResponse : Response {
 /// started inside keeps reporting `local` and `down` after the pointer leaves. `flip_y` for GL render
 /// targets.
 ViewportResponse viewport(Context& ctx, TextureId tex, Vec2 size, bool flip_y = false);
+/// Custom window titlebar for borderless windows (PlatformConfig::custom_titlebar). Draws the bar along the
+/// top of the window with an optional icon, the title and minimize / maximize / close buttons, and reports
+/// the drag region and the button clicks to the backend. Widgets you add between begin and end (a menu
+/// bar, tabs, a search box) land between the title and the buttons and stay clickable. Start the rest of
+/// the UI at `titlebar_height(ctx)`. Call end only when begin returned true.
+enum TitlebarFlags : uint32_t {
+    TitlebarCenterTitle = 1 << 0,  ///< title centered in the bar; custom widgets then start after the icon
+    TitlebarNoMinimize = 1 << 1,
+    TitlebarNoMaximize = 1 << 2,
+};
+bool titlebar_begin(Context& ctx, std::string_view title, uint32_t flags = 0, TextureId icon = 0);
+void titlebar_end(Context& ctx);
+float titlebar_height(const Context& ctx);
+/// Fills the whole window with a rounded, bordered backdrop (square corners when maximized). Use it with
+/// PlatformConfig::transparent for a window with rounded corners; call it first each frame.
+void window_background(Context& ctx, const Paint& fill = {});
+
+/// Draws a modern box at `r` in one call: drop shadow, solid or gradient fill, border, per-corner radii and opacity.
+///   rd::Style st; st.fill = rd::Paint::linear(a, b, 90); st.radius = 14; st.shadow = {black, 24, {0, 8}};
+///   rd::box(ui, r, st);
+void box(Context& ctx, const Rect& r, const Style& st);
+
 /// Immediate-mode 2D drawing area. Coordinates are relative to the canvas top-left and everything is
 /// clipped to it. Pair `canvas_begin` with `canvas_end`. Shapes are drawn in call order.
 class Canvas {
@@ -61,6 +85,8 @@ public:
     Vec2 local;         ///< pointer relative to the canvas top-left
     float pinch = 1;    ///< two-finger zoom factor this frame, while the fingers are over the canvas
     Vec2 pan2;          ///< two-finger pan this frame
+    /// A shadowed, bordered, gradient-filled box; see `rd::box`. Coordinates are canvas-relative.
+    void box(Rect r, const Style& st);
     void fill_rect(Rect r, Color c, float radius = 0);
     void stroke_rect(Rect r, Color c, float thickness = 1, float radius = 0);
     void circle(Vec2 center, float radius, Color c);
@@ -150,6 +176,9 @@ enum class Icon {
     Pin,
     Backspace,
     Code,
+    Minimize,
+    Maximize,
+    Restore,
     Count  ///< number of icons, not an icon
 };
 
@@ -365,6 +394,22 @@ void end_disabled(Context& ctx);
 /// Eases a value stored under `id` toward `target` and returns it; call every frame. The first
 /// frame (and any frame after a pause) starts at `from`. Use it to animate your own drawing.
 float animate(Context& ctx, std::string_view id, float target, float duration = 0.15f, float from = 0.0f);
+
+enum class Ease { Linear, InQuad, OutQuad, InOutQuad, OutCubic, InOutCubic, OutBack, OutElastic };
+/// Maps t in 0..1 through an easing curve (0 -> 0 and 1 -> 1). OutBack and OutElastic overshoot.
+float ease(Ease e, float t);
+
+/// A physical spring pulling the value stored under `id` toward `target`; call every frame and use the result.
+/// Lower `damping` bounces. Unlike `animate` it keeps its momentum when the target changes mid-flight.
+struct SpringParams {
+    float stiffness = 180, damping = 22;
+};
+float spring(Context& ctx, std::string_view id, float target, SpringParams p = {});
+/// As above, starting at `from` the first time (or after the widget was not shown for a frame).
+float spring(Context& ctx, std::string_view id, float target, float from, SpringParams p = {});
+/// Runs a fixed-length, eased transition toward `target`; a new target restarts it from the current value.
+float tween(Context& ctx, std::string_view id, float target, float duration = 0.25f, Ease e = Ease::OutCubic);
+/// Interpolate any style with the blend helpers: `rd::blend(base, hover, rd::animate(ui, "k", hovered))`.
 /// Everything until transition_end fades and slides in whenever `key` changes (page switches, tabs).
 void transition_begin(Context& ctx, std::string_view id, int key);
 void transition_end(Context& ctx);

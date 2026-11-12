@@ -29,9 +29,19 @@ out vec4 o_color;
 float sd_box(vec2 p, vec2 h, float r) { vec2 q = abs(p) - h + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
 void main() {
     float mode = v_shape.z;
+    if (mode < -4.5) discard;  // frosted backdrop: not supported here yet
+    if (mode < -3.5) {
+        vec2 q = vec2(max(abs(v_local.x) - v_shape.x, 0.0), v_local.y);
+        float d = length(q) - v_shape.y;
+        float aa = max(fwidth(d), 1e-4);
+        o_color = vec4(v_color.rgb, v_color.a * clamp(0.5 - d / aa, 0.0, 1.0)); return;
+    }
     if (mode < -2.5) { o_color = v_color; return; }
     if (mode < -1.5) { o_color = texture(u_tex, v_uv) * v_color; return; }
-    if (mode < -0.5) { o_color = vec4(v_color.rgb, v_color.a * texture(u_tex, v_uv).r); return; }
+    if (mode < -0.5) {
+        float sd = texture(u_tex, v_uv).r; float w = max(fwidth(sd), 1e-4) * 0.75;
+        o_color = vec4(v_color.rgb, v_color.a * smoothstep(0.5 - w, 0.5 + w, sd)); return;
+    }
     float d = sd_box(v_local, v_shape.xy, v_shape.z);
     float blur = v_uv.x; float a;
     if (blur > 0.0) { a = 1.0 - smoothstep(-blur, blur, d); }

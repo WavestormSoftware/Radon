@@ -17,7 +17,7 @@ Theme Theme::with_accent(Theme t, Color accent) {
 
 Theme Theme::scaled(Theme t, float k) {
     for (float* m : {&t.padding, &t.spacing, &t.corner_radius, &t.scrollbar_width, &t.title_height,
-                     &t.cell_height, &t.window_radius, &t.shadow_blur, &t.indent})
+                     &t.cell_height, &t.window_radius, &t.shadow_blur, &t.backdrop_blur, &t.indent})
         *m *= k;
     return t;
 }
@@ -30,6 +30,28 @@ Theme Theme::touch(Theme t) {
     t.indent = 20;
     t.scrollbar_width = 6;
     t.corner_radius += 2;
+    return t;
+}
+
+Theme Theme::glass(Theme t) {
+    const bool darkish = (int)t.background.r + t.background.g + t.background.b < 384;
+    auto a = [](Color c, int alpha) {
+        c.a = (uint8_t)alpha;
+        return c;
+    };
+    t.surface = a(t.surface, 150);
+    t.surface_hover = darkish ? Color{255, 255, 255, 26} : Color{255, 255, 255, 150};
+    t.surface_active = darkish ? Color{255, 255, 255, 46} : Color{255, 255, 255, 210};
+    t.border = darkish ? Color{255, 255, 255, 34} : Color{255, 255, 255, 170};
+    t.shadow = {0, 0, 0, darkish ? (uint8_t)150 : (uint8_t)60};
+    t.corner_radius = 10;
+    t.window_radius = 16;
+    t.shadow_blur = 36;
+    t.backdrop_blur = 20;
+    Color hi = mix(t.accent, {255, 255, 255, 255}, 0.22f), lo = mix(t.accent, {90, 60, 255, 255}, 0.35f);
+    t.accent_paint = Paint::linear(hi, lo, 90);
+    t.window_paint = Paint::linear(a(t.surface, 170), a(t.surface, 120), 90);
+    t.card_paint = t.surface_hover;
     return t;
 }
 

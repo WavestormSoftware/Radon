@@ -17,7 +17,7 @@ struct Config {
     int max_fonts = 4;
     int max_glyphs = 4096;  ///< glyph cache entries
     int max_anims = 256;    ///< hover/press blend slots, keyed by ID
-    int atlas_size = 1024;  ///< glyph atlas, square
+    int atlas_size = 2048;  ///< glyph atlas, square
     int undo_bytes = 8192;  ///< undo + redo history of the focused text box
     int max_dock_nodes = 32;
     int max_dock_panels = 32;

@@ -73,16 +73,20 @@ enum {
     RD_KEY_PAGE_DOWN
 };
 
-/* Same memory layout as rd::DrawVertex (44 bytes) and rd::DrawCommand (32 bytes). */
+/* Same memory layout as rd::DrawVertex (80 bytes) and rd::DrawCommand (36 bytes). */
 typedef struct {
     float pos[2], uv[2];
     uint8_t color[4];
     float local[2], shape[4];
+    uint8_t color2[4];  /* gradient end color */
+    float radii[4];     /* per-corner radii: tl, tr, br, bl */
+    float grad[4];      /* gradient: z = 0 none, 1 linear, 2 radial */
 } rd_vertex;
 typedef struct {
     uint32_t texture; /* 0 = glyph atlas, else your own id (see rd_viewport / rd_image) */
     float clip[4];    /* x, y, w, h in logical px */
     uint32_t index_offset, index_count, layer;
+    float blur; /* > 0: blur the framebuffer so far by this radius (px) before drawing; see ShapeBlur */
 } rd_draw_command;
 
 RD_API int rd_version(void);

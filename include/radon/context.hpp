@@ -43,7 +43,7 @@ public:
     void set_default_font(FontHandle font);
     void set_clipboard_callbacks(ClipboardGet get, ClipboardSet set, void* user = nullptr);
 
-    /// Glyph atlas for the backend: 8-bit coverage, atlas_size x atlas_size. The version changes
+    /// Glyph atlas for the backend: 8-bit signed distance (0.5 = glyph edge), atlas_size x atlas_size. The version changes
     /// whenever the pixels change.
     const uint8_t* atlas_pixels() const;
     int atlas_size() const;
@@ -58,6 +58,10 @@ public:
     Rect text_input_rect() const;
     /// The mouse cursor the last frame asked for (text beam over text boxes, resize arrows, ...).
     Cursor cursor() const;
+    /// The titlebar drag region of the last frame (empty caption when no titlebar was drawn).
+    const WindowChrome& window_chrome() const;
+    /// What the titlebar's minimize/maximize/close buttons asked for during the last frame.
+    WindowCommand window_command() const;
     /// True if the last frame was still animating or handling input. When false the host may sleep
     /// until the next input event instead of redrawing (saves battery).
     bool animating() const;

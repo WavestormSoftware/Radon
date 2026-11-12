@@ -37,7 +37,7 @@ add_library(radon
     src/core/widgets/container.cpp src/core/widgets/color.cpp
     src/core/widgets/more.cpp src/core/widgets/overlay.cpp
     src/core/a11y.cpp src/core/dnd.cpp src/core/dock.cpp src/core/widgets/mobile.cpp
-    src/core/widgets/picker.cpp src/core/widgets/chart.cpp src/core/widgets/richtext.cpp)
+    src/core/widgets/titlebar.cpp src/core/widgets/picker.cpp src/core/widgets/chart.cpp src/core/widgets/richtext.cpp)
 add_library(radon::radon ALIAS radon)
 if(RD_BUILD_C_API)
     target_sources(radon PRIVATE src/core/radon_c.cpp)

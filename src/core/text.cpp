@@ -122,6 +122,8 @@ void reset_atlas(State& s) {
 }
 
 // Returns the cached glyph, rasterizing it on first use. Null when the atlas is full.
+constexpr int kSdfPad = 4;  // distance range in bake pixels
+
 static const Glyph* glyph_for(State& s, FontHandle h, const FontSlot& f, uint32_t cp) {
     const int cap = s.cfg.max_glyphs;
     uint32_t hash = (cp * 2654435761u) ^ ((uint32_t)h * 40503u);
@@ -136,14 +138,13 @@ static const Glyph* glyph_for(State& s, FontHandle h, const FontSlot& f, uint32_
         s.warning = true;
         return nullptr;
     }
-    const float dpi = s.cfg.dpi_scale;
+    // Signed-distance glyphs: baked once at ~2x the font size (DPI-independent) and scaled by the shader.
+    const float bake = std::fmin(std::fmax(f.pixel_size * 2.0f, 24.0f), 40.0f);
+    const float m = bake / f.pixel_size;  // bake pixels per logical pixel
     int gi;
     float gscale;
     const FontSlot& src = *resolve(s, f, cp, &gi, &gscale);
-    const float sc = gscale * dpi;
-    int x0, y0, x1, y1;
-    stbtt_GetGlyphBitmapBox(&src.info, gi, sc, sc, &x0, &y0, &x1, &y1);
-    int bw = x1 - x0, bh = y1 - y0;
+    const float sc = gscale * m;
     Glyph g;
     g.font = h;
     g.cp = cp;
@@ -151,11 +152,14 @@ static const Glyph* glyph_for(State& s, FontHandle h, const FontSlot& f, uint32_
     int adv, lsb;
     stbtt_GetGlyphHMetrics(&src.info, gi, &adv, &lsb);
     g.advance = adv * gscale;
-    g.xoff = x0 / dpi;
-    g.yoff = y0 / dpi;
-    g.w = bw / dpi;
-    g.h = bh / dpi;
-    if (bw > 0 && bh > 0) {
+    s.arena.used = 0;
+    int bw = 0, bh = 0, ox = 0, oy = 0;
+    uint8_t* sdf = stbtt_GetGlyphSDF(&src.info, sc, gi, kSdfPad, 128, 128.0f / kSdfPad, &bw, &bh, &ox, &oy);
+    g.xoff = ox / m;
+    g.yoff = oy / m;
+    g.w = bw / m;
+    g.h = bh / m;
+    if (sdf && bw > 0 && bh > 0) {
         stbrp_rect rc{};
         rc.w = (stbrp_coord)(bw + 2);
         rc.h = (stbrp_coord)(bh + 2);
@@ -165,9 +169,8 @@ static const Glyph* glyph_for(State& s, FontHandle h, const FontSlot& f, uint32_
             return nullptr;
         }
         const int stride = s.cfg.atlas_size;
-        s.arena.used = 0;
-        stbtt_MakeGlyphBitmap(&src.info, s.atlas.get() + (size_t)(rc.y + 1) * stride + rc.x + 1, bw, bh,
-                              stride, sc, sc, gi);
+        for (int y = 0; y < bh; y++)
+            std::memcpy(s.atlas.get() + (size_t)(rc.y + 1 + y) * stride + rc.x + 1, sdf + (size_t)y * bw, (size_t)bw);
         s.arena.used = 0;
         const float inv = 1.0f / stride;
         g.u0 = (rc.x + 1) * inv;
@@ -186,9 +189,9 @@ void draw_text(State& s, FontHandle h, Vec2 pos, std::string_view text, Color c)
     const FontSlot* f = font_of(s, h);
     if (!f || c.a == 0) return;
     const float dpi = s.cfg.dpi_scale;
-    auto snap = [dpi](float v) { return std::floor(v * dpi + 0.5f) / dpi; };
+    // Subpixel x; the baseline snaps to a device pixel so horizontal stems stay crisp.
+    const float base = std::floor((pos.y + f->ascent) * dpi + 0.5f) / dpi;
     float pen = pos.x;
-    const float base = pos.y + f->ascent;
     const char* p = text.data();
     const char* e = p + text.size();
     while (p < e) {
@@ -197,7 +200,7 @@ void draw_text(State& s, FontHandle h, Vec2 pos, std::string_view text, Color c)
         if (p < e) utf8_decode(p, e, nx);
         const Glyph* g = glyph_for(s, h, *f, cp);
         if (g && g->w > 0 && g->h > 0)
-            s.dl.glyph({snap(pen + g->xoff), snap(base + g->yoff), g->w, g->h}, {g->u0, g->v0, g->u1, g->v1},
+            s.dl.glyph({pen + g->xoff, base + g->yoff, g->w, g->h}, {g->u0, g->v0, g->u1, g->v1},
                        c);
         pen += advance_of(s, *f, cp, nx);
     }

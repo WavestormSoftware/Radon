@@ -76,7 +76,7 @@ bool begin_card(Context& ctx, std::string_view label) {
     // The card is as tall as its content was last frame.
     layout_row(ctx, 1, nullptr, 0, std::fmax(c->content_h, t.cell_height));
     Rect r = layout_next(ctx);
-    s.dl.rect(r, t.surface_hover, t.window_radius);
+    s.dl.fill(r, pick(t.card_paint, t.surface_hover), t.window_radius);
     s.dl.rect(r, t.border, t.window_radius, t.border_width);
     ChildFrame& f = s.cstack[s.cstack_n++];
     f = ChildFrame{};

@@ -608,3 +608,57 @@ TEST_CASE("indeterminate progress bar keeps animating") {
     u.frames(2);
     CHECK(u.h.ctx.animating());
 }
+
+TEST_CASE("titlebar reports a drag region minus its controls, and button clicks") {
+    th::Harness h;
+    h.in.screen_size = {400, 300};
+    auto bar = [&] {
+        if (titlebar_begin(h.ctx, "App")) titlebar_end(h.ctx);
+    };
+    h.frame(bar);
+    const WindowChrome& c = h.ctx.window_chrome();
+    CHECK(c.caption.w == 400);
+    CHECK(c.caption.h == titlebar_height(h.ctx));
+    CHECK(c.no_drag_count >= 3);  // close, maximize, minimize
+    CHECK(h.ctx.window_command() == WindowCommand::None);
+    h.in.pointer = {400 - 23, 10};  // the close button
+    h.in.pointer_down = h.in.pointer_pressed = true;
+    h.frame(bar);
+    h.in.pointer_down = false;
+    h.in.pointer_released = true;
+    h.frame(bar);
+    CHECK(h.ctx.window_command() == WindowCommand::Close);
+}
+
+TEST_CASE("ease hits its endpoints; spring settles on the target and wakes the host while moving") {
+    for (Ease e : {Ease::Linear, Ease::InQuad, Ease::OutQuad, Ease::InOutQuad, Ease::OutCubic, Ease::InOutCubic,
+                   Ease::OutBack, Ease::OutElastic}) {
+        CHECK(ease(e, 0) == doctest::Approx(0.0f).epsilon(0.001));
+        CHECK(ease(e, 1) == doctest::Approx(1.0f).epsilon(0.001));
+    }
+    th::Harness h;
+    float v = -1;
+    auto frame = [&](float target) { h.frame([&] { v = spring(h.ctx, "s", target, 0.0f); }); };
+    frame(1);
+    CHECK(v < 0.5f);  // starts at `from`, does not jump
+    CHECK(h.ctx.animating());
+    for (int i = 0; i < 240; i++) frame(1);
+    CHECK(v == 1.0f);
+    CHECK_FALSE(h.ctx.animating());
+}
+
+TEST_CASE("tween runs for its duration and restarts from the current value on a new target") {
+    th::Harness h;
+    float v = -1;
+    auto frame = [&](float target) { h.frame([&] { v = tween(h.ctx, "t", target, 0.25f, Ease::Linear); }); };
+    frame(0);
+    CHECK(v == 0);  // first use starts at the target
+    frame(1);
+    CHECK(v > 0);
+    CHECK(v < 1);
+    for (int i = 0; i < 30; i++) frame(1);
+    CHECK(v == doctest::Approx(1.0f));
+    frame(0);
+    CHECK(v < 1.0f);
+    CHECK(v > 0.8f);  // restarted from ~1, not from 0
+}
