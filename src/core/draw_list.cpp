@@ -117,9 +117,20 @@ void DrawList::triangle(Vec2 a, Vec2 b, Vec2 c, Color col) {
 void DrawList::line(Vec2 a, Vec2 b, Color c, float t) {
     float dx = b.x - a.x, dy = b.y - a.y, len = std::sqrt(dx * dx + dy * dy);
     if (len <= 0) return;
-    float nx = -dy / len * t / 2, ny = dx / len * t / 2;
-    triangle({a.x + nx, a.y + ny}, {b.x + nx, b.y + ny}, {b.x - nx, b.y - ny}, c);
-    triangle({a.x + nx, a.y + ny}, {b.x - nx, b.y - ny}, {a.x - nx, a.y - ny}, c);
+    if (c.a == 0 || !begin(0, 4, 6)) return;
+    c = fade(c);
+    // Oriented quad with a 1px margin; the shader carves a round-capped capsule out of it.
+    const float ux = dx / len, uy = dy / len, hl = len / 2, ht = t / 2, m = 1.0f;
+    const Vec2 mid{(a.x + b.x) / 2, (a.y + b.y) / 2};
+    const float sx[4] = {-1, 1, 1, -1}, sy[4] = {-1, -1, 1, 1};
+    const Vec4 sh{hl, ht, (float)ShapeLine, 0};
+    uint32_t base = nv_;
+    for (int i = 0; i < 4; i++) {
+        const float lx = sx[i] * (hl + ht + m), ly = sy[i] * (ht + m);
+        verts_[nv_++] = DrawVertex{{mid.x + ux * lx - uy * ly, mid.y + uy * lx + ux * ly}, {0, 0}, c, {lx, ly}, sh};
+    }
+    static const uint32_t order[6] = {0, 1, 2, 0, 2, 3};
+    for (uint32_t o : order) idx_[ni_++] = base + o;
 }
 
 }  // namespace rd

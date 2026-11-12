@@ -15,7 +15,8 @@ struct DrawVertex {
     Vec4 shape;
 };
 
-enum : int { ShapeGlyph = -1, ShapeImage = -2, ShapeSolid = -3 };
+/// ShapeLine (-4): anti-aliased capsule; `local` = (along, across) the segment, shape.xy = (half length, half width).
+enum : int { ShapeGlyph = -1, ShapeImage = -2, ShapeSolid = -3, ShapeLine = -4 };
 
 struct DrawCommand {
     TextureId texture = 0;

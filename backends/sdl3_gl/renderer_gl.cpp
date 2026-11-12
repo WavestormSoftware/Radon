@@ -449,12 +449,12 @@ void render(Renderer* r, const Context& ctx, int fb_w, int fb_h) {
     GLuint bound = r->atlas_tex;
     for (int i = 0; i < dl.command_count(); i++) {
         const DrawCommand& c = dl.commands()[i];
-        float x0 = std::fmax(0.0f, c.clip.x * dpi), y0 = std::fmax(0.0f, c.clip.y * dpi);
-        float x1 = std::fmin((float)fb_w, (c.clip.x + c.clip.w) * dpi);
-        float y1 = std::fmin((float)fb_h, (c.clip.y + c.clip.h) * dpi);
+        float x0 = std::fmax(0.0f, std::floor(c.clip.x * dpi)), y0 = std::fmax(0.0f, std::floor(c.clip.y * dpi));
+        float x1 = std::fmin((float)fb_w, std::ceil((c.clip.x + c.clip.w) * dpi));
+        float y1 = std::fmin((float)fb_h, std::ceil((c.clip.y + c.clip.h) * dpi));
         if (x1 <= x0 || y1 <= y0) continue;
-        r->Scissor((GLint)x0, (GLint)((float)fb_h - y1), (GLsizei)(x1 - x0 + 0.5f),
-                   (GLsizei)(y1 - y0 + 0.5f));
+        r->Scissor((GLint)x0, (GLint)((float)fb_h - y1), (GLsizei)(x1 - x0),
+                   (GLsizei)(y1 - y0));
         GLuint want = c.texture == 0 ? r->atlas_tex
                                      : (c.texture <= r->textures.size() && r->textures[c.texture - 1]
                                             ? r->textures[c.texture - 1]
