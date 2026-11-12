@@ -136,3 +136,22 @@ and available for new ones: `rect`, `shadow`, `glyph`, `image`, `line`, `triangl
 Everything is allocated in the constructor, including the glyph atlas and a 1 MB scratch arena that
 stb_truetype uses while rasterizing glyphs. Frames after warm-up allocate nothing (`tests/test_alloc.cpp`
 runs the whole widget set and counts allocations).
+
+## Custom titlebar
+
+Set `PlatformConfig::custom_titlebar` (and `transparent` for rounded window corners), then draw the bar yourself:
+
+```cpp
+rd::window_background(ui);                       // rounded, bordered backdrop (square when maximized)
+if (rd::titlebar_begin(ui, "My app")) {          // icon, title, minimize / maximize / close
+    rd::layout_row(ui, 2, widths, 2, 0);         // anything you add stays clickable, the rest drags the window
+    rd::button(ui, "File", rd::ButtonStyle::Ghost);
+    rd::search_box(ui, "##search", search);
+    rd::titlebar_end(ui);
+}
+// the rest of the UI starts at rd::titlebar_height(ui)
+```
+
+The backend feeds `Context::window_chrome()` to SDL's hit test (native drag and edge resize) and runs
+`Context::window_command()`. With `transparent`, clear with alpha 0. See `examples/snippets/12_frameless.cpp`.
+Not yet verified on Windows. On X11 and Wayland the compositor decides whether double-click maximizes.

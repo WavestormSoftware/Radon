@@ -288,6 +288,10 @@ struct State {
     bool animating = false, secondary = false, long_fired = false;
     float press_time = 0;
     Cursor cursor = Cursor::Arrow;
+    WindowChrome chrome;  // titlebar drag region, filled by titlebar_begin
+    WindowCommand wcmd = WindowCommand::None;
+    bool tb_active = false;  // between titlebar_begin and titlebar_end: controls there are not draggable
+    Rect tb_rect;            // the titlebar's content window
     Rect text_rect;
     Toast toasts[kMaxToasts];
     float toast_offset = 0;

@@ -54,6 +54,8 @@ struct AppConfig {
     rd::Config config;  ///< pool sizes for the context (more fonts, a bigger atlas, ...)
     InitFn init;        ///< optional, after fonts are loaded
     FrameFn frame;
+    bool custom_titlebar = false;  ///< borderless window; draw rd::titlebar_begin yourself
+    bool transparent = false;      ///< window with alpha: rounded corners via rd::window_background
     /// Optional: the OS switched between light and dark. Default: apply make_theme(fonts, dark).
     std::function<void(rd::Context&, bool dark)> system_theme;
 };

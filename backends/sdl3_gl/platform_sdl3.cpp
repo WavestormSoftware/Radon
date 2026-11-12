@@ -44,7 +44,9 @@ struct Platform {
     bool skip = false;
     std::vector<std::string> drops;  // dropped file paths, oldest first
     Uint64 last_draw = 0;
-    SDL_Cursor* cursors[6] = {};
+    SDL_Cursor* cursors[7] = {};
+    WindowChrome chrome;  // titlebar drag region of the last frame, read by the hit-test callback
+    bool custom_titlebar = false;
     std::vector<SDL_Gamepad*> pads;
     Cursor cursor = Cursor::Arrow;
     Rect text_area;
@@ -123,6 +125,8 @@ bool make_window(Platform* p, const PlatformConfig& cfg, bool es) {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_WindowFlags flags = SDL_WINDOW_OPENGL | SDL_WINDOW_HIGH_PIXEL_DENSITY;
     if (cfg.resizable) flags |= SDL_WINDOW_RESIZABLE;
+    if (cfg.custom_titlebar) flags |= SDL_WINDOW_BORDERLESS;
+    if (cfg.transparent) flags |= SDL_WINDOW_TRANSPARENT;
 #if defined(__ANDROID__) || (defined(__APPLE__) && TARGET_OS_IPHONE)
     flags |= SDL_WINDOW_FULLSCREEN;
 #endif
@@ -153,6 +157,34 @@ void SDLCALL dialog_done(void*, const char* const* files, int) {
 float window_to_logical(const Platform* p) {
     const float density = SDL_GetWindowPixelDensity(p->window);
     return (density > 0 ? density : 1.0f) / dpi_scale(p);
+}
+
+// Native drag and resize for the borderless window. Runs inside SDL's event pump on the main thread, so it can
+// read the chrome copy that finish_frame made. shortcut: the copy is unsynchronized; add a lock if a backend
+// ever delivers hit tests from another thread.
+SDL_HitTestResult SDLCALL hit_test(SDL_Window* win, const SDL_Point* a, void* data) {
+    const Platform* p = static_cast<const Platform*>(data);
+    int w = 0, h = 0;
+    SDL_GetWindowSize(win, &w, &h);
+    const SDL_WindowFlags f = SDL_GetWindowFlags(win);
+    if ((f & SDL_WINDOW_RESIZABLE) && !(f & (SDL_WINDOW_MAXIMIZED | SDL_WINDOW_FULLSCREEN))) {
+        const int B = 6;  // window units
+        const bool l = a->x < B, r = a->x >= w - B, t = a->y < B, b = a->y >= h - B;
+        if (t && l) return SDL_HITTEST_RESIZE_TOPLEFT;
+        if (t && r) return SDL_HITTEST_RESIZE_TOPRIGHT;
+        if (b && l) return SDL_HITTEST_RESIZE_BOTTOMLEFT;
+        if (b && r) return SDL_HITTEST_RESIZE_BOTTOMRIGHT;
+        if (t) return SDL_HITTEST_RESIZE_TOP;
+        if (b) return SDL_HITTEST_RESIZE_BOTTOM;
+        if (l) return SDL_HITTEST_RESIZE_LEFT;
+        if (r) return SDL_HITTEST_RESIZE_RIGHT;
+    }
+    const float k = window_to_logical(p);
+    const Vec2 pt{(float)a->x * k, (float)a->y * k};
+    if (!p->chrome.caption.contains(pt)) return SDL_HITTEST_NORMAL;
+    for (int i = 0; i < p->chrome.no_drag_count; i++)
+        if (p->chrome.no_drag[i].contains(pt)) return SDL_HITTEST_NORMAL;
+    return SDL_HITTEST_DRAGGABLE;
 }
 
 void handle_event(Platform* p, Input& in, const SDL_Event& e, float k, int ww, int wh) {
@@ -363,6 +395,8 @@ Platform* create_platform(const PlatformConfig& cfg) {
     SDL_GL_MakeCurrent(p->window, p->gl);
     SDL_GL_SetSwapInterval(cfg.vsync ? 1 : 0);
     p->wait_events = cfg.wait_events;
+    p->custom_titlebar = cfg.custom_titlebar;
+    if (cfg.custom_titlebar) SDL_SetWindowHitTest(p->window, hit_test, p.get());
     p->haptics = cfg.haptics;
     p->last_ticks = SDL_GetTicksNS();
     return p.release();
@@ -525,6 +559,11 @@ bool poll(Platform* p, Input& in, float& dt) {
             in.touches[in.touch_count++] = p->touches[i];
     in.a11y_action = A11yAction::None;
     in.a11y_target = 0;
+    {
+        const SDL_WindowFlags wf = SDL_GetWindowFlags(p->window);
+        in.window_maximized = (wf & SDL_WINDOW_MAXIMIZED) != 0;
+        in.window_focused = (wf & SDL_WINDOW_INPUT_FOCUS) != 0;
+    }
 
     SDL_Rect safe{0, 0, ww, wh};
     in.safe_area = {};
@@ -590,11 +629,22 @@ void finish_frame(Platform* p, Context& ctx) {
     if (ctx.cursor() != p->cursor) {
         static const SDL_SystemCursor map[] = {SDL_SYSTEM_CURSOR_DEFAULT,   SDL_SYSTEM_CURSOR_TEXT,
                                                SDL_SYSTEM_CURSOR_POINTER,   SDL_SYSTEM_CURSOR_EW_RESIZE,
-                                               SDL_SYSTEM_CURSOR_NS_RESIZE, SDL_SYSTEM_CURSOR_NWSE_RESIZE};
+                                               SDL_SYSTEM_CURSOR_NS_RESIZE, SDL_SYSTEM_CURSOR_NWSE_RESIZE,
+                                               SDL_SYSTEM_CURSOR_NESW_RESIZE};
         p->cursor = ctx.cursor();
         SDL_Cursor*& c = p->cursors[(int)p->cursor];
         if (!c) c = SDL_CreateSystemCursor(map[(int)p->cursor]);
         if (c) SDL_SetCursor(c);
+    }
+    if (p->custom_titlebar) {
+        p->chrome = ctx.window_chrome();
+        switch (ctx.window_command()) {
+            case WindowCommand::Minimize: SDL_MinimizeWindow(p->window); break;
+            case WindowCommand::Maximize: SDL_MaximizeWindow(p->window); break;
+            case WindowCommand::Restore: SDL_RestoreWindow(p->window); break;
+            case WindowCommand::Close: p->quit = true; break;
+            case WindowCommand::None: break;
+        }
     }
     p->idle = !ctx.animating();
     p->can_dismiss = ctx.can_dismiss();

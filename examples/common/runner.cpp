@@ -162,6 +162,8 @@ bool Runner::start(int argc, char** argv, const AppConfig& cfg) {
     pc.title = cfg.title;
     pc.width = (int)((float)(o.width > 0 ? o.width : cfg.width) * o.scale);
     pc.height = (int)((float)(o.height > 0 ? o.height : cfg.height) * o.scale);
+    pc.custom_titlebar = cfg.custom_titlebar;
+    pc.transparent = cfg.transparent;
     pc.wait_events = !o.screenshot;  // sleep while idle; screenshots need a fixed number of frames
     m.plat = rd::sdl3::create_platform(pc);
     if (!m.plat) {
@@ -223,7 +225,7 @@ bool Runner::step() {
     m.ctx->begin_frame(m.input, dt);
     m.cfg.frame(*m.ctx, m.input, lw, lh);
     m.ctx->end_frame();
-    rd::gl::clear(m.rend, m.ctx->theme().background);
+    rd::gl::clear(m.rend, m.cfg.transparent ? rd::Color{0, 0, 0, 0} : m.ctx->theme().background);
     rd::gl::render(m.rend, *m.ctx, fw, fh);
     if (m.opt.screenshot && ++m.frame_no >= m.opt.frames) {
         std::vector<uint8_t> px((size_t)fw * fh * 4);

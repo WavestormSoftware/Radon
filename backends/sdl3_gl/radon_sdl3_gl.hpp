@@ -18,6 +18,12 @@ struct PlatformConfig {
     bool wait_events = false;
     /// Play the haptic feedback widgets ask for (Context::haptic) on Android and iOS.
     bool haptics = true;
+    /// Borderless window; the UI draws the titlebar itself with rd::titlebar_begin. The backend supplies native
+    /// dragging and edge resizing (double-click maximize and snap layouts where the OS does them for the caption).
+    bool custom_titlebar = false;
+    /// Window with an alpha channel (rounded corners, see rd::window_background). Clear with alpha 0
+    /// (rd::gl::clear). Compositor-dependent: without one the corners show black.
+    bool transparent = false;
 };
 
 struct Platform;

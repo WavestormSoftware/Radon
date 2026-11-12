@@ -155,6 +155,8 @@ struct Input {
     A11yAction a11y_action = A11yAction::None;
     uint32_t a11y_target = 0;
     Vec2 screen_size{};  ///< window size in logical px (used to center modals)
+    bool window_maximized = false;  ///< the OS window is maximized (the titlebar shows Restore, corners go square)
+    bool window_focused = true;     ///< the OS window has keyboard focus (the titlebar dims when not)
     Rect safe_area{};    ///< mobile insets in logical px: x=left, y=top, w=right, h=bottom; zero on desktop
     /// The screen minus the safe-area insets: where UI can be placed without hitting notches or bars.
     Rect safe_rect() const {
@@ -164,7 +166,18 @@ struct Input {
 };
 
 /// Mouse cursor the UI asks for this frame (see Context::cursor). Backends map it to a system cursor.
-enum class Cursor { Arrow, Text, Hand, ResizeEW, ResizeNS, ResizeNWSE };
+enum class Cursor { Arrow, Text, Hand, ResizeEW, ResizeNS, ResizeNWSE, ResizeNESW };
+
+/// What the custom titlebar asks the host to do with the OS window (see Context::window_command).
+enum class WindowCommand { None, Minimize, Maximize, Restore, Close };
+
+/// Where the OS window may be dragged by (see Context::window_chrome): the caption minus the interactive
+/// controls inside it. Backends feed this to their native hit test.
+struct WindowChrome {
+    Rect caption;
+    Rect no_drag[16];
+    int no_drag_count = 0;
+};
 
 /// Semantic color of alerts and toasts.
 enum class Tone { Info, Success, Warning, Error };

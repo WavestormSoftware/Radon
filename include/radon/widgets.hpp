@@ -12,6 +12,8 @@ enum WindowFlags : uint32_t {
     WindowScrollable = 1 << 3,
     WindowTitleBar = 1 << 4,
     WindowBorder = 1 << 5,
+    WindowTransparent = 1 << 6,  ///< no background fill
+    WindowNoPadding = 1 << 7,    ///< content starts at the window edge
     WindowDefault = WindowMovable | WindowResizable | WindowTitleBar | WindowBorder,
 };
 
@@ -52,6 +54,23 @@ struct ViewportResponse : Response {
 /// started inside keeps reporting `local` and `down` after the pointer leaves. `flip_y` for GL render
 /// targets.
 ViewportResponse viewport(Context& ctx, TextureId tex, Vec2 size, bool flip_y = false);
+/// Custom window titlebar for borderless windows (PlatformConfig::custom_titlebar). Draws the bar along the
+/// top of the window with an optional icon, the title and minimize / maximize / close buttons, and reports
+/// the drag region and the button clicks to the backend. Widgets you add between begin and end (a menu
+/// bar, tabs, a search box) land between the title and the buttons and stay clickable. Start the rest of
+/// the UI at `titlebar_height(ctx)`. Call end only when begin returned true.
+enum TitlebarFlags : uint32_t {
+    TitlebarCenterTitle = 1 << 0,  ///< title centered in the bar; custom widgets then start after the icon
+    TitlebarNoMinimize = 1 << 1,
+    TitlebarNoMaximize = 1 << 2,
+};
+bool titlebar_begin(Context& ctx, std::string_view title, uint32_t flags = 0, TextureId icon = 0);
+void titlebar_end(Context& ctx);
+float titlebar_height(const Context& ctx);
+/// Fills the whole window with a rounded, bordered backdrop (square corners when maximized). Use it with
+/// PlatformConfig::transparent for a window with rounded corners; call it first each frame.
+void window_background(Context& ctx, const Paint& fill = {});
+
 /// Draws a modern box at `r` in one call: drop shadow, solid or gradient fill, border, per-corner radii and opacity.
 ///   rd::Style st; st.fill = rd::Paint::linear(a, b, 90); st.radius = 14; st.shadow = {black, 24, {0, 8}};
 ///   rd::box(ui, r, st);
@@ -157,6 +176,9 @@ enum class Icon {
     Pin,
     Backspace,
     Code,
+    Minimize,
+    Maximize,
+    Restore,
     Count  ///< number of icons, not an icon
 };
 

@@ -58,6 +58,10 @@ public:
     Rect text_input_rect() const;
     /// The mouse cursor the last frame asked for (text beam over text boxes, resize arrows, ...).
     Cursor cursor() const;
+    /// The titlebar drag region of the last frame (empty caption when no titlebar was drawn).
+    const WindowChrome& window_chrome() const;
+    /// What the titlebar's minimize/maximize/close buttons asked for during the last frame.
+    WindowCommand window_command() const;
     /// True if the last frame was still animating or handling input. When false the host may sleep
     /// until the next input event instead of redrawing (saves battery).
     bool animating() const;

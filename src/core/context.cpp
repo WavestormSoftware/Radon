@@ -167,6 +167,7 @@ void kinetic(State& s, float& scroll, float& vel, bool dragging, float maxs) {
 Response update_control(Context& ctx, ID id, const Rect& r, bool focusable, bool captures) {
     State& s = state(ctx);
     Response rs;
+    if (s.tb_active && s.chrome.no_drag_count < 16) s.chrome.no_drag[s.chrome.no_drag_count++] = r;
     if (s.disabled > 0) {  // disabled sections draw but never react
         s.last_id = id;
         s.last_rect = r;
@@ -328,6 +329,9 @@ void Context::begin_frame(const Input& input, float dt) {
     s.haptic = Haptic::None;
     s.text_type = TextInputType::Text;
     s.cursor = Cursor::Arrow;
+    s.chrome = WindowChrome{};
+    s.wcmd = WindowCommand::None;
+    s.tb_active = false;
     s.text_rect = {};
     s.alpha = 1;
     s.alpha_n = s.disabled = s.tr_n = 0;
@@ -577,4 +581,13 @@ FontHandle Context::load_font(const uint8_t* data, size_t size, float pixel_size
     return s.font_n++;
 }
 
+}  // namespace rd
+
+namespace rd {
+const WindowChrome& Context::window_chrome() const {
+    return s_->chrome;
+}
+WindowCommand Context::window_command() const {
+    return s_->wcmd;
+}
 }  // namespace rd

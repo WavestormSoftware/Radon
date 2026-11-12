@@ -608,3 +608,24 @@ TEST_CASE("indeterminate progress bar keeps animating") {
     u.frames(2);
     CHECK(u.h.ctx.animating());
 }
+
+TEST_CASE("titlebar reports a drag region minus its controls, and button clicks") {
+    th::Harness h;
+    h.in.screen_size = {400, 300};
+    auto bar = [&] {
+        if (titlebar_begin(h.ctx, "App")) titlebar_end(h.ctx);
+    };
+    h.frame(bar);
+    const WindowChrome& c = h.ctx.window_chrome();
+    CHECK(c.caption.w == 400);
+    CHECK(c.caption.h == titlebar_height(h.ctx));
+    CHECK(c.no_drag_count >= 3);  // close, maximize, minimize
+    CHECK(h.ctx.window_command() == WindowCommand::None);
+    h.in.pointer = {400 - 23, 10};  // the close button
+    h.in.pointer_down = h.in.pointer_pressed = true;
+    h.frame(bar);
+    h.in.pointer_down = false;
+    h.in.pointer_released = true;
+    h.frame(bar);
+    CHECK(h.ctx.window_command() == WindowCommand::Close);
+}

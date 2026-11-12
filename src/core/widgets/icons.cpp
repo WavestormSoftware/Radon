@@ -337,6 +337,17 @@ void draw_icon(Context& ctx, Icon icon, const Rect& r, Color c) {
             L(1, 0, 0.4f, 0.8f);
             L(0.15f, -1, -0.15f, 1);
             break;
+        case Icon::Minimize:
+            L(-0.9f, 0, 0.9f, 0);
+            break;
+        case Icon::Maximize:
+            d.rect({m.x - 0.85f * u, m.y - 0.85f * u, 1.7f * u, 1.7f * u}, c, 0.2f * u, w);
+            break;
+        case Icon::Restore:
+            d.rect({m.x - 0.9f * u, m.y - 0.45f * u, 1.35f * u, 1.35f * u}, c, 0.2f * u, w);
+            L(-0.45f, -0.9f, 0.7f, -0.9f);
+            L(0.9f, -0.7f, 0.9f, 0.45f);
+            break;
         case Icon::Count:
             break;
     }
