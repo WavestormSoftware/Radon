@@ -66,7 +66,7 @@ for each command c:
     draw_indexed(c.index_count, c.index_offset);
 ```
 
-The atlas is `ctx.atlas_pixels()` (8-bit coverage, `atlas_size()` square). Re-upload it when
+The atlas is `ctx.atlas_pixels()` (8-bit signed distance (0.5 = glyph edge), `atlas_size()` square). Re-upload it when
 `ctx.atlas_version()` changes.
 
 ### Vertex shape data

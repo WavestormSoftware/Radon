@@ -43,7 +43,7 @@ public:
     void set_default_font(FontHandle font);
     void set_clipboard_callbacks(ClipboardGet get, ClipboardSet set, void* user = nullptr);
 
-    /// Glyph atlas for the backend: 8-bit coverage, atlas_size x atlas_size. The version changes
+    /// Glyph atlas for the backend: 8-bit signed distance (0.5 = glyph edge), atlas_size x atlas_size. The version changes
     /// whenever the pixels change.
     const uint8_t* atlas_pixels() const;
     int atlas_size() const;

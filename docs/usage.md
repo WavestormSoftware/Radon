@@ -17,7 +17,7 @@ thread-safe. For tutorials see [getting-started.md](getting-started.md) and [wid
 | `load_font(data, size, px)` | TrueType from memory (buffer must outlive the context). Returns -1 on failure. |
 | `set_default_font(f)` | Font used when a theme font is -1 (the first loaded font by default). |
 | `set_clipboard_callbacks(get, set, user)` | `int get(user, out, cap)` returns bytes copied; `void set(user, text, len)`. |
-| `atlas_pixels()` `atlas_size()` `atlas_version()` | 8-bit glyph atlas for backends; re-upload when the version changes. |
+| `atlas_pixels()` `atlas_size()` `atlas_version()` | 8-bit signed-distance glyph atlas for backends; re-upload when the version changes. |
 | `wants_text_input()` | True while a text box has focus (show the soft keyboard). |
 | `pointer_over_ui()` | True if the pointer is over a window or popup (do not also use the click). |
 | `text_input_rect()` | The focused text box in logical px, for the IME / soft keyboard. |
@@ -37,8 +37,8 @@ thread-safe. For tutorials see [getting-started.md](getting-started.md) and [wid
 
 `max_windows` (32), `max_id_stack` (32), `max_layout_stack` (64), `max_draw_commands` (4096),
 `max_vertices` (65536), `max_indices` (196608), `max_textboxes` (16), `max_children` (32), `max_fonts` (4),
-`max_glyphs` (4096), `max_anims` (256), `atlas_size` (1024), `undo_bytes` (8192, text undo + redo),
-`max_dock_nodes` (32), `max_dock_panels` (32), `max_a11y_nodes` (1024), `dpi_scale`, `animations`, `a11y`
+`max_glyphs` (4096), `max_anims` (256), `atlas_size` (2048), `undo_bytes` (8192, text undo + redo),
+`max_dock_nodes` (32), `max_dock_panels` (32), `max_a11y_nodes` (2048), `dpi_scale`, `animations`, `a11y`
 (false), `theme`.
 A full pool skips the work, sets `error()` and keeps running.
 

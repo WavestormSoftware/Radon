@@ -547,8 +547,7 @@ void Context::set_font_fallback(FontHandle font, FontHandle fallback) {
 
 void Context::set_dpi_scale(float scale) {
     if (scale <= 0 || scale == s_->cfg.dpi_scale) return;
-    s_->cfg.dpi_scale = scale;
-    detail::reset_atlas(*s_);
+    s_->cfg.dpi_scale = scale;  // glyphs are SDF, so the atlas survives DPI changes
 }
 
 FontHandle Context::load_font(const uint8_t* data, size_t size, float pixel_size) {

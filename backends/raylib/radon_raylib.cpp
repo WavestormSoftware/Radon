@@ -37,7 +37,10 @@ void main() {
     }
     if (mode < -2.5) { o_color = v_color; return; }
     if (mode < -1.5) { o_color = texture(u_tex, v_uv) * v_color; return; }
-    if (mode < -0.5) { o_color = vec4(v_color.rgb, v_color.a * texture(u_tex, v_uv).r); return; }
+    if (mode < -0.5) {
+        float sd = texture(u_tex, v_uv).r; float w = max(fwidth(sd), 1e-4) * 0.75;
+        o_color = vec4(v_color.rgb, v_color.a * smoothstep(0.5 - w, 0.5 + w, sd)); return;
+    }
     float d = sd_box(v_local, v_shape.xy, v_shape.z);
     float blur = v_uv.x; float a;
     if (blur > 0.0) { a = 1.0 - smoothstep(-blur, blur, d); }
